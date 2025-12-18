@@ -1,0 +1,402 @@
+<?php
+/**
+ * Donation Controller
+ * 
+ * Endpoints:
+ * POST   /donations              - สร้างรายการบริจาค
+ * GET    /donations/:id/qr       - QR Code
+ * GET    /donations/:id/status   - ตรวจสอบสถานะ
+ * GET    /donations              - รายการทั้งหมด (Admin)
+ * GET    /donations/:id          - รายละเอียด (Admin)
+ * PUT    /donations/:id          - แก้ไข (Admin)
+ */
+
+class DonationController {
+    private PDO $pdo;
+    
+    public function __construct() {
+        $this->pdo = Database::getInstance();
+    }
+    
+    public function handle(string $method, ?string $id, ?string $action): array {
+        // Handle special actions
+        if ($id && $action) {
+            switch ($action) {
+                case 'qr': return $this->getQr($id);
+                case 'status': return $this->getStatus($id);
+            }
+        }
+        
+        switch ($method) {
+            case 'GET':
+                if ($id) {
+                    AuthMiddleware::requireAdmin();
+                    return $this->show($id);
+                }
+                AuthMiddleware::requireAdmin();
+                return $this->index();
+            case 'POST':
+                return $this->create();
+            case 'PUT':
+                AuthMiddleware::requireAdmin();
+                return $this->update($id);
+            default:
+                return Response::error('METHOD_NOT_ALLOWED', 'Method not allowed', 405);
+        }
+    }
+    
+    // POST /donations - สร้างรายการบริจาค
+    private function create(): array {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        
+        $v = new Validator($data);
+        $v->required('project_number')
+          ->required('phone')
+          ->required('amount')
+          ->required('type')
+          ->numeric('amount')
+          ->min('amount', 1);
+        
+        // If need receipt, validate additional fields
+        if (!empty($data['needReceipt'])) {
+            $v->required('firstName')
+              ->required('lastName')
+              ->required('idCard')
+              ->required('receiptAddress')
+              ->required('shippingAddress');
+        }
+        
+        if (!$v->passes()) return Response::validation($v->errors());
+        
+        // Generate billPaymentRef1 (15 digits numeric only)
+        // Format: YYYY(4) + PROJ(6) + RAND(5) = 15 Digits
+        // Requirement: ปี, เลขโครงการ, ต่อด้วยเลขอีก 5 หลัก (รวมต้อง 15 หลัก)
+        
+        $year = date('Y') + 543; // 4 digits (e.g., 2568)
+        $rand = rand(10000, 99999); // 5 digits (e.g., 12345)
+        
+        // Project Number processing
+        $projNumRaw = preg_replace('/\D/', '', $data['project_number']); // Remove non-digits
+        // Calculate needed length for project number to make total 15
+        // 15 - 4 (Year) - 5 (Rand) = 6 digits for Project
+        $projNum = str_pad(substr($projNumRaw, 0, 6), 6, '0', STR_PAD_LEFT); 
+        
+        $ref1 = $year . $projNum . $rand;
+
+
+        
+        try {
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO donat_user (
+                    billPaymentRef1, project_number, project_name, type, phone, amount, 
+                    fiscal_year, status_donat, payby, receiptDate,
+                    need_receipt, first_name, last_name, id_card, receipt_address, shipping_address
+                ) VALUES (
+                    :ref1, :project_number, :project_name, :type, :phone, :amount, 
+                    :fiscal_year, 'pending', 'QR PromptPay', CURDATE(),
+                    :need_receipt, :first_name, :last_name, :id_card, :receipt_address, :shipping_address
+                )"
+            );
+            
+            // Get project name
+            $projectStmt = $this->pdo->prepare("SELECT project_name FROM projects WHERE project_number = :pn");
+            $projectStmt->execute([':pn' => $data['project_number']]);
+            $project = $projectStmt->fetch();
+            
+            $stmt->execute([
+                ':ref1' => $ref1,
+                ':project_number' => $data['project_number'],
+                ':project_name' => $project['project_name'] ?? $data['project_name'] ?? '',
+                ':type' => $data['type'],
+                ':phone' => $data['phone'],
+                ':amount' => $data['amount'],
+                ':fiscal_year' => (date('Y') + 543),
+                ':need_receipt' => !empty($data['needReceipt']) ? 1 : 0,
+                ':first_name' => $data['firstName'] ?? null,
+                ':last_name' => $data['lastName'] ?? null,
+                ':id_card' => $data['idCard'] ?? null,
+                ':receipt_address' => $data['receiptAddress'] ?? null,
+                ':shipping_address' => $data['shippingAddress'] ?? null
+            ]);
+            
+            $id = $this->pdo->lastInsertId();
+            
+            return Response::success([
+                'id' => $id,
+                'billPaymentRef1' => $ref1,
+                'amount' => floatval($data['amount']),
+                'status' => 'pending',
+                'qr_url' => "/api/v1/donations/{$id}/qr",
+                'expires_at' => date('c', strtotime('+30 minutes'))
+            ], 'สร้างรายการบริจาคสำเร็จ');
+            
+        } catch (PDOException $e) {
+            error_log("Donation create error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถบันทึกข้อมูลได้: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    // GET /donations/:id/qr
+    private function getQr(string $id): array {
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT * FROM donat_user WHERE id = :id"
+            );
+            $stmt->execute([':id' => $id]);
+            $donation = $stmt->fetch();
+            
+            if (!$donation) return Response::notFound('ไม่พบรายการบริจาค');
+            
+            return Response::success([
+                'id' => $id,
+                'amount' => floatval($donation['amount']),
+                'billPaymentRef1' => $donation['billPaymentRef1'],
+                'project_number' => $donation['project_number'],
+                'project_name' => $donation['project_name'] ?? '',
+                'type' => $donation['type'] ?? '',
+                'phone' => $donation['phone'] ?? '',
+                'first_name' => $donation['first_name'] ?? '',
+                'last_name' => $donation['last_name'] ?? '',
+                'need_receipt' => $donation['need_receipt'] == 1,
+                'status' => $donation['status_donat'] ?? 'pending',
+                'created_at' => $donation['created_at'] ?? null
+            ]);
+        } catch (PDOException $e) {
+            error_log("Get QR error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    // GET /donations/:id/status
+    private function getStatus(string $id): array {
+        try {
+            // First get the donation record with user details
+            $donationStmt = $this->pdo->prepare("SELECT id, billPaymentRef1, status_donat, need_receipt, first_name, last_name, amount FROM donat_user WHERE id = :id");
+            $donationStmt->execute([':id' => $id]);
+            $donation = $donationStmt->fetch();
+            
+            if (!$donation) {
+                return Response::notFound('ไม่พบรายการบริจาค');
+            }
+            
+            // Check bank_transactions for payment confirmation
+            $bankStmt = $this->pdo->prepare("
+                SELECT transactionId, transactionDateandTime, payerName, payerAccountName,
+                       sendingBankCode, amount, confirmId, created_at
+                FROM bank_transactions 
+                WHERE billPaymentRef1 = :ref1 
+                ORDER BY created_at DESC 
+                LIMIT 1
+            ");
+            $bankStmt->execute([':ref1' => $donation['billPaymentRef1']]);
+            $bankTxn = $bankStmt->fetch();
+            
+            if ($bankTxn || $donation['status_donat'] === 'completed') {
+                // Payment confirmed
+                
+                // 1. Amount Validation (Crucial: Prevent Underpayment)
+                // Only check if we are relying on bank transaction
+                if ($bankTxn) {
+                    $paidAmount = floatval($bankTxn['amount'] ?? 0);
+                    $donatedAmount = floatval($donation['amount']);
+                    
+                    // Allow tiny floating point diff or strict >=
+                    if ($paidAmount < $donatedAmount) {
+                        // Underpayment detected!
+                        return Response::success([
+                            'id' => $id,
+                            'status' => 'pending', // Keep pending or introduce 'partial'
+                            'message' => 'ยอดเงินที่ชำระไม่ครบตามจำนวน'
+                        ]);
+                    }
+                }
+
+                $receipt = null;
+                $payerNameFromBank = $bankTxn['payerAccountName'] ?? $bankTxn['payerName'] ?? 'ผู้บริจาค';
+
+                try {
+                    $this->pdo->beginTransaction();
+
+                    // Update status to completed if not already
+                    if ($donation['status_donat'] !== 'completed') {
+                         $upd = $this->pdo->prepare("UPDATE donat_user SET status_donat = 'completed' WHERE id = :id");
+                         $upd->execute([':id' => $id]);
+                    }
+
+                    // --- Receipt Generation Logic ---
+                    // Check if receipt exists
+                    $receiptStmt = $this->pdo->prepare("SELECT id, receipt_no FROM receipts WHERE donation_id = :did");
+                    $receiptStmt->execute([':did' => $donation['id']]);
+                    $receipt = $receiptStmt->fetch();
+
+                    if (!$receipt) {
+                        try {
+                            // 1. Determine Payer Name
+                            $finalPayerName = $payerNameFromBank;
+                            if ($donation['need_receipt'] == 1 && !empty($donation['first_name'])) {
+                                $finalPayerName = trim($donation['first_name'] . ' ' . $donation['last_name']);
+                            }
+
+                            // 2. Generate Receipt No (YYYY-EXXXX)
+                            $buddhistYear = date('Y') + 543;
+                            $prefix = $buddhistYear . '-E';
+                            
+                            // Lock rows for reading max number (SAFE)
+                            $maxStmt = $this->pdo->prepare("SELECT MAX(receipt_no) as max_no FROM receipts WHERE receipt_no LIKE :prefix FOR UPDATE");
+                            $maxStmt->execute([':prefix' => $prefix . '%']);
+                            $maxRow = $maxStmt->fetch();
+                            
+                            $nextNum = 1;
+                            if ($maxRow && $maxRow['max_no']) {
+                                // แยกเลขออกจาก 2568-E0005 -> 0005
+                                $numPart = preg_replace('/^\d{4}-E/', '', $maxRow['max_no']);
+                                $nextNum = intval($numPart) + 1;
+                            }
+                            $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+
+                            // 3. Insert Receipt
+                            $insReceipt = $this->pdo->prepare("INSERT INTO receipts (donation_id, receipt_no, payer_name, amount, issued_at) VALUES (:did, :rno, :pname, :amt, NOW())");
+                            $insReceipt->execute([
+                                ':did' => $donation['id'],
+                                ':rno' => $receiptNo,
+                                ':pname' => $finalPayerName,
+                                ':amt' => $donation['amount']
+                            ]);
+                            
+                            $receipt = [
+                                'id' => $this->pdo->lastInsertId(),
+                                'receipt_no' => $receiptNo
+                            ];
+                        } catch (PDOException $ex) {
+                            // If dup entry for donation_id (Race condition caught by DB), ignore
+                            if ($ex->getCode() == 23000) {
+                                // Re-fetch existing receipt
+                                $receiptStmt->execute([':did' => $donation['id']]);
+                                $receipt = $receiptStmt->fetch();
+                            } else {
+                                throw $ex; // Re-throw other errors
+                            }
+                        }
+                    }
+
+                    $this->pdo->commit();
+                } catch (Exception $e) {
+                    $this->pdo->rollBack();
+                    error_log("Transaction failed: " . $e->getMessage());
+                    // Don't fail the request, just return status without receipt if failed
+                    // But usually we should return error
+                }
+                
+                // Get bank name from code (Display Logic)
+                $bankNames = [
+                    '002' => 'ธนาคารกรุงเทพ',
+                    '004' => 'ธนาคารกสิกรไทย',
+                    '006' => 'ธนาคารกรุงไทย',
+                    '011' => 'ธนาคารทหารไทยธนชาต',
+                    '014' => 'ธนาคารไทยพาณิชย์',
+                    '025' => 'ธนาคารกรุงศรีอยุธยา',
+                    '030' => 'ธนาคารออมสิน',
+                    '034' => 'ธนาคาร ธ.ก.ส.'
+                ];
+                $bankName = $bankNames[$bankTxn['sendingBankCode'] ?? ''] ?? 'ธนาคาร';
+                
+                // สร้าง access_token สำหรับเปิดใบเสร็จ (ถ้ามี receipt)
+                $accessToken = null;
+                $pdfUrl = null;
+                if ($receipt && isset($receipt['id'])) {
+                    $accessToken = bin2hex(random_bytes(32));
+                    $expireAt = time() + 600; // หมดอายุใน 10 นาที
+                    
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $_SESSION['pdf_access_tokens'][$receipt['id']] = [
+                        'token' => $accessToken,
+                        'expire_at' => $expireAt
+                    ];
+                    
+                    $pdfUrl = "/appdev/edonation/receipts/pdf_maker.php?id={$receipt['id']}&token={$accessToken}";
+                }
+                
+                return Response::success([
+                    'id' => $id,
+                    'status' => 'completed',
+                    'payer_name' => $payerNameFromBank, 
+                    'receipt_id' => $receipt['id'] ?? null,
+                    'receipt_no' => $receipt['receipt_no'] ?? null,
+                    'access_token' => $accessToken,
+                    'pdf_url' => $pdfUrl,
+                    'bank_name' => $bankName,
+                    'bank_code' => $bankTxn['sendingBankCode'] ?? null,
+                    'amount' => floatval($bankTxn['amount'] ?? 0),
+                    'transaction_id' => $bankTxn['transactionId'] ?? null,
+                    'confirm_id' => $bankTxn['confirmId'] ?? null,
+                    'paid_at' => $bankTxn['transactionDateandTime'] ?? $bankTxn['created_at'] ?? null
+                ]);
+            }
+            
+            // Still pending
+            return Response::success([
+                'id' => $id,
+                'status' => 'pending'
+            ]);
+            
+        } catch (PDOException $e) {
+            error_log("Get status error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถตรวจสอบสถานะได้', 500);
+        }
+    }
+    
+    // GET /donations (Admin)
+    private function index(): array {
+        $page = max(1, intval($_GET['page'] ?? 1));
+        $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
+        $offset = ($page - 1) * $limit;
+        
+        $sql = "SELECT id, payerAccountName, amount, project_name, status_payment, 
+                       receipt_no, receiptDate, created_at 
+                FROM donat ORDER BY id DESC LIMIT :limit OFFSET :offset";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return Response::success($stmt->fetchAll());
+    }
+    
+    // GET /donations/:id (Admin)
+    private function show(string $id): array {
+        $stmt = $this->pdo->prepare("SELECT * FROM donat WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $donation = $stmt->fetch();
+        
+        if (!$donation) return Response::notFound();
+        
+        return Response::success($donation);
+    }
+    
+    // PUT /donations/:id (Admin)
+    private function update(string $id): array {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        
+        $allowedFields = ['payerAccountName', 'address', 'province', 'amphure', 'district', 'zip_code', 'comment'];
+        $fields = [];
+        $params = [':id' => $id];
+        
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $fields[] = "{$field} = :{$field}";
+                $params[":{$field}"] = $data[$field];
+            }
+        }
+        
+        if (empty($fields)) return Response::error('NO_DATA', 'ไม่มีข้อมูลที่จะอัปเดต');
+        
+        $sql = "UPDATE donat SET " . implode(', ', $fields) . " WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        
+        return Response::success(null, 'อัปเดตสำเร็จ');
+    }
+}

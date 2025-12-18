@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Manager - eDonation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+            color: #38bdf8;
+        }
+
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .status.online {
+            background: #22c55e33;
+            color: #22c55e;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            height: fit-content;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            color: #94a3b8;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .endpoint-group {
+            margin-bottom: 20px;
+        }
+
+        .endpoint-group-title {
+            color: #38bdf8;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .endpoint {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .endpoint:hover {
+            background: #334155;
+        }
+
+        .endpoint.active {
+            background: #38bdf833;
+            border-left: 3px solid #38bdf8;
+        }
+
+        .method {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .method.get {
+            background: #22c55e33;
+            color: #22c55e;
+        }
+
+        .method.post {
+            background: #3b82f633;
+            color: #3b82f6;
+        }
+
+        .method.put {
+            background: #f59e0b33;
+            color: #f59e0b;
+        }
+
+        .method.delete {
+            background: #ef444433;
+            color: #ef4444;
+        }
+
+        .main {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .request-section {
+            margin-bottom: 24px;
+        }
+
+        .request-section h3 {
+            color: #38bdf8;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .url-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .url-bar select {
+            background: #334155;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .url-bar input {
+            flex: 1;
+            background: #334155;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .url-bar button {
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: #0f172a;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .url-bar button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px #38bdf844;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: #334155;
+            border: none;
+            color: #94a3b8;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: #475569;
+            color: #e2e8f0;
+        }
+
+        textarea {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Monaco', monospace;
+            font-size: 13px;
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .response-section {
+            margin-top: 24px;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .response-status {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .response-status.success {
+            background: #22c55e33;
+            color: #22c55e;
+        }
+
+        .response-status.error {
+            background: #ef444433;
+            color: #ef4444;
+        }
+
+        pre {
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .auth-section {
+            background: #334155;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .auth-section label {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .auth-section input {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 4px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 992px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>eDonation API Manager</h1>
+            <span class="status online" id="apiStatus">Online</span>
+        </header>
+
+        <div class="grid">
+            <aside class="sidebar">
+                <h3>Endpoints</h3>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Projects</div>
+                    <div class="endpoint active" onclick="selectEndpoint('GET', '/api/v1/projects')">
+                        <span class="method get">GET</span> /projects
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/projects/P001')">
+                        <span class="method get">GET</span> /projects/:id
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/projects')">
+                        <span class="method post">POST</span> /projects
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('PUT', '/api/v1/projects/1')">
+                        <span class="method put">PUT</span> /projects/:id
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Donations</div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/donations')">
+                        <span class="method post">POST</span> /donations
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/donations/1/qr')">
+                        <span class="method get">GET</span> /donations/:id/qr
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/donations/1/status')">
+                        <span class="method get">GET</span> /donations/:id/status
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/donations')">
+                        <span class="method get">GET</span> /donations (Admin)
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Receipts</div>
+                    <div class="endpoint"
+                        onclick="selectEndpoint('GET', '/api/v1/receipts/search?keyword=1234567890123')">
+                        <span class="method get">GET</span> /receipts/search
+                    </div>
+                    <div class="endpoint"
+                        onclick="selectEndpoint('GET', '/api/v1/receipts/1/verify?tax_id=1234567890123')">
+                        <span class="method get">GET</span> /receipts/:id/verify
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/receipts/1/pdf')">
+                        <span class="method get">GET</span> /receipts/:id/pdf
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/receipts/1/details')">
+                        <span class="method get">GET</span> /receipts/:id/details
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/receipts')">
+                        <span class="method get">GET</span> /receipts (Admin)
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/receipts/generate')">
+                        <span class="method post">POST</span> /receipts/generate
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Signatures</div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/signatures')">
+                        <span class="method get">GET</span> /signatures
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/signatures/2568')">
+                        <span class="method get">GET</span> /signatures/:year
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/signatures')">
+                        <span class="method post">POST</span> /signatures
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('PUT', '/api/v1/signatures/2568')">
+                        <span class="method put">PUT</span> /signatures/:year
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('DELETE', '/api/v1/signatures/2568')">
+                        <span class="method delete">DELETE</span> /signatures/:year
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Benefits</div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/benefits')">
+                        <span class="method get">GET</span> /benefits
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/benefits/1')">
+                        <span class="method get">GET</span> /benefits/:id
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/benefits')">
+                        <span class="method post">POST</span> /benefits
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('PUT', '/api/v1/benefits/1')">
+                        <span class="method put">PUT</span> /benefits/:id
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('DELETE', '/api/v1/benefits/1')">
+                        <span class="method delete">DELETE</span> /benefits/:id
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Payments</div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/payments/callback')">
+                        <span class="method post">POST</span> /payments/callback
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Auth</div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/auth/login')">
+                        <span class="method post">POST</span> /auth/login
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/auth/me')">
+                        <span class="method get">GET</span> /auth/me
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
+                    <div class="endpoint-group-title">Notifications</div>
+                    <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/notifications/send')">
+                        <span class="method post">POST</span> /notifications/send
+                    </div>
+                </div>
+            </aside>
+
+            <main class="main">
+                <div class="auth-section">
+                    <label>Authorization Token (Bearer)</label>
+                    <input type="text" id="authToken" placeholder="Paste JWT token here...">
+                </div>
+
+                <div class="request-section">
+                    <h3>Request</h3>
+                    <div class="url-bar">
+                        <select id="method">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                        <input type="text" id="url" value="/api/v1/projects" placeholder="/api/v1/...">
+                        <button onclick="sendRequest()">Send</button>
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab active">Body (JSON)</button>
+                    </div>
+                    <textarea id="requestBody" placeholder='{"key": "value"}'>{}</textarea>
+                </div>
+
+                <div class="response-section">
+                    <div class="response-header">
+                        <h3>Response</h3>
+                        <span class="response-status" id="responseStatus"></span>
+                    </div>
+                    <pre id="responseBody">Click "Send" to see response...</pre>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = '/appdev/edonation';
+
+        const sampleBodies = {
+            'POST /api/v1/donations': JSON.stringify({
+                project_number: "P001",
+                type: "บุคคลทั่วไป",
+                phone: "0812345678",
+                amount: 100,
+                needReceipt: true,
+                firstName: "ทดสอบ",
+                lastName: "ระบบ",
+                idCard: "1234567890123",
+                receiptAddress: "123 ถนนทดสอบ",
+                shippingAddress: "123 ถนนทดสอบ"
+            }, null, 2),
+            'POST /api/v1/projects': JSON.stringify({
+                project_number: "P002",
+                project_name: "โครงการใหม่",
+                project_tex: "รายละเอียด"
+            }, null, 2),
+            'POST /api/v1/auth/login': JSON.stringify({
+                username: "admin@cmu.ac.th",
+                password: "password"
+            }, null, 2),
+            'POST /api/v1/receipts/generate': JSON.stringify({
+                donation_id: 1,
+                payer_name: "นายทดสอบ ระบบ",
+                amount: 1000
+            }, null, 2),
+            'POST /api/v1/signatures': JSON.stringify({
+                fiscal_year: 2570,
+                dean_signature: "TCPDF/signature/NewDean.png",
+                dean_name: "(ชื่อคณบดีใหม่)",
+                collector_signature: "TCPDF/signature/signature_collector.png",
+                collector_name: "(นางสาวชนิดา ต้นพิพัฒน์)"
+            }, null, 2),
+            'PUT /api/v1/signatures/2568': JSON.stringify({
+                dean_name: "(ผู้ช่วยศาสตราจารย์ ดร.สุภารัตน์ วังศรีคูณ)",
+                is_active: 1
+            }, null, 2),
+            'POST /api/v1/benefits': JSON.stringify({
+                name: "ขั้นที่ 8 ระดับใหม่",
+                amount: "บริจาค 50,000 บาทขึ้นไป",
+                img_file: "8.jpg",
+                sort_order: 8
+            }, null, 2),
+            'PUT /api/v1/benefits/1': JSON.stringify({
+                name: "ขั้นที่ 1 ปฐมดิเรกคุณากรณ์ (แก้ไข)",
+                amount: "บริจาค 30,000,000 บาทขึ้นไป"
+            }, null, 2),
+            'POST /api/v1/payments/callback': JSON.stringify({
+                transactionId: "TXN123456789",
+                transactionDateandTime: "2024-12-17T14:00:00+07:00",
+                billPaymentRef1: "256800100112345",
+                billPaymentRef2: "1234567890123",
+                amount: "1000.00",
+                payerName: "นายทดสอบ ระบบ",
+                payerAccountName: "นายทดสอบ ระบบ",
+                sendingBankCode: "004"
+            }, null, 2),
+            'POST /api/v1/notifications/send': JSON.stringify({
+                type: "email",
+                to: "test@example.com",
+                subject: "ทดสอบระบบ",
+                message: "ข้อความทดสอบ"
+            }, null, 2)
+        };
+
+        function selectEndpoint(method, url) {
+            document.querySelectorAll('.endpoint').forEach(e => e.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            document.getElementById('method').value = method;
+            document.getElementById('url').value = url;
+
+            const key = method + ' ' + url.split('?')[0];
+            document.getElementById('requestBody').value = sampleBodies[key] || '{}';
+        }
+
+        async function sendRequest() {
+            const method = document.getElementById('method').value;
+            const url = BASE_URL + document.getElementById('url').value;
+            const body = document.getElementById('requestBody').value;
+            const token = document.getElementById('authToken').value;
+
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            };
+
+            if (token) {
+                options.headers['Authorization'] = 'Bearer ' + token;
+            }
+
+            if (method !== 'GET' && body && body !== '{}') {
+                options.body = body;
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+
+                const statusEl = document.getElementById('responseStatus');
+                statusEl.textContent = response.status + ' ' + response.statusText;
+                statusEl.className = 'response-status ' + (response.ok ? 'success' : 'error');
+
+                document.getElementById('responseBody').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('responseStatus').textContent = 'Error';
+                document.getElementById('responseStatus').className = 'response-status error';
+                document.getElementById('responseBody').textContent = error.message;
+            }
+        }
+
+        // Check API status
+        fetch(BASE_URL + '/api/v1')
+            .then(r => r.json())
+            .then(() => {
+                document.getElementById('apiStatus').textContent = 'Online';
+                document.getElementById('apiStatus').className = 'status online';
+            })
+            .catch(() => {
+                document.getElementById('apiStatus').textContent = 'Offline';
+                document.getElementById('apiStatus').style.background = '#ef444433';
+                document.getElementById('apiStatus').style.color = '#ef4444';
+            });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,14 @@
+{
+    "name": "edonation/project",
+    "description": "eDonation Project",
+    "type": "project",
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "ezyang/htmlpurifier": "^4.16",
+        "phpoffice/phpspreadsheet": "^1.29"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist"
+    }
+}
