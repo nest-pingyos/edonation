@@ -19,7 +19,7 @@
 
                 <div class="row">
                     <!-- Search Form Card -->
-                    <div class="col-lg-8 offset-lg-2 mb-4">
+                    <div class="col-lg-12 mb-4">
                         <div class="contact-panel">
                             <form id="searchForm">
                                 <div class="row">
@@ -53,7 +53,7 @@
 
                 <!-- Results Section -->
                 <div class="row mt-30">
-                    <div class="col-lg-8 offset-lg-2">
+                    <div class="col-lg-12">
                         <!-- Loading State -->
                         <div id="loadingState" class="text-center py-5" style="display: none;">
                             <div class="loading"><span></span><span></span><span></span><span></span></div>

@@ -39,56 +39,62 @@ $action = $segments[3] ?? null;
 // Route to controller
 try {
     $response = null;
-    
+
     switch ($resource) {
         case 'projects':
             require_once __DIR__ . '/controllers/ProjectController.php';
             $controller = new ProjectController();
             $response = $controller->handle($method, $id, $action);
             break;
-            
+
         case 'donations':
             require_once __DIR__ . '/controllers/DonationController.php';
             $controller = new DonationController();
             $response = $controller->handle($method, $id, $action);
             break;
-            
+
         case 'receipts':
             require_once __DIR__ . '/controllers/ReceiptController.php';
             $controller = new ReceiptController();
             $response = $controller->handle($method, $id, $action);
             break;
-            
+
         case 'auth':
             require_once __DIR__ . '/controllers/AuthController.php';
             $controller = new AuthController();
             $response = $controller->handle($method, $id, $action);
             break;
-            
-        case 'notifications':
-            require_once __DIR__ . '/controllers/NotificationController.php';
-            $controller = new NotificationController();
-            $response = $controller->handle($method, $id, $action);
-            break;
-            
+
         case 'payments':
             require_once __DIR__ . '/controllers/PaymentController.php';
             $controller = new PaymentController();
             $response = $controller->handle($method, $id, $action);
             break;
-            
+
         case 'signatures':
             require_once __DIR__ . '/controllers/SignatureController.php';
             $controller = new SignatureController();
             $response = $controller->handle($method, $id, $action);
             break;
-            
+
         case 'benefits':
             require_once __DIR__ . '/controllers/BenefitsController.php';
             $controller = new BenefitsController();
             $response = $controller->handle($method, $id, $action);
             break;
-            
+
+        case 'news':
+            require_once __DIR__ . '/controllers/NewsController.php';
+            $controller = new NewsController();
+            $response = $controller->handle($method, $id, $action);
+            break;
+
+        case 'notifications':
+            require_once __DIR__ . '/controllers/NotificationsController.php';
+            $controller = new NotificationsController();
+            $response = $controller->handle($method, $id, $action);
+            break;
+
         default:
             $response = [
                 'success' => true,
@@ -100,13 +106,14 @@ try {
                     'auth' => '/api/v1/auth',
                     'notifications' => '/api/v1/notifications',
                     'payments' => '/api/v1/payments/callback',
-                    'benefits' => '/api/v1/benefits'
+                    'benefits' => '/api/v1/benefits',
+                    'news' => '/api/v1/news'
                 ]
             ];
     }
-    
+
     echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

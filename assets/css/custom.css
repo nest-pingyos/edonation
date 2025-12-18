@@ -6,6 +6,21 @@
 /* =========================================
    Global & Utilities
    ========================================= */
+
+/* Global White Background */
+html, body {
+    background-color: #ffffff !important;
+}
+
+.wrapper {
+    background-color: #ffffff;
+}
+
+/* Main content sections */
+section {
+    background-color: #ffffff;
+}
+
 .btn:disabled,
 .btn[disabled] {
     opacity: 0.65;

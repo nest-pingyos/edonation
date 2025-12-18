@@ -18,19 +18,32 @@ $currentPage = basename(dirname($_SERVER['PHP_SELF']));
       <div class="collapse navbar-collapse" id="mainNavigation">
         <ul class="navbar-nav ml-auto">
           <li class="nav__item">
-            <a href="../home/<?= $langParam ?>" class="nav__item-link <?= $currentPage == 'home' ? 'active' : '' ?>">หน้าหลัก</a>
+            <a href="../home/<?= $langParam ?>"
+              class="nav__item-link <?= $currentPage == 'home' ? 'active' : '' ?>">หน้าหลัก</a>
           </li>
           <li class="nav__item">
-            <a href="../step/<?= $langParam ?>" class="nav__item-link <?= $currentPage == 'step' ? 'active' : '' ?>">ขั้นตอนการบริการ</a>
+            <a href="../projects/<?= $langParam ?>"
+              class="nav__item-link <?= $currentPage == 'projects' ? 'active' : '' ?>">โครงการ</a>
           </li>
           <li class="nav__item">
-            <a href="../benefits/<?= $langParam ?>" class="nav__item-link <?= $currentPage == 'benefits' ? 'active' : '' ?>">สิทธิประโยชน์</a>
+            <a href="../news/<?= $langParam ?>"
+              class="nav__item-link <?= $currentPage == 'news' ? 'active' : '' ?>">ข่าวสาร</a>
           </li>
           <li class="nav__item">
-            <a href="../receipts/<?= $langParam ?>" class="nav__item-link <?= $currentPage == 'receipts' ? 'active' : '' ?>">ค้นหาใบเสร็จ</a>
+            <a href="../step/<?= $langParam ?>"
+              class="nav__item-link <?= $currentPage == 'step' ? 'active' : '' ?>">ขั้นตอนการบริการ</a>
           </li>
           <li class="nav__item">
-            <a href="../contact/<?= $langParam ?>" class="nav__item-link <?= $currentPage == 'contact' ? 'active' : '' ?>">ติดต่อเรา</a>
+            <a href="../benefits/<?= $langParam ?>"
+              class="nav__item-link <?= $currentPage == 'benefits' ? 'active' : '' ?>">สิทธิประโยชน์</a>
+          </li>
+          <li class="nav__item">
+            <a href="../receipts/<?= $langParam ?>"
+              class="nav__item-link <?= $currentPage == 'receipts' ? 'active' : '' ?>">ค้นหาใบเสร็จ</a>
+          </li>
+          <li class="nav__item">
+            <a href="../contact/<?= $langParam ?>"
+              class="nav__item-link <?= $currentPage == 'contact' ? 'active' : '' ?>">ติดต่อเรา</a>
           </li>
           <li class="nav__item d-flex align-items-center">
             <div class="lang-switch">

@@ -7,19 +7,22 @@
  * POST /payments/callback - รับ Callback จากธนาคาร
  */
 
-class PaymentController {
+class PaymentController
+{
     private PDO $pdo;
-    
-    public function __construct() {
+
+    public function __construct()
+    {
         $this->pdo = Database::getInstance();
     }
-    
-    public function handle(string $method, ?string $id, ?string $action): array {
+
+    public function handle(string $method, ?string $id, ?string $action): array
+    {
         // URL: /payments/callback - "callback" comes as $id not $action
         if ($id === 'callback' && $method === 'POST') {
             return $this->callback();
         }
-        
+
         return [
             'resCode' => '01',
             'resDesc' => 'Method not allowed',
@@ -27,7 +30,7 @@ class PaymentController {
             'confirmId' => null
         ];
     }
-    
+
     /**
      * POST /payments/callback
      * รับ Callback จากธนาคาร (ผ่าน recieve.php หรือเรียกตรง)
@@ -53,12 +56,13 @@ class PaymentController {
      *   "transactionType": "Domestic Transfers"
      * }
      */
-    private function callback(): array {
+    private function callback(): array
+    {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
-        
+
         // Log incoming data
         error_log("Payment Callback API: " . json_encode($data, JSON_UNESCAPED_UNICODE));
-        
+
         // Extract all fields
         $payeeProxyId = $data['payeeProxyId'] ?? '';
         $payeeProxyType = $data['payeeProxyType'] ?? '';
@@ -77,7 +81,7 @@ class PaymentController {
         $currencyCode = $data['currencyCode'] ?? '764';
         $channelCode = $data['channelCode'] ?? '';
         $transactionType = $data['transactionType'] ?? '';
-        
+
         // Validate required fields
         if (empty($transactionId) || empty($billPaymentRef1) || empty($amount)) {
             return [
@@ -87,13 +91,13 @@ class PaymentController {
                 'confirmId' => null
             ];
         }
-        
+
         // Validate payeeProxyId (our biller ID)
         $expectedPayeeProxyId = '099400258783792';
         if (!empty($payeeProxyId) && $payeeProxyId !== $expectedPayeeProxyId) {
             error_log("Warning: PayeeProxyId mismatch - Expected: $expectedPayeeProxyId, Got: $payeeProxyId");
         }
-        
+
         // Parse amount
         $amountValue = floatval($amount);
         if ($amountValue <= 0) {
@@ -104,7 +108,7 @@ class PaymentController {
                 'confirmId' => null
             ];
         }
-        
+
         // Parse transaction datetime
         $txnDateTime = null;
         if (!empty($transactionDateandTime)) {
@@ -117,15 +121,15 @@ class PaymentController {
         } else {
             $txnDateTime = date('Y-m-d H:i:s');
         }
-        
+
         try {
             $this->pdo->beginTransaction();
-            
+
             // 1. Check duplicate transactionId in bank_transactions
             $checkDuplicate = $this->pdo->prepare("SELECT id, confirmId FROM bank_transactions WHERE transactionId = :txnId LIMIT 1");
             $checkDuplicate->execute([':txnId' => $transactionId]);
             $existingTxn = $checkDuplicate->fetch();
-            
+
             if ($existingTxn) {
                 $this->pdo->rollBack();
                 return [
@@ -135,7 +139,7 @@ class PaymentController {
                     'confirmId' => $existingTxn['confirmId']
                 ];
             }
-            
+
             // 2. Find donation by billPaymentRef1
             $findDonation = $this->pdo->prepare("
                 SELECT id, amount, status_donat 
@@ -145,7 +149,7 @@ class PaymentController {
             ");
             $findDonation->execute([':ref1' => $billPaymentRef1]);
             $donation = $findDonation->fetch();
-            
+
             if (!$donation) {
                 $this->pdo->rollBack();
                 return [
@@ -155,7 +159,7 @@ class PaymentController {
                     'confirmId' => null
                 ];
             }
-            
+
             // 3. Verify amount
             $expectedAmount = floatval($donation['amount']);
             if (abs($expectedAmount - $amountValue) > 0.01) {
@@ -168,10 +172,10 @@ class PaymentController {
                     'confirmId' => null
                 ];
             }
-            
+
             // 4. Generate confirmId
             $confirmId = 'CNF' . date('YmdHis') . rand(1000, 9999);
-            
+
             // 5. Insert into bank_transactions
             $insertTxn = $this->pdo->prepare("
                 INSERT INTO bank_transactions (
@@ -190,7 +194,7 @@ class PaymentController {
                     :confirmId, 1
                 )
             ");
-            
+
             $insertTxn->execute([
                 ':payeeProxyId' => $payeeProxyId,
                 ':payeeProxyType' => $payeeProxyType,
@@ -211,10 +215,10 @@ class PaymentController {
                 ':transactionType' => $transactionType,
                 ':confirmId' => $confirmId
             ]);
-            
+
             // ดึง bank_transaction_id ทันทีหลัง INSERT
             $bankTransactionId = $this->pdo->lastInsertId();
-            
+
             // 6. Update donat_user status (if not already completed)
             if ($donation['status_donat'] !== 'completed') {
                 $updateDonation = $this->pdo->prepare("
@@ -225,38 +229,38 @@ class PaymentController {
                 ");
                 $updateDonation->execute([':id' => $donation['id']]);
             }
-            
+
             // 7. สร้าง Receipt อัตโนมัติ (ถ้ายังไม่มี)
-            
+
             $checkReceipt = $this->pdo->prepare("SELECT id FROM receipts WHERE donation_id = :did LIMIT 1");
             $checkReceipt->execute([':did' => $donation['id']]);
-            
+
             if (!$checkReceipt->fetch()) {
                 // สร้างเลขที่ใบเสร็จ Format: YYYY-EXXXX
                 $fiscalYear = date('Y') + 543; // พ.ศ.
                 $prefix = $fiscalYear . '-E';
                 $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM receipts WHERE receipt_no LIKE :prefix");
                 $countStmt->execute([':prefix' => $prefix . '%']);
-                $count = (int)$countStmt->fetchColumn() + 1;
+                $count = (int) $countStmt->fetchColumn() + 1;
                 $receiptNo = $prefix . str_pad($count, 4, '0', STR_PAD_LEFT);
-                
+
                 // ดึงชื่อผู้บริจาคจาก donat_user
                 $getDonorName = $this->pdo->prepare("SELECT first_name, last_name FROM donat_user WHERE id = :id");
                 $getDonorName->execute([':id' => $donation['id']]);
                 $donor = $getDonorName->fetch();
                 $payerName = trim(($donor['first_name'] ?? '') . ' ' . ($donor['last_name'] ?? ''));
-                
+
                 // ถ้าไม่มีชื่อใน donat_user ให้ใช้จาก bank callback
                 if (empty($payerName)) {
                     $payerName = $payerAccountName ?: $payerName ?: 'ไม่ระบุชื่อ';
                 }
-                
+
                 // Insert receipt พร้อม bank_transaction_id
                 $insertReceipt = $this->pdo->prepare("
                     INSERT INTO receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at)
                     VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW())
                 ");
-                
+
                 $insertReceipt->execute([
                     ':donation_id' => $donation['id'],
                     ':bank_transaction_id' => $bankTransactionId, // อ้างอิง bank_transactions.id
@@ -264,27 +268,63 @@ class PaymentController {
                     ':payer_name' => $payerName,
                     ':amount' => $amountValue
                 ]);
-                
+
                 error_log("Receipt created automatically - ReceiptNo: $receiptNo, DonationId: " . $donation['id'] . ", BankTxnId: $bankTransactionId");
             }
-            
+
             $this->pdo->commit();
-            
+
             error_log("Payment processed successfully - TxnId: $transactionId, ConfirmId: $confirmId, DonationId: " . $donation['id']);
-            
+
+            // 8. ส่งแจ้งเตือน LINE OA (หลังจาก commit สำเร็จ)
+            try {
+                require_once __DIR__ . '/../services/LineNotificationService.php';
+                $lineNotifier = new LineNotificationService();
+
+                // ดึงชื่อโครงการ (ใช้ COLLATE เพื่อแก้ปัญหา collation mismatch)
+                $getProject = $this->pdo->prepare("
+                    SELECT p.project_name 
+                    FROM donat_user d
+                    JOIN projects p ON d.project_number COLLATE utf8mb4_unicode_ci = p.project_number COLLATE utf8mb4_unicode_ci
+                    WHERE d.id = :id
+                ");
+                $getProject->execute([':id' => $donation['id']]);
+                $project = $getProject->fetch();
+                $projectName = $project['project_name'] ?? 'ไม่ระบุโครงการ';
+
+                // ดึงชื่อผู้บริจาค
+                $getDonor = $this->pdo->prepare("SELECT first_name, last_name FROM donat_user WHERE id = :id");
+                $getDonor->execute([':id' => $donation['id']]);
+                $donorInfo = $getDonor->fetch();
+                $donorName = trim(($donorInfo['first_name'] ?? '') . ' ' . ($donorInfo['last_name'] ?? ''));
+
+                // ส่งแจ้งเตือน
+                $notifyResult = $lineNotifier->sendPaymentSuccessNotification(
+                    (int) $donation['id'],
+                    $amountValue,
+                    $projectName,
+                    $donorName
+                );
+
+                error_log("LINE Notification result: " . json_encode($notifyResult, JSON_UNESCAPED_UNICODE));
+            } catch (Exception $notifyError) {
+                // ไม่ให้ error การแจ้งเตือนมีผลกับ response
+                error_log("LINE Notification Error: " . $notifyError->getMessage());
+            }
+
             return [
                 'resCode' => '00',
                 'resDesc' => 'success',
                 'transactionId' => $transactionId,
                 'confirmId' => $confirmId
             ];
-            
+
         } catch (PDOException $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             error_log("Payment Callback DB Error: " . $e->getMessage());
-            
+
             return [
                 'resCode' => '99',
                 'resDesc' => 'Database error',
@@ -296,7 +336,7 @@ class PaymentController {
                 $this->pdo->rollBack();
             }
             error_log("Payment Callback Error: " . $e->getMessage());
-            
+
             return [
                 'resCode' => '99',
                 'resDesc' => 'Internal error',

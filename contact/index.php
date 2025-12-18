@@ -17,52 +17,52 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-lg-6 offset-lg-3 mb-4">
-                        <div class="contact-panel">
+                    <div class="col-lg-12 mb-4">
+                        <div class="contact-panel"
+                            style="background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 40px;">
                             <div class="contact-panel__form">
                                 <div class="row">
                                     <div class="col-12 mb-4">
-                                        <h5 class="contact-panel__title mb-20">คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่</h5>
+                                        <h5 class="contact-panel__title mb-20"
+                                            style="font-size: 1.5rem; color: #1a3a5c; font-weight: 700;">คณะพยาบาลศาสตร์
+                                            มหาวิทยาลัยเชียงใหม่</h5>
                                     </div>
 
-                                    <!-- Address -->
-                                    <div class="col-12 mb-4">
-                                        <div class="d-flex align-items-start">
-                                            <i class="icon-location mr-3" style="font-size: 24px; color: #FB974E; margin-top: 3px;"></i>
-                                            <div>
-                                                <strong>ที่อยู่</strong>
-                                                <p class="mb-0 mt-1 text-muted">
-                                                    110/406 ถนนอินทวโรรส ตำบลศรีภูมิ อำเภอเมือง จังหวัดเชียงใหม่ 50200<br>
-                                                    <small>Faculty of Nursing, Chiang Mai University</small>
-                                                </p>
-                                            </div>
+                                    <!-- Contact Items Grid -->
+                                    <div class="col-lg-4 col-md-6 mb-4">
+                                        <div class="contact-item"
+                                            style="background: #f8f9fa; border-radius: 12px; padding: 24px; height: 100%; transition: all 0.3s ease;">
+                                            <strong style="font-size: 1.1rem; color: #1a3a5c; display: block; margin-bottom: 12px;">ที่อยู่</strong>
+                                            <p class="mb-0 text-muted" style="line-height: 1.7;">
+                                                110/406 ถนนอินทวโรรส ตำบลศรีภูมิ อำเภอเมือง จังหวัดเชียงใหม่ 50200<br>
+                                                <small style="color: #888;">Faculty of Nursing, Chiang Mai University</small>
+                                            </p>
                                         </div>
                                     </div>
 
                                     <!-- Phone -->
-                                    <div class="col-12 mb-4">
-                                        <div class="d-flex align-items-start">
-                                            <i class="icon-phone mr-3" style="font-size: 24px; color: #FB974E; margin-top: 3px;"></i>
-                                            <div>
-                                                <strong>โทรศัพท์</strong>
-                                                <p class="mb-0 mt-1">
-                                                    <a href="tel:053949075" class="text-muted">053-949075</a> , 
-                                                    <a href="tel:053949127" class="text-muted">053-949127</a>
-                                                </p>
-                                            </div>
+                                    <div class="col-lg-4 col-md-6 mb-4">
+                                        <div class="contact-item"
+                                            style="background: #f8f9fa; border-radius: 12px; padding: 24px; height: 100%; transition: all 0.3s ease;">
+                                            <strong style="font-size: 1.1rem; color: #1a3a5c; display: block; margin-bottom: 12px;">โทรศัพท์</strong>
+                                            <p class="mb-0">
+                                                <a href="tel:053949075" class="d-block"
+                                                    style="color: #00a651; font-weight: 500; text-decoration: none;">053-949075</a>
+                                                <a href="tel:053949127" class="d-block mt-1"
+                                                    style="color: #00a651; font-weight: 500; text-decoration: none;">053-949127</a>
+                                            </p>
                                         </div>
                                     </div>
 
                                     <!-- Hours -->
-                                    <div class="col-12">
-                                        <div class="d-flex align-items-start">
-                                            <i class="icon-clock mr-3" style="font-size: 24px; color: #FB974E; margin-top: 3px;"></i>
-                                            <div>
-                                                <strong>เวลาทำการ</strong>
-                                                <p class="mb-0 mt-1 text-muted">
-                                                    วันจันทร์ - วันศุกร์ เวลา 08:30 น. - 16:30 น.
-                                                </p>
-                                            </div>
+                                    <div class="col-lg-4 col-md-12 mb-4">
+                                        <div class="contact-item"
+                                            style="background: #f8f9fa; border-radius: 12px; padding: 24px; height: 100%; transition: all 0.3s ease;">
+                                            <strong style="font-size: 1.1rem; color: #1a3a5c; display: block; margin-bottom: 12px;">เวลาทำการ</strong>
+                                            <p class="mb-0 text-muted" style="line-height: 1.7;">
+                                                วันจันทร์ - วันศุกร์<br>
+                                                <span style="color: #1a3a5c; font-weight: 500;">08:30 น. - 16:30 น.</span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -80,4 +80,5 @@
     <script src="../assets/js/plugins.js"></script>
     <script src="../assets/js/main.js"></script>
 </body>
+
 </html>
