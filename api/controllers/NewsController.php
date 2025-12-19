@@ -71,7 +71,7 @@ class NewsController
         $sql = "SELECT id, title, excerpt, content, img_file, category, 
                        author, published_at, is_featured, is_active, 
                        view_count, created_at, updated_at 
-                FROM news";
+                FROM edonation_news";
 
         $where = [];
         $params = [];
@@ -112,7 +112,7 @@ class NewsController
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get total count
-        $countSql = "SELECT COUNT(*) FROM news";
+        $countSql = "SELECT COUNT(*) FROM edonation_news";
         if (!empty($where)) {
             $countSql .= " WHERE " . implode(' AND ', $where);
         }
@@ -153,7 +153,7 @@ class NewsController
         $sql = "SELECT id, title, excerpt, content, img_file, category,
                        author, published_at, is_featured, is_active, 
                        view_count, created_at, updated_at 
-                FROM news WHERE id = :id LIMIT 1";
+                FROM edonation_news WHERE id = :id LIMIT 1";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -163,7 +163,7 @@ class NewsController
         }
 
         // Increment view count
-        $updateSql = "UPDATE news SET view_count = view_count + 1 WHERE id = :id";
+        $updateSql = "UPDATE edonation_news SET view_count = view_count + 1 WHERE id = :id";
         $updateStmt = $this->pdo->prepare($updateSql);
         $updateStmt->execute([':id' => $id]);
         $result['view_count']++;
@@ -196,7 +196,7 @@ class NewsController
         if (!$v->passes())
             return Response::validation($v->errors());
 
-        $sql = "INSERT INTO news (title, excerpt, content, img_file, category, 
+        $sql = "INSERT INTO edonation_news (title, excerpt, content, img_file, category, 
                                   author, published_at, is_featured, is_active)
                 VALUES (:title, :excerpt, :content, :img_file, :category,
                         :author, :published_at, :is_featured, :is_active)";
@@ -230,7 +230,7 @@ class NewsController
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         // Check if news exists
-        $checkSql = "SELECT id FROM news WHERE id = :id";
+        $checkSql = "SELECT id FROM edonation_news WHERE id = :id";
         $checkStmt = $this->pdo->prepare($checkSql);
         $checkStmt->execute([':id' => $id]);
 
@@ -268,7 +268,7 @@ class NewsController
         // Add updated_at
         $updates[] = "updated_at = NOW()";
 
-        $sql = "UPDATE news SET " . implode(', ', $updates) . " WHERE id = :id";
+        $sql = "UPDATE edonation_news SET " . implode(', ', $updates) . " WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
 
@@ -284,7 +284,7 @@ class NewsController
     private function delete(string $id): array
     {
         // Check if news exists
-        $checkSql = "SELECT id FROM news WHERE id = :id";
+        $checkSql = "SELECT id FROM edonation_news WHERE id = :id";
         $checkStmt = $this->pdo->prepare($checkSql);
         $checkStmt->execute([':id' => $id]);
 
@@ -292,7 +292,7 @@ class NewsController
             return Response::notFound('ไม่พบข่าวนี้');
         }
 
-        $sql = "DELETE FROM news WHERE id = :id";
+        $sql = "DELETE FROM edonation_news WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
 

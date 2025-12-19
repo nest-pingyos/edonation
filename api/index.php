@@ -26,7 +26,10 @@ require_once __DIR__ . '/config/bootstrap.php';
 // Get request info
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$uri = str_replace('/appdev/edonation/api', '', $uri);
+
+// ใช้ BASE_PATH จาก env config (รองรับทั้ง Production และ Testing)
+$apiBasePath = (defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation') . '/api';
+$uri = str_replace($apiBasePath, '', $uri);
 $uri = trim($uri, '/');
 $segments = $uri ? explode('/', $uri) : [];
 

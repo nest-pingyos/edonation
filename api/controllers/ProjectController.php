@@ -39,7 +39,7 @@ class ProjectController {
             $offset = ($page - 1) * $limit;
             
             // Simple query without status filter first
-            $sql = "SELECT * FROM projects ORDER BY id DESC LIMIT :limit OFFSET :offset";
+            $sql = "SELECT * FROM edonation_projects ORDER BY id DESC LIMIT :limit OFFSET :offset";
             
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -76,7 +76,7 @@ class ProjectController {
     private function show(string $id): array {
         try {
             $stmt = $this->pdo->prepare(
-                "SELECT * FROM projects WHERE id = :id OR project_number = :pn LIMIT 1"
+                "SELECT * FROM edonation_projects WHERE id = :id OR project_number = :pn LIMIT 1"
             );
             $stmt->execute([':id' => $id, ':pn' => $id]);
             $project = $stmt->fetch();
@@ -114,7 +114,7 @@ class ProjectController {
         
         try {
             // Check existing columns
-            $columnsStmt = $this->pdo->query("SHOW COLUMNS FROM projects");
+            $columnsStmt = $this->pdo->query("SHOW COLUMNS FROM edonation_projects");
             $columns = array_column($columnsStmt->fetchAll(), 'Field');
             
             // Build dynamic insert based on available columns
@@ -137,7 +137,7 @@ class ProjectController {
                 $params[':status'] = $data['status'] ?? 'active';
             }
             
-            $sql = "INSERT INTO projects (" . implode(', ', $insertCols) . ") VALUES (" . implode(', ', $insertVals) . ")";
+            $sql = "INSERT INTO edonation_projects (" . implode(', ', $insertCols) . ") VALUES (" . implode(', ', $insertVals) . ")";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
             
@@ -164,7 +164,7 @@ class ProjectController {
         
         if (empty($fields)) return Response::error('NO_DATA', 'ไม่มีข้อมูลที่จะอัปเดต');
         
-        $sql = "UPDATE projects SET " . implode(', ', $fields) . " WHERE id = :id";
+        $sql = "UPDATE edonation_projects SET " . implode(', ', $fields) . " WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         

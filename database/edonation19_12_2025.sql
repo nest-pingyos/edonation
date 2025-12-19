@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 18, 2025 at 03:21 AM
+-- Generation Time: Dec 19, 2025 at 08:01 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -24,10 +24,10 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `bank_transactions`
+-- Table structure for table `edonation_bank_transactions`
 --
 
-CREATE TABLE `bank_transactions` (
+CREATE TABLE `edonation_bank_transactions` (
   `id` int(11) NOT NULL,
   `payeeProxyId` varchar(50) DEFAULT NULL,
   `payeeProxyType` varchar(20) DEFAULT NULL,
@@ -51,26 +51,13 @@ CREATE TABLE `bank_transactions` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `bank_transactions`
---
-
-INSERT INTO `bank_transactions` (`id`, `payeeProxyId`, `payeeProxyType`, `payeeAccountNumber`, `payeeName`, `payerAccountNumber`, `payerAccountName`, `payerName`, `sendingBankCode`, `receivingBankCode`, `amount`, `transactionId`, `transactionDateandTime`, `billPaymentRef1`, `billPaymentRef2`, `currencyCode`, `channelCode`, `transactionType`, `confirmId`, `processed`, `created_at`) VALUES
-(9, '099400258783792', 'BILLERID', '5663044095', 'FACULTY OF NURSING CMU', '5662488652', 'พัชรพล ปิงยศ', 'พัชรพล ปิงยศ', '014', '014', 5000.00, '59a2d569b8d5418a96c77507393d4b9a', '2025-11-04 09:39:56', '256812120646207', '1500701252396', '764', 'PMH', 'Domestic Transfers', 'CNF202512170708437424', 1, '2025-12-17 06:08:43'),
-(10, '099400258783792', 'BILLERID', '5663044095', 'FACULTY OF NURSING CMU', '5662488652', 'พัชรพล ปิงยศ', 'พัชรพล ปิงยศ', '014', '014', 5000.00, '60a2d569b8d5418a96c77507393d4b9a', '2025-11-04 09:39:56', '256812120786256', '1500701252395', '764', 'PMH', 'Domestic Transfers', 'CNF202512170713026916', 1, '2025-12-17 06:13:02'),
-(11, '099400258783792', 'BILLERID', '5663044095', 'FACULTY OF NURSING CMU', '5662488652', 'พัชรพล ปิงยศ', 'พัชรพล ปิงยศ', '014', '014', 2000000.00, '61a2d569b8d5418a96c77507393d4b9a', '2025-11-04 09:39:56', '256812120693036', '1500701252395', '764', 'PMH', 'Domestic Transfers', 'CNF202512170736474757', 1, '2025-12-17 06:36:47'),
-(12, '099400258783792', 'BILLERID', '5663044095', 'FACULTY OF NURSING CMU', '5662488652', 'พัชรพล ปิงยศ', 'พัชรพล ปิงยศ', '014', '014', 100.00, '62b2d569b8d5418a96c77507393d4b9a', '2025-11-04 09:39:56', '256812120650218', '1500701252395', '764', 'PMH', 'Domestic Transfers', 'CNF202512170745475065', 1, '2025-12-17 06:45:47'),
-(13, '099400258783792', 'BILLERID', '5663044095', 'FACULTY OF NURSING CMU', '5662488652', 'พัชรพล ปิงยศ', 'พัชรพล ปิงยศ', '014', '014', 100.00, '62b2d569b8d5418a96c87507393d4b9a', '2025-11-04 09:39:56', '256812120631756', '1500701252395', '764', 'PMH', 'Domestic Transfers', 'CNF202512170816209514', 1, '2025-12-17 07:16:20'),
-(14, '099400258783792', 'BILLERID', '5663044095', 'FACULTY OF NURSING CMU', '5662488652', 'พัชรพล ปิงยศ', 'พัชรพล ปิงยศ', '014', '014', 1000.00, '62b2d569b8a5418a96c87507393d4b9a', '2025-11-04 09:39:56', '256812120738510', '1500701252395', '764', 'PMH', 'Domestic Transfers', 'CNF202512170822458560', 1, '2025-12-17 07:22:45'),
-(15, '099400258783792', 'BILLERID', '5663044095', 'FACULTY OF NURSING CMU', '5662488652', 'พัชรพล ปิงยศ', 'พัชรพล ปิงยศ', '014', '014', 500.00, '62b2d569b8a5418a96c87507394d4b9a', '2025-11-04 09:39:56', '256812120634109', '1500701252395', '764', 'PMH', 'Domestic Transfers', 'CNF202512170831059468', 1, '2025-12-17 07:31:05');
-
 -- --------------------------------------------------------
 
 --
--- Table structure for table `benefits`
+-- Table structure for table `edonation_benefits`
 --
 
-CREATE TABLE `benefits` (
+CREATE TABLE `edonation_benefits` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL COMMENT 'ชื่อระดับ เช่น ขั้นที่ 1 ปฐมดิเรกคุณากรณ์',
   `amount` varchar(100) NOT NULL COMMENT 'ยอดเงินบริจาค เช่น บริจาค 30,000,000 บาทขึ้นไป',
@@ -83,10 +70,10 @@ CREATE TABLE `benefits` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ตารางระดับผู้มีอุปการคุณ';
 
 --
--- Dumping data for table `benefits`
+-- Dumping data for table `edonation_benefits`
 --
 
-INSERT INTO `benefits` (`id`, `name`, `amount`, `img_file`, `description`, `sort_order`, `is_active`, `created_at`, `updated_at`) VALUES
+INSERT INTO `edonation_benefits` (`id`, `name`, `amount`, `img_file`, `description`, `sort_order`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 'ขั้นที่ 1 ปฐมดิเรกคุณากรณ์', 'บริจาค 30,000,000 บาทขึ้นไป', '1.jpg', NULL, 1, 1, '2025-12-17 07:41:11', '2025-12-17 07:41:11'),
 (2, 'ขั้นที่ 2 ทุติยดิเรกคุณาภรณ์', 'บริจาค 14,000,000 บาทขึ้นไป', '2.jpg', NULL, 2, 1, '2025-12-17 07:41:11', '2025-12-17 07:41:11'),
 (3, 'ขั้นที่ 3 ตติยดิเรกคุณาภรณ์', 'บริจาค 6,000,000 บาทขึ้นไป', '3.jpg', NULL, 3, 1, '2025-12-17 07:41:11', '2025-12-17 07:41:11'),
@@ -98,10 +85,10 @@ INSERT INTO `benefits` (`id`, `name`, `amount`, `img_file`, `description`, `sort
 -- --------------------------------------------------------
 
 --
--- Table structure for table `donat_user`
+-- Table structure for table `edonation_donat_user`
 --
 
-CREATE TABLE `donat_user` (
+CREATE TABLE `edonation_donat_user` (
   `id` int(11) NOT NULL,
   `billPaymentRef1` varchar(50) NOT NULL,
   `project_number` varchar(20) NOT NULL,
@@ -121,29 +108,95 @@ CREATE TABLE `donat_user` (
   `shipping_address` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `donat_user`
---
-
-INSERT INTO `donat_user` (`id`, `billPaymentRef1`, `project_number`, `project_name`, `type`, `phone`, `amount`, `fiscal_year`, `status_donat`, `payby`, `receiptDate`, `need_receipt`, `first_name`, `last_name`, `id_card`, `receipt_address`, `shipping_address`, `created_at`, `updated_at`) VALUES
-(25, '256812120646207', '121206', 'กองทุนวิจัยและนวัตกรรม', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 5000.00, 2568, 'completed', 'QR PromptPay', '2025-12-17', 1, 'พัชรพล', 'ปิงยศ', '1-5007-01252-39-5', 'คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', '2025-12-17 06:08:23', '2025-12-17 06:08:43'),
-(26, '256812120786256', '121207', 'กองทุนพัฒนาอาคารสถานที่', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 5000.00, 2568, 'completed', 'QR PromptPay', '2025-12-17', 0, NULL, NULL, NULL, NULL, NULL, '2025-12-17 06:12:36', '2025-12-17 06:13:02'),
-(27, '256812120693036', '121206', 'กองทุนวิจัยและนวัตกรรม', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 2000000.00, 2568, 'completed', 'QR PromptPay', '2025-12-17', 0, NULL, NULL, NULL, NULL, NULL, '2025-12-17 06:36:24', '2025-12-17 06:36:47'),
-(28, '256812120650218', '121206', 'กองทุนวิจัยและนวัตกรรม', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 100.00, 2567, 'completed', 'QR PromptPay', '2025-12-17', 1, 'พัชรพล', 'ปิงยศ', '1-5007-01252-39-5', 'คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่\n110/406 ถนนอินทวโรรส ตำบลสุเทพ อำเภอเมือง จังหวัดเชียงใหม่ 50200', 'คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่\n110/406 ถนนอินทวโรรส ตำบลสุเทพ อำเภอเมือง จังหวัดเชียงใหม่ 50200', '2025-12-17 06:45:04', '2025-12-17 07:09:28'),
-(29, '256812120714881', '121207', 'กองทุนพัฒนาอาคารสถานที่', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 100.00, 2568, 'pending', 'QR PromptPay', '2025-12-17', 0, NULL, NULL, NULL, NULL, NULL, '2025-12-17 07:12:10', '2025-12-17 07:12:10'),
-(30, '256812120631756', '121206', 'กองทุนวิจัยและนวัตกรรม', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 100.00, 2568, 'completed', 'QR PromptPay', '2025-12-17', 0, NULL, NULL, NULL, NULL, NULL, '2025-12-17 07:16:04', '2025-12-17 07:16:20'),
-(31, '256812120738510', '121207', 'กองทุนพัฒนาอาคารสถานที่', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 1000.00, 2568, 'completed', 'QR PromptPay', '2025-12-17', 0, NULL, NULL, NULL, NULL, NULL, '2025-12-17 07:22:25', '2025-12-17 07:22:45'),
-(32, '256812120634109', '121206', 'บริจาคเพื่อระดมพลัง เร่งรัดปรับปรุงคุณภาพ คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'ศิษย์เก่าคณะพยาบาล มช.', '0903821777', 500.00, 2568, 'completed', 'QR PromptPay', '2025-12-17', 0, NULL, NULL, NULL, NULL, NULL, '2025-12-17 07:30:21', '2025-12-17 07:31:05');
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `projects`
+-- Table structure for table `edonation_news`
 --
 
-CREATE TABLE `projects` (
+CREATE TABLE `edonation_news` (
+  `id` int(11) NOT NULL,
+  `title` varchar(500) NOT NULL COMMENT 'หัวข้อข่าว',
+  `excerpt` varchar(1000) DEFAULT NULL COMMENT 'เนื้อหาย่อ',
+  `content` text DEFAULT NULL COMMENT 'เนื้อหาเต็ม',
+  `img_file` varchar(255) DEFAULT NULL COMMENT 'ชื่อไฟล์รูปภาพ',
+  `category` varchar(50) DEFAULT 'general' COMMENT 'หมวดหมู่ข่าว',
+  `author` varchar(255) DEFAULT NULL COMMENT 'ผู้เขียน',
+  `published_at` datetime DEFAULT NULL COMMENT 'วันที่เผยแพร่',
+  `is_featured` tinyint(1) DEFAULT 0 COMMENT 'ข่าวเด่น',
+  `is_active` tinyint(1) DEFAULT 1 COMMENT 'สถานะเผยแพร่',
+  `view_count` int(11) DEFAULT 0 COMMENT 'จำนวนการเข้าชม',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Ó©òÓ©▓Ó©úÓ©▓Ó©çÓ©éÓ╣êÓ©▓Ó©ºÓ©¬Ó©▓Ó©ú';
+
+--
+-- Dumping data for table `edonation_news`
+--
+
+INSERT INTO `edonation_news` (`id`, `title`, `excerpt`, `content`, `img_file`, `category`, `author`, `published_at`, `is_featured`, `is_active`, `view_count`, `created_at`, `updated_at`) VALUES
+(4, 'นศ.ผู้ช่วยพยาบาล มช. รับมอบทุนการศึกษาจาก Chiang Mai International Rotary Club  ', 'ผู้ช่วยศาสตราจารย์ ดร.สุภารัตน์ วังศรีคูณ คณบดี พร้อมด้วยคณะผู้บริหารและอาจารย์ คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่ ร่วมเป็นสักขีพยานในการรับมอบทุนการศึกษา จาก Mr. David A. Lucero ประธานคณะกรรมการทุนการศึกษาในนามของสโมสรโรตารีอินเตอร์เนชั่นแนล (Chiang Mai International Rotary Club)', 'ผู้ช่วยศาสตราจารย์ ดร.สุภารัตน์ วังศรีคูณ คณบดี พร้อมด้วยคณะผู้บริหารและอาจารย์ คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่ ร่วมเป็นสักขีพยานในการรับมอบทุนการศึกษา จาก Mr. David A. Lucero ประธานคณะกรรมการทุนการศึกษาในนามของสโมสรโรตารีอินเตอร์เนชั่นแนล (Chiang Mai International Rotary Club) เพื่อสนับสนุนการศึกษาของนักศึกษาหลักสูตรประกาศนียบัตรผู้ช่วยพยาบาลของคณะฯ (Practical Nursing Program) จำนวน 3 ทุน รวม 90,000 บาท (เก้าหมื่นบาทถ้วน) ณ ห้องรับรองสำนักงานคณบดี อาคาร 4 เมื่อวันพฤหัสบดีที่ 4 ธันวาคม 2568', '46371.jpg', 'general', 'Admin', '2025-12-18 10:02:30', 1, 1, 9, '2025-12-18 03:02:30', '2025-12-18 03:44:32'),
+(5, 'ขอขอบคุณผู้มีอุปการคุณทุกท่าน', 'คณะพยาบาลศาสตร์ขอขอบคุณผู้มีอุปการคุณทุกท่านที่ร่วมบริจาค', 'คณะพยาบาลศาสตร์ขอขอบคุณผู้มีอุปการคุณทุกท่านที่ร่วมบริจาคเพื่อสนับสนุนกิจกรรมต่างๆ ของคณะ', '46371.jpg', 'thank', 'Admin', '2025-12-18 10:02:30', 0, 1, 0, '2025-12-18 03:02:30', '2025-12-18 03:36:15'),
+(6, 'ประกาศผลการมอบทุนการศึกษา ประจำปี 2568', 'ประกาศรายชื่อนักศึกษาที่ได้รับทุนการศึกษาจากเงินบริจาค', 'ประกาศรายชื่อนักศึกษาที่ได้รับทุนการศึกษาจากเงินบริจาคของผู้มีอุปการคุณ ประจำปีการศึกษา 2568', '46371.jpg', 'announcement', 'Admin', '2025-12-18 10:02:30', 0, 1, 0, '2025-12-18 03:02:30', '2025-12-18 03:36:16'),
+(7, 'ประกาศผลการมอบทุนการศึกษา ประจำปี 2568', 'ประกาศรายชื่อนักศึกษาที่ได้รับทุนการศึกษาจากเงินบริจาค', 'ประกาศรายชื่อนักศึกษาที่ได้รับทุนการศึกษาจากเงินบริจาคของผู้มีอุปการคุณ ประจำปีการศึกษา 2568', '46371.jpg', 'announcement', 'Admin', '2025-12-18 10:02:30', 0, 1, 0, '2025-12-18 03:02:30', '2025-12-18 03:36:18');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `edonation_notification_logs`
+--
+
+CREATE TABLE `edonation_notification_logs` (
+  `id` int(11) NOT NULL,
+  `notification_type` varchar(50) NOT NULL,
+  `recipient_email` varchar(255) NOT NULL,
+  `message` text DEFAULT NULL,
+  `status` enum('pending','sent','failed') DEFAULT 'pending',
+  `response` text DEFAULT NULL,
+  `reference_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `edonation_notification_logs`
+--
+
+INSERT INTO `edonation_notification_logs` (`id`, `notification_type`, `recipient_email`, `message`, `status`, `response`, `reference_id`, `created_at`) VALUES
+(16, 'payment_success', 'phatcharapon.p@cmu.ac.th', 'แจ้งเตือนการชำระเงินบริจาค\n━━━━━━━━━━━━\nโครงการ: บริจาคเพื่อสาธารณะประโยชน์และการกุศลอื่น ๆ\nจำนวน: 1,000.00 บาท\nเวลา: 18 ธ.ค. 2568 13:45', 'sent', '\"Success\"', 41, '2025-12-18 06:45:38'),
+(17, 'payment_success', 'phatcharapon.p@cmu.ac.th', 'แจ้งเตือนการชำระเงินบริจาค\n━━━━━━━━━━━━\nโครงการ: โครงการทดสอบระบบ\nจำนวน: 1,000.00 บาท\nผู้บริจาค: ผู้ทดสอบระบบ\nเวลา: 18 ธ.ค. 2568 13:45', 'sent', '\"Success\"', 999, '2025-12-18 06:45:38');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `edonation_notification_recipients`
+--
+
+CREATE TABLE `edonation_notification_recipients` (
+  `id` int(11) NOT NULL,
+  `notification_type` varchar(50) NOT NULL,
+  `recipient_email` varchar(255) NOT NULL,
+  `cmu_account` varchar(255) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `edonation_notification_recipients`
+--
+
+INSERT INTO `edonation_notification_recipients` (`id`, `notification_type`, `recipient_email`, `cmu_account`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'payment_success', 'phatcharapon.p@cmu.ac.th', 'phatcharapon.p@cmu.ac.th', 1, '2025-12-18 04:44:04', '2025-12-18 06:13:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `edonation_projects`
+--
+
+CREATE TABLE `edonation_projects` (
   `id` int(11) NOT NULL,
   `project_number` varchar(20) NOT NULL COMMENT 'รหัสโครงการ เช่น P001',
   `project_name` varchar(255) NOT NULL COMMENT 'ชื่อโครงการ',
@@ -165,10 +218,10 @@ CREATE TABLE `projects` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `projects`
+-- Dumping data for table `edonation_projects`
 --
 
-INSERT INTO `projects` (`id`, `project_number`, `project_name`, `project_name_en`, `description`, `short_description`, `image_url`, `thumbnail_url`, `target_amount`, `current_amount`, `donor_count`, `status`, `is_featured`, `display_order`, `start_date`, `end_date`, `created_at`, `updated_at`) VALUES
+INSERT INTO `edonation_projects` (`id`, `project_number`, `project_name`, `project_name_en`, `description`, `short_description`, `image_url`, `thumbnail_url`, `target_amount`, `current_amount`, `donor_count`, `status`, `is_featured`, `display_order`, `start_date`, `end_date`, `created_at`, `updated_at`) VALUES
 (1, '121205', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', NULL, 'สนับสนุนทุนการศึกษาแก่นักศึกษาคณะพยาบาลศาสตร์ที่ขาดแคลนทุนทรัพย์', 'สนับสนุนทุนการศึกษานักศึกษา', 'pro-1.jpg', NULL, 0.00, 0.00, 0, 'active', 1, 1, NULL, NULL, '2025-12-15 04:53:53', '2025-12-17 08:51:01'),
 (2, '121206', 'บริจาคเพื่อระดมพลัง เร่งรัดปรับปรุงคุณภาพ คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', NULL, 'สนับสนุนการวิจัยและพัฒนานวัตกรรมทางการพยาบาล', 'สนับสนุนงานวิจัยด้านพยาบาล', 'pro-2.jpg', NULL, 0.00, 0.00, 0, 'active', 1, 2, NULL, NULL, '2025-12-15 04:53:53', '2025-12-17 08:51:07'),
 (3, '121207', 'บริจาคเพื่อสาธารณะประโยชน์และการกุศลอื่น ๆ', NULL, 'ปรับปรุงและพัฒนาอาคารเรียนและห้องปฏิบัติการ', 'พัฒนาอาคารและสถานที่', 'pro-3.jpg', NULL, 0.00, 0.00, 0, 'active', 1, 3, NULL, NULL, '2025-12-15 04:53:53', '2025-12-17 08:51:14');
@@ -176,10 +229,10 @@ INSERT INTO `projects` (`id`, `project_number`, `project_name`, `project_name_en
 -- --------------------------------------------------------
 
 --
--- Table structure for table `receipts`
+-- Table structure for table `edonation_receipts`
 --
 
-CREATE TABLE `receipts` (
+CREATE TABLE `edonation_receipts` (
   `id` int(11) NOT NULL,
   `donation_id` int(11) NOT NULL COMMENT 'FK to donat_user.id',
   `bank_transaction_id` int(11) DEFAULT NULL COMMENT 'FK to bank_transactions.id',
@@ -190,21 +243,13 @@ CREATE TABLE `receipts` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ตารางใบเสร็จรับเงิน';
 
---
--- Dumping data for table `receipts`
---
-
-INSERT INTO `receipts` (`id`, `donation_id`, `bank_transaction_id`, `receipt_no`, `payer_name`, `amount`, `issued_at`, `created_at`) VALUES
-(6, 31, 14, '2568-E0001', 'พัชรพล ปิงยศ', 1000.00, '2025-12-17 14:22:45', '2025-12-17 07:22:45'),
-(7, 32, 15, '2568-E0002', 'พัชรพล ปิงยศ', 500.00, '2025-12-17 14:31:05', '2025-12-17 07:31:05');
-
 -- --------------------------------------------------------
 
 --
--- Table structure for table `receipt_2566`
+-- Table structure for table `edonation_receipt_2566`
 --
 
-CREATE TABLE `receipt_2566` (
+CREATE TABLE `edonation_receipt_2566` (
   `id` int(11) NOT NULL,
   `payerAccountName` varchar(255) NOT NULL,
   `billPaymentRef2` varchar(255) NOT NULL,
@@ -236,10 +281,10 @@ CREATE TABLE `receipt_2566` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `receipt_2566`
+-- Dumping data for table `edonation_receipt_2566`
 --
 
-INSERT INTO `receipt_2566` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `type`, `type_profile`, `email`, `phone`, `amount`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `project_name`, `status_donat`, `payby`, `servce`, `gift`, `cc_email`, `comment`, `status_payment`, `url`, `created_at`, `receiptDate`) VALUES
+INSERT INTO `edonation_receipt_2566` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `type`, `type_profile`, `email`, `phone`, `amount`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `project_name`, `status_donat`, `payby`, `servce`, `gift`, `cc_email`, `comment`, `status_payment`, `url`, `created_at`, `receiptDate`) VALUES
 (1, 'นาง ศรรยา ธรรมมงคล อินทรวิชัย', '5100500105430', '661212050000001', '-', 'person', '', '0814285828', 50000.00, '328 ', 'กรุงเทพมหานคร', 'แขวงเสนานิคม', 'เขตจตุจักร', '', '2566', '121205', 'E0001', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน / Prompt Pay', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=1&table=receipt_2566', '0000-00-00 00:00:00', '7/19/2023'),
 (2, 'นางสาว อุบลรัตน์ เมฆาสุวรรณดำรง', '3101701920411', '661212050000002', '-', 'person', '', '', 2000.00, '', '', '', '', '', '2566', '121205', 'E0002', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน / Prompt Pay', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=2&table=receipt_2566', '0000-00-00 00:00:00', '7/19/2023'),
 (3, 'นางสาว สุธาทิพย์ อุปลาบัติ', '3509901166829', '661212050000003', '-', 'person', '', '', 5000.00, '15/3-4', 'จ.อุบลราชธานี', 'อ.พิบูลมังสาหาร', 'ต.พิบูล', '', '2566', '121205', 'E0003', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'เงินสด / Cash', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=3&table=receipt_2566', '0000-00-00 00:00:00', '7/20/2023'),
@@ -316,10 +361,10 @@ INSERT INTO `receipt_2566` (`id`, `payerAccountName`, `billPaymentRef2`, `billPa
 -- --------------------------------------------------------
 
 --
--- Table structure for table `receipt_2567`
+-- Table structure for table `edonation_receipt_2567`
 --
 
-CREATE TABLE `receipt_2567` (
+CREATE TABLE `edonation_receipt_2567` (
   `id` int(11) NOT NULL,
   `payerAccountName` varchar(255) NOT NULL,
   `billPaymentRef2` varchar(255) NOT NULL,
@@ -351,10 +396,10 @@ CREATE TABLE `receipt_2567` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `receipt_2567`
+-- Dumping data for table `edonation_receipt_2567`
 --
 
-INSERT INTO `receipt_2567` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `type`, `type_profile`, `email`, `phone`, `amount`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `project_name`, `status_donat`, `payby`, `servce`, `gift`, `cc_email`, `comment`, `status_payment`, `url`, `created_at`, `receiptDate`) VALUES
+INSERT INTO `edonation_receipt_2567` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `type`, `type_profile`, `email`, `phone`, `amount`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `project_name`, `status_donat`, `payby`, `servce`, `gift`, `cc_email`, `comment`, `status_payment`, `url`, `created_at`, `receiptDate`) VALUES
 (1, 'นาย ต่อพงษ์ บุญมาประเสริฐ', '3509901156611', '661212050000073', '-', 'person', '', '0897567888', 10000.00, '67 เวียงพิงค์', 'จ. เชียงใหม่', 'อ. เมืองเชียงใหม่', 'ต. ช้างคลาน', '', '2567', '121205', 'E0001', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน / Prompt Pay', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=1&table=receipt_2567', '0000-00-00 00:00:00', '2023-10-04'),
 (2, ' Fongkum Hall', '', '661212050000074', '-', 'person', '', '', 900000.00, ' ', '', '', '', '', '2567', '121205', 'E0002', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'เช็ค / Cheque', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=2&table=receipt_2567', '0000-00-00 00:00:00', '2023-10-05'),
 (3, ' มูลนิธิชิน โสภณพนิช ', '0993000156013', '661212050000090', '-', 'corporation', '', '026621119', 552000.00, '319/1 ซอยสุขุมวิท 31 (สวัสดี) ถนนสุขุมวิท แขวงคลองตันเหนือ เขตวัฒนา', 'กรุงเทพฯ ', '', '', '10110', '2567', '121205', 'E0003', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'เช็ค / Cheque', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=3&table=receipt_2567', '0000-00-00 00:00:00', '2023-10-12'),
@@ -462,7 +507,7 @@ INSERT INTO `receipt_2567` (`id`, `payerAccountName`, `billPaymentRef2`, `billPa
 (105, 'นางสาว วรนุช  กิตสัมบันท์', '3509901194318', '671212050000328', '-', 'person', '', '', 28000.00, ' ', '', '', '', '', '2567', '121205', 'E0105', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน / Prompt Pay', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=105&table=receipt_2567', '0000-00-00 00:00:00', '2024-05-13'),
 (106, 'นาง สินี อารีเจริญเลิศ', '3101200518521', '671212050000329', '-', 'person', '', '', 100000.00, ' ', '', '', '', '', '2567', '121205', 'E0106', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน / Prompt Pay', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=106&table=receipt_2567', '0000-00-00 00:00:00', '2024-05-14'),
 (107, ' TPAA FOUNDATION ', '', '671212050000330', '-', 'corporation', '', '', 255270.70, ' ', '', '', '', '', '2567', '121205', 'E0107', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน / Prompt Pay', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=107&table=receipt_2567', '0000-00-00 00:00:00', '2024-05-17');
-INSERT INTO `receipt_2567` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `type`, `type_profile`, `email`, `phone`, `amount`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `project_name`, `status_donat`, `payby`, `servce`, `gift`, `cc_email`, `comment`, `status_payment`, `url`, `created_at`, `receiptDate`) VALUES
+INSERT INTO `edonation_receipt_2567` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `type`, `type_profile`, `email`, `phone`, `amount`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `project_name`, `status_donat`, `payby`, `servce`, `gift`, `cc_email`, `comment`, `status_payment`, `url`, `created_at`, `receiptDate`) VALUES
 (108, 'นางสาว นัทธมน วุทธานนท์', '', '671212050000331', '-', 'person', '', '', 200000.00, ' ', '', '', '', '', '2567', '121205', 'E0108', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'เงินสด / Cash', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=108&table=receipt_2567', '0000-00-00 00:00:00', '2024-05-17'),
 (109, 'นาย Komsan Singhatong', '3101402280517', '671212050000333', '-', 'person', 'ksinghatong@gmail.com', '0816451424', 100.00, '39/4 Mooban Whiang Phing Villa ', 'จ. Thailand', 'อ. Doi Saket', 'ต. Talad Kwan', '50220', '2567', '121205', 'E0109', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'QR CODE', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=109&table=receipt_2567', '0000-00-00 00:00:00', '2024-05-20'),
 (110, 'นาง ศรรยา ธรรมมงคล อินทรวิชัย', '5100500105430', '671212050000334', '-', 'person', '', '0814285828', 50000.00, '328 ซ.พหลโยธิน40 แขวงเสนานิคม เขตจตุจักร กรุงเทพมหานคร', '', '', '', '', '2567', '121205', 'E0110', 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน / Prompt Pay', '-', 1, 1, '', 'confirm', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_maker.php?id=110&table=receipt_2567', '0000-00-00 00:00:00', '2024-05-27'),
@@ -534,10 +579,10 @@ INSERT INTO `receipt_2567` (`id`, `payerAccountName`, `billPaymentRef2`, `billPa
 -- --------------------------------------------------------
 
 --
--- Table structure for table `receipt_2568`
+-- Table structure for table `edonation_receipt_2568`
 --
 
-CREATE TABLE `receipt_2568` (
+CREATE TABLE `edonation_receipt_2568` (
   `id` int(11) NOT NULL,
   `payerAccountName` varchar(255) DEFAULT NULL,
   `billPaymentRef2` varchar(255) DEFAULT NULL,
@@ -570,10 +615,10 @@ CREATE TABLE `receipt_2568` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `receipt_2568`
+-- Dumping data for table `edonation_receipt_2568`
 --
 
-INSERT INTO `receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `transactionId`, `amount`, `type`, `type_profile`, `email`, `phone`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `shipping_status`, `last_shipped_at`, `project_name`, `status_donat`, `payby`, `servce`, `status_payment`, `url`, `comment`, `created_at`, `receiptDate`) VALUES
+INSERT INTO `edonation_receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `transactionId`, `amount`, `type`, `type_profile`, `email`, `phone`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `shipping_status`, `last_shipped_at`, `project_name`, `status_donat`, `payby`, `servce`, `status_payment`, `url`, `comment`, `created_at`, `receiptDate`) VALUES
 (1, 'นางสาว กาญจนา ธานะ', '3501200249950', '671212060000416', '', 500.00, 'บุคคลทั่วไป', 'บุคคลทั่วไป', 'kanjana.th@cmu.ac.th', '0890449777', '50 ม.2', 'เชียงใหม่', 'สันป่าตอง', 'บ้านกลาง', '50120', '2568', '121206', 'E0001', 'pending', NULL, 'บริจาคเพื่อสนับสนุนการศึกษาคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'online', 'QR CODE', 'ไม่ได้รับของที่ระลึก', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=1&table=receipt_2568', '', '2024-11-10 22:56:15', '2024-10-01'),
 (2, 'มูลนิธิชิน โสภณพนิช', '0993000156013', '671212050000417', '', 504000.00, 'บุคคลทั่วไป', 'นิติบุคคล', '', '', '319/1 ซอยสุขุมวิท 31 (สวัสดี) ถนนสุขุมวิท แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110', '', '', '', '', '2568', '121205', 'E0002', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'เช็ค / Cheque (ฺBBL เลขที่14470859 ลว.16ต.ค.67)', 'ขวดน้ำเก็บความร้อน-เย็น', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=2&table=receipt_2568', '', '2024-11-10 22:56:15', '2024-10-18'),
 (3, 'นางสาว จิตตาภรณ์ จิตรีเชื้อ', '3120101409064', '671212050000418', '', 10000.00, 'บุคคลทั่วไป', 'บุคคลทั่วไป', '', '0869104151', '126/105 หมู่ที่ 2', 'เชียงใหม่', 'เมืองเชียงใหม่', 'ป่าแดด', '', '2568', '121205', 'E0003', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'เงินสด / Cash', 'กระเป๋าถือกันน้ำ', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=3&table=receipt_2568', '', '2024-11-10 22:56:15', '2024-10-22'),
@@ -672,7 +717,7 @@ INSERT INTO `receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPa
 (96, 'นางอารยา อินทชัย', '3500700631127', 'F67121206000096', '', 1000.00, 'ศิษย์เก่าคณะพยาบาล มช.', 'บุคคลทั่วไป', '', '0816719478', '5 ถ.กู่เต้า ซอย 2 ต.ช้างเผือก อ.เมือง จ.เชียงใหม่ 50300', '', '', '', '', '2568', '121206', 'E0096', 'pending', NULL, 'บริจาคเพื่อสนับสนุนการศึกษาคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'Griptok', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=96&table=receipt_2568', 'DN 18', '2024-12-11 04:09:40', '2024-12-11'),
 (97, 'นางสาวพรรณงาม พิมพ์ชู', '3609900826735', 'F67121206000097', '', 8000.00, 'ศิษย์เก่าคณะพยาบาล มช.', 'บุคคลทั่วไป', '', '0816811562', '99/15 หมู่9 หมู่บ้านกุลพันธ์วิลล์ โครงการ 8 ต.หนองควาย อ.หางดง จ.เชียงใหม่ 50230', '', '', '', '', '2568', '121206', 'E0097', 'pending', NULL, 'บริจาคเพื่อสนับสนุนการศึกษาคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'จานรองแก้วเซรามิค', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=97&table=receipt_2568', 'DN 18', '2024-12-11 04:10:46', '2024-12-11'),
 (98, 'นางอรจิรา เลิศมีมงคลชัย', '3509900405625', 'F67121206000098', '', 3000.00, 'ศิษย์เก่าคณะพยาบาล มช.', 'บุคคลทั่วไป', '', '0896340993', '171/38 กุลพันธุ์วิลล์10 ซอย7 ถ.สันกำแพงสายใหม่ ต.ไชยสถาน อ.สารภี จ.เชียงใหม่ 50140', '', '', '', '', '2568', '121206', 'E0098', 'pending', NULL, 'บริจาคเพื่อสนับสนุนการศึกษาคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'Griptok', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=98&table=receipt_2568', 'DN 18', '2024-12-11 04:12:02', '2024-12-11');
-INSERT INTO `receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `transactionId`, `amount`, `type`, `type_profile`, `email`, `phone`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `shipping_status`, `last_shipped_at`, `project_name`, `status_donat`, `payby`, `servce`, `status_payment`, `url`, `comment`, `created_at`, `receiptDate`) VALUES
+INSERT INTO `edonation_receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `transactionId`, `amount`, `type`, `type_profile`, `email`, `phone`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `shipping_status`, `last_shipped_at`, `project_name`, `status_donat`, `payby`, `servce`, `status_payment`, `url`, `comment`, `created_at`, `receiptDate`) VALUES
 (99, 'นายชูศักดิ์ พัฒนา', '3560300149832', 'F67121206000099', '', 2000.00, 'ศิษย์เก่าคณะพยาบาล มช.', 'บุคคลทั่วไป', '', '0815688200', '70/3 หมู่4 หมู่บ้านริมธาร ต.รอบเวียง อ.เมือง เชียงราย 57000', '', '', '', '', '2568', '121206', 'E0099', 'pending', NULL, 'บริจาคเพื่อสนับสนุนการศึกษาคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'Griptok', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=99&table=receipt_2568', 'DN 18', '2024-12-11 04:13:06', '2024-12-11'),
 (100, 'นางวรรณา  ดำเนินสวัสดิ์', '3609700357952', 'F67121206000100', '', 10000.00, 'ศิษย์เก่าคณะพยาบาล มช.', 'บุคคลทั่วไป', '', '0818839952', 'สำนักงานสาธารณสุขจังหวัดลำปาง เลขที่ 3 ถนนป่าขาม ตำบลหัวเวียง อำเภอเมืองลำปาง จังหวัดลำปาง 52100', '', '', '', '', '2568', '121206', 'E0100', 'pending', NULL, 'บริจาคเพื่อสนับสนุนการศึกษาคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'จานรองแก้วเซรามิค', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=100&table=receipt_2568', 'DN 18', '2024-12-11 04:14:11', '2024-12-11'),
 (101, 'นางสาวพิมพิมล วงศ์ไชยา', '3560101151632', 'F67121206000101', '', 5000.00, 'ศิษย์เก่าคณะพยาบาล มช.', 'บุคคลทั่วไป', '', '0819616204', '106 หมู่ 17 ตำบลบ้านต๋อม อำเภอเมือง จังหวัดพะเยา 56000', '', '', '', '', '2568', '121206', 'E0101', 'pending', NULL, 'บริจาคเพื่อสนับสนุนการศึกษาคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'จานรองแก้วเซรามิค', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=101&table=receipt_2568', 'DN 18', '2024-12-11 04:15:09', '2024-12-11'),
@@ -771,7 +816,7 @@ INSERT INTO `receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPa
 (194, 'นายศรัญญู  เพ็งศิริ', '3629900009303', 'F68121205000194', 'TXN_942f015b5daa0', 10000.00, 'บุคคลทั่วไป', 'บุคคลทั่วไป', 'Cocoakp67@gmail.com', '08461333703', '256/15 หมู่ 13 ถนนลำปาง-งาว', 'จ. ลำปาง', 'อ. เมืองลำปาง', 'ต. พิชัย', '52000', '2568', '121205', 'E0194', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'เงินสด/Cash', 'จานรองแก้วเซรามิค', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=194&table=receipt_2568', '', '2025-03-25 03:20:31', '2025-03-25'),
 (195, 'นายแพทย์วิเชษฐ์ และคุณสมพร บุณยปรีดี', '', 'F68121205000195', 'TXN_f13c7cd39fa94', 96000.00, 'บุคคลทั่วไป', 'บุคคลทั่วไป', '', '', '', '', '', '', '', '2568', '121205', 'E0195', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'ขวดน้ำเก็บความร้อน-เย็น', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=195&table=receipt_2568', 'เงินโอนวันที่ 24 มีนาคม 2568 (ผ่านหน่วยกิจการนักศึกษา)', '2025-03-31 07:14:13', '2025-03-31'),
 (196, 'สมาคมศิษย์เก่าแพทย์เชียงใหม่ โดยศิษย์เก่าแพทย์เชียงใหม่ในอเมริกา', '', 'F68121205000196', 'TXN_cd70eb5eb2020', 72000.00, 'บุคคลทั่วไป', 'นิติบุคคล', '', '', '', '', '', '', '', '2568', '121205', 'E0196', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'ขวดน้ำเก็บความร้อน-เย็น', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=196&table=receipt_2568', 'เงินโอนวันที่ 24 มีนาคม 2568 (ผ่านหน่วยกิจการนักศึกษา)', '2025-03-31 07:15:38', '2025-03-31');
-INSERT INTO `receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `transactionId`, `amount`, `type`, `type_profile`, `email`, `phone`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `shipping_status`, `last_shipped_at`, `project_name`, `status_donat`, `payby`, `servce`, `status_payment`, `url`, `comment`, `created_at`, `receiptDate`) VALUES
+INSERT INTO `edonation_receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPaymentRef1`, `transactionId`, `amount`, `type`, `type_profile`, `email`, `phone`, `address`, `province`, `amphure`, `district`, `zip_code`, `fiscal_year`, `project_number`, `receipt_no`, `shipping_status`, `last_shipped_at`, `project_name`, `status_donat`, `payby`, `servce`, `status_payment`, `url`, `comment`, `created_at`, `receiptDate`) VALUES
 (197, 'สมาคมศิษย์เก่าแพทย์เชียงใหม่ โดยศิษย์เก่าแพทย์เชียงใหม่ในอเมริกา', '', 'F68121205000197', 'TXN_ff46e4d6e1635', 72000.00, 'บุคคลทั่วไป', 'นิติบุคคล', '', '', '', '', '', '', '', '2568', '121205', 'E0197', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'ขวดน้ำเก็บความร้อน-เย็น', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=197&table=receipt_2568', 'เงินโอนวันที่ 24 มีนาคม 2568 (ผ่านหน่วยกิจการนักศึกษา)', '2025-03-31 07:16:24', '2025-03-31'),
 (198, 'สมาคมศิษย์เก่าแพทย์เชียงใหม่ โดยศิษย์เก่าแพทย์เชียงใหม่ในอเมริกา', '', 'F68121205000198', 'TXN_4a7586e08885a', 72000.00, 'บุคคลทั่วไป', 'นิติบุคคล', '', '', '', '', '', '', '', '2568', '121205', 'E0198', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'ขวดน้ำเก็บความร้อน-เย็น', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=198&table=receipt_2568', 'เงินโอนวันที่ 24 มีนาคม 2568 (ผ่านหน่วยกิจการนักศึกษา)', '2025-03-31 07:17:08', '2025-03-31'),
 (199, 'สมาคมศิษย์เก่าแพทย์เชียงใหม่ โดยศิษย์เก่าแพทย์เชียงใหม่ในอเมริกา', '', 'F68121205000199', 'TXN_d479f612a0944', 72000.00, 'บุคคลทั่วไป', 'นิติบุคคล', '', '', '', '', '', '', '', '2568', '121205', 'E0199', 'pending', NULL, 'บริจาคเพื่อการศึกษา เพื่อเป็นทุนการศึกษานักศึกษาพยาบาลศาสตร์  มหาวิทยาลัยเชียงใหม่', 'offline', 'โอน/Prompt Pay', 'ขวดน้ำเก็บความร้อน-เย็น', 'activation', 'https://app.nurse.cmu.ac.th/edonation/list/pdf_receipt_2568.php?id=199&table=receipt_2568', 'เงินโอนวันที่ 24 มีนาคม 2568 (ผ่านหน่วยกิจการนักศึกษา)', '2025-03-31 07:18:10', '2025-03-31'),
@@ -863,10 +908,10 @@ INSERT INTO `receipt_2568` (`id`, `payerAccountName`, `billPaymentRef2`, `billPa
 -- --------------------------------------------------------
 
 --
--- Table structure for table `signature_config`
+-- Table structure for table `edonation_signature_config`
 --
 
-CREATE TABLE `signature_config` (
+CREATE TABLE `edonation_signature_config` (
   `id` int(11) NOT NULL,
   `fiscal_year` int(4) NOT NULL COMMENT 'ปีงบประมาณ (พ.ศ.)',
   `dean_signature` varchar(255) NOT NULL COMMENT 'Path ไฟล์ลายเซ็นคณบดี',
@@ -879,10 +924,10 @@ CREATE TABLE `signature_config` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ตาราง config ลายเซ็นตามปีงบประมาณ';
 
 --
--- Dumping data for table `signature_config`
+-- Dumping data for table `edonation_signature_config`
 --
 
-INSERT INTO `signature_config` (`id`, `fiscal_year`, `dean_signature`, `dean_name`, `collector_signature`, `collector_name`, `is_active`, `created_at`, `updated_at`) VALUES
+INSERT INTO `edonation_signature_config` (`id`, `fiscal_year`, `dean_signature`, `dean_name`, `collector_signature`, `collector_name`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 2566, 'TCPDF/signature/Thanee_2567.png', '(ผู้ช่วยศาสตราจารย์ ดร.ธานี แก้วธรรมานุกูล)', 'TCPDF/signature/signature_collector.png', '(นางสาวชนิดา ต้นพิพัฒน์)', 1, '2025-12-17 07:06:39', '2025-12-17 07:06:39'),
 (2, 2567, 'TCPDF/signature/Thanee_2567.png', '(ผู้ช่วยศาสตราจารย์ ดร.ธานี แก้วธรรมานุกูล)', 'TCPDF/signature/signature_collector.png', '(นางสาวชนิดา ต้นพิพัฒน์)', 1, '2025-12-17 07:06:39', '2025-12-17 07:06:39'),
 (3, 2568, 'TCPDF/signature/Suparat_2568.png', '(ผู้ช่วยศาสตราจารย์ ดร.สุภารัตน์ วังศรีคูณ)', 'TCPDF/signature/signature_collector.png', '(นางสาวชนิดา ต้นพิพัฒน์)', 1, '2025-12-17 07:06:39', '2025-12-17 07:06:39'),
@@ -893,33 +938,60 @@ INSERT INTO `signature_config` (`id`, `fiscal_year`, `dean_signature`, `dean_nam
 --
 
 --
--- Indexes for table `bank_transactions`
+-- Indexes for table `edonation_bank_transactions`
 --
-ALTER TABLE `bank_transactions`
+ALTER TABLE `edonation_bank_transactions`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `transactionId` (`transactionId`),
   ADD KEY `idx_ref1` (`billPaymentRef1`),
   ADD KEY `idx_txn` (`transactionId`);
 
 --
--- Indexes for table `benefits`
+-- Indexes for table `edonation_benefits`
 --
-ALTER TABLE `benefits`
+ALTER TABLE `edonation_benefits`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_sort_order` (`sort_order`),
   ADD KEY `idx_is_active` (`is_active`);
 
 --
--- Indexes for table `donat_user`
+-- Indexes for table `edonation_donat_user`
 --
-ALTER TABLE `donat_user`
+ALTER TABLE `edonation_donat_user`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `billPaymentRef1` (`billPaymentRef1`);
 
 --
--- Indexes for table `projects`
+-- Indexes for table `edonation_news`
 --
-ALTER TABLE `projects`
+ALTER TABLE `edonation_news`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_category` (`category`),
+  ADD KEY `idx_published_at` (`published_at`),
+  ADD KEY `idx_is_active` (`is_active`),
+  ADD KEY `idx_is_featured` (`is_featured`);
+
+--
+-- Indexes for table `edonation_notification_logs`
+--
+ALTER TABLE `edonation_notification_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_notification_type` (`notification_type`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- Indexes for table `edonation_notification_recipients`
+--
+ALTER TABLE `edonation_notification_recipients`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_notification_type` (`notification_type`),
+  ADD KEY `idx_is_active` (`is_active`);
+
+--
+-- Indexes for table `edonation_projects`
+--
+ALTER TABLE `edonation_projects`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `project_number` (`project_number`),
   ADD KEY `idx_status` (`status`),
@@ -927,9 +999,9 @@ ALTER TABLE `projects`
   ADD KEY `idx_display_order` (`display_order`);
 
 --
--- Indexes for table `receipts`
+-- Indexes for table `edonation_receipts`
 --
-ALTER TABLE `receipts`
+ALTER TABLE `edonation_receipts`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `receipt_no` (`receipt_no`),
   ADD UNIQUE KEY `donation_id` (`donation_id`),
@@ -939,29 +1011,29 @@ ALTER TABLE `receipts`
   ADD KEY `idx_issued_at` (`issued_at`);
 
 --
--- Indexes for table `receipt_2566`
+-- Indexes for table `edonation_receipt_2566`
 --
-ALTER TABLE `receipt_2566`
+ALTER TABLE `edonation_receipt_2566`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `receipt_2567`
+-- Indexes for table `edonation_receipt_2567`
 --
-ALTER TABLE `receipt_2567`
+ALTER TABLE `edonation_receipt_2567`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `receipt_2568`
+-- Indexes for table `edonation_receipt_2568`
 --
-ALTER TABLE `receipt_2568`
+ALTER TABLE `edonation_receipt_2568`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_shipping_status` (`shipping_status`),
   ADD KEY `idx_last_shipped_at` (`last_shipped_at`);
 
 --
--- Indexes for table `signature_config`
+-- Indexes for table `edonation_signature_config`
 --
-ALTER TABLE `signature_config`
+ALTER TABLE `edonation_signature_config`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `fiscal_year` (`fiscal_year`),
   ADD KEY `idx_is_active` (`is_active`);
@@ -971,57 +1043,75 @@ ALTER TABLE `signature_config`
 --
 
 --
--- AUTO_INCREMENT for table `bank_transactions`
+-- AUTO_INCREMENT for table `edonation_bank_transactions`
 --
-ALTER TABLE `bank_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+ALTER TABLE `edonation_bank_transactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `benefits`
+-- AUTO_INCREMENT for table `edonation_benefits`
 --
-ALTER TABLE `benefits`
+ALTER TABLE `edonation_benefits`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT for table `donat_user`
+-- AUTO_INCREMENT for table `edonation_donat_user`
 --
-ALTER TABLE `donat_user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+ALTER TABLE `edonation_donat_user`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `projects`
+-- AUTO_INCREMENT for table `edonation_news`
 --
-ALTER TABLE `projects`
+ALTER TABLE `edonation_news`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `edonation_notification_logs`
+--
+ALTER TABLE `edonation_notification_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
+-- AUTO_INCREMENT for table `edonation_notification_recipients`
+--
+ALTER TABLE `edonation_notification_recipients`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `edonation_projects`
+--
+ALTER TABLE `edonation_projects`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `receipts`
+-- AUTO_INCREMENT for table `edonation_receipts`
 --
-ALTER TABLE `receipts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+ALTER TABLE `edonation_receipts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
--- AUTO_INCREMENT for table `receipt_2566`
+-- AUTO_INCREMENT for table `edonation_receipt_2566`
 --
-ALTER TABLE `receipt_2566`
+ALTER TABLE `edonation_receipt_2566`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
--- AUTO_INCREMENT for table `receipt_2567`
+-- AUTO_INCREMENT for table `edonation_receipt_2567`
 --
-ALTER TABLE `receipt_2567`
+ALTER TABLE `edonation_receipt_2567`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=176;
 
 --
--- AUTO_INCREMENT for table `receipt_2568`
+-- AUTO_INCREMENT for table `edonation_receipt_2568`
 --
-ALTER TABLE `receipt_2568`
+ALTER TABLE `edonation_receipt_2568`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=284;
 
 --
--- AUTO_INCREMENT for table `signature_config`
+-- AUTO_INCREMENT for table `edonation_signature_config`
 --
-ALTER TABLE `signature_config`
+ALTER TABLE `edonation_signature_config`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 COMMIT;
 

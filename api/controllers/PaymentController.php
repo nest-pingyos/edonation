@@ -126,7 +126,7 @@ class PaymentController
             $this->pdo->beginTransaction();
 
             // 1. Check duplicate transactionId in bank_transactions
-            $checkDuplicate = $this->pdo->prepare("SELECT id, confirmId FROM bank_transactions WHERE transactionId = :txnId LIMIT 1");
+            $checkDuplicate = $this->pdo->prepare("SELECT id, confirmId FROM edonation_bank_transactions WHERE transactionId = :txnId LIMIT 1");
             $checkDuplicate->execute([':txnId' => $transactionId]);
             $existingTxn = $checkDuplicate->fetch();
 
@@ -143,7 +143,7 @@ class PaymentController
             // 2. Find donation by billPaymentRef1
             $findDonation = $this->pdo->prepare("
                 SELECT id, amount, status_donat 
-                FROM donat_user 
+                FROM edonation_donat_user 
                 WHERE billPaymentRef1 = :ref1 
                 LIMIT 1
             ");
@@ -176,9 +176,9 @@ class PaymentController
             // 4. Generate confirmId
             $confirmId = 'CNF' . date('YmdHis') . rand(1000, 9999);
 
-            // 5. Insert into bank_transactions
+            // 5. Insert INTO edonation_bank_transactions
             $insertTxn = $this->pdo->prepare("
-                INSERT INTO bank_transactions (
+                INSERT INTO edonation_bank_transactions (
                     payeeProxyId, payeeProxyType, payeeAccountNumber, payeeName,
                     payerAccountNumber, payerAccountName, payerName,
                     sendingBankCode, receivingBankCode, amount,
@@ -219,10 +219,10 @@ class PaymentController
             // ดึง bank_transaction_id ทันทีหลัง INSERT
             $bankTransactionId = $this->pdo->lastInsertId();
 
-            // 6. Update donat_user status (if not already completed)
+            // 6. UPDATE edonation_donat_user status (if not already completed)
             if ($donation['status_donat'] !== 'completed') {
                 $updateDonation = $this->pdo->prepare("
-                    UPDATE donat_user 
+                    UPDATE edonation_donat_user 
                     SET status_donat = 'completed',
                         updated_at = NOW()
                     WHERE id = :id
@@ -232,20 +232,20 @@ class PaymentController
 
             // 7. สร้าง Receipt อัตโนมัติ (ถ้ายังไม่มี)
 
-            $checkReceipt = $this->pdo->prepare("SELECT id FROM receipts WHERE donation_id = :did LIMIT 1");
+            $checkReceipt = $this->pdo->prepare("SELECT id FROM edonation_receipts WHERE donation_id = :did LIMIT 1");
             $checkReceipt->execute([':did' => $donation['id']]);
 
             if (!$checkReceipt->fetch()) {
                 // สร้างเลขที่ใบเสร็จ Format: YYYY-EXXXX
                 $fiscalYear = date('Y') + 543; // พ.ศ.
                 $prefix = $fiscalYear . '-E';
-                $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM receipts WHERE receipt_no LIKE :prefix");
+                $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE receipt_no LIKE :prefix");
                 $countStmt->execute([':prefix' => $prefix . '%']);
                 $count = (int) $countStmt->fetchColumn() + 1;
                 $receiptNo = $prefix . str_pad($count, 4, '0', STR_PAD_LEFT);
 
                 // ดึงชื่อผู้บริจาคจาก donat_user
-                $getDonorName = $this->pdo->prepare("SELECT first_name, last_name FROM donat_user WHERE id = :id");
+                $getDonorName = $this->pdo->prepare("SELECT first_name, last_name FROM edonation_donat_user WHERE id = :id");
                 $getDonorName->execute([':id' => $donation['id']]);
                 $donor = $getDonorName->fetch();
                 $payerName = trim(($donor['first_name'] ?? '') . ' ' . ($donor['last_name'] ?? ''));
@@ -257,7 +257,7 @@ class PaymentController
 
                 // Insert receipt พร้อม bank_transaction_id
                 $insertReceipt = $this->pdo->prepare("
-                    INSERT INTO receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at)
+                    INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at)
                     VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW())
                 ");
 
@@ -284,8 +284,8 @@ class PaymentController
                 // ดึงชื่อโครงการ (ใช้ COLLATE เพื่อแก้ปัญหา collation mismatch)
                 $getProject = $this->pdo->prepare("
                     SELECT p.project_name 
-                    FROM donat_user d
-                    JOIN projects p ON d.project_number COLLATE utf8mb4_unicode_ci = p.project_number COLLATE utf8mb4_unicode_ci
+                    FROM edonation_donat_user d
+                    JOIN edonation_projects p ON d.project_number COLLATE utf8mb4_unicode_ci = p.project_number COLLATE utf8mb4_unicode_ci
                     WHERE d.id = :id
                 ");
                 $getProject->execute([':id' => $donation['id']]);
@@ -293,7 +293,7 @@ class PaymentController
                 $projectName = $project['project_name'] ?? 'ไม่ระบุโครงการ';
 
                 // ดึงชื่อผู้บริจาค
-                $getDonor = $this->pdo->prepare("SELECT first_name, last_name FROM donat_user WHERE id = :id");
+                $getDonor = $this->pdo->prepare("SELECT first_name, last_name FROM edonation_donat_user WHERE id = :id");
                 $getDonor->execute([':id' => $donation['id']]);
                 $donorInfo = $getDonor->fetch();
                 $donorName = trim(($donorInfo['first_name'] ?? '') . ' ' . ($donorInfo['last_name'] ?? ''));

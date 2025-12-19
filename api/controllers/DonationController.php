@@ -94,7 +94,7 @@ class DonationController
 
         try {
             $stmt = $this->pdo->prepare(
-                "INSERT INTO donat_user (
+                "INSERT INTO edonation_donat_user (
                     billPaymentRef1, project_number, project_name, type, phone, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
                     need_receipt, first_name, last_name, id_card, receipt_address, shipping_address
@@ -106,7 +106,7 @@ class DonationController
             );
 
             // Get project name
-            $projectStmt = $this->pdo->prepare("SELECT project_name FROM projects WHERE project_number = :pn");
+            $projectStmt = $this->pdo->prepare("SELECT project_name FROM edonation_projects WHERE project_number = :pn");
             $projectStmt->execute([':pn' => $data['project_number']]);
             $project = $projectStmt->fetch();
 
@@ -148,7 +148,7 @@ class DonationController
     {
         try {
             $stmt = $this->pdo->prepare(
-                "SELECT * FROM donat_user WHERE id = :id"
+                "SELECT * FROM edonation_donat_user WHERE id = :id"
             );
             $stmt->execute([':id' => $id]);
             $donation = $stmt->fetch();
@@ -182,7 +182,7 @@ class DonationController
     {
         try {
             // First get the donation record with user details
-            $donationStmt = $this->pdo->prepare("SELECT id, billPaymentRef1, status_donat, need_receipt, first_name, last_name, amount FROM donat_user WHERE id = :id");
+            $donationStmt = $this->pdo->prepare("SELECT id, billPaymentRef1, status_donat, need_receipt, first_name, last_name, amount FROM edonation_donat_user WHERE id = :id");
             $donationStmt->execute([':id' => $id]);
             $donation = $donationStmt->fetch();
 
@@ -194,7 +194,7 @@ class DonationController
             $bankStmt = $this->pdo->prepare("
                 SELECT transactionId, transactionDateandTime, payerName, payerAccountName,
                        sendingBankCode, amount, confirmId, created_at
-                FROM bank_transactions 
+                FROM edonation_bank_transactions 
                 WHERE billPaymentRef1 = :ref1 
                 ORDER BY created_at DESC 
                 LIMIT 1
@@ -230,13 +230,13 @@ class DonationController
 
                     // Update status to completed if not already
                     if ($donation['status_donat'] !== 'completed') {
-                        $upd = $this->pdo->prepare("UPDATE donat_user SET status_donat = 'completed' WHERE id = :id");
+                        $upd = $this->pdo->prepare("UPDATE edonation_donat_user SET status_donat = 'completed' WHERE id = :id");
                         $upd->execute([':id' => $id]);
                     }
 
                     // --- Receipt Generation Logic ---
                     // Check if receipt exists
-                    $receiptStmt = $this->pdo->prepare("SELECT id, receipt_no FROM receipts WHERE donation_id = :did");
+                    $receiptStmt = $this->pdo->prepare("SELECT id, receipt_no FROM edonation_receipts WHERE donation_id = :did");
                     $receiptStmt->execute([':did' => $donation['id']]);
                     $receipt = $receiptStmt->fetch();
 
@@ -253,7 +253,7 @@ class DonationController
                             $prefix = $buddhistYear . '-E';
 
                             // Lock rows for reading max number (SAFE)
-                            $maxStmt = $this->pdo->prepare("SELECT MAX(receipt_no) as max_no FROM receipts WHERE receipt_no LIKE :prefix FOR UPDATE");
+                            $maxStmt = $this->pdo->prepare("SELECT MAX(receipt_no) as max_no FROM edonation_receipts WHERE receipt_no LIKE :prefix FOR UPDATE");
                             $maxStmt->execute([':prefix' => $prefix . '%']);
                             $maxRow = $maxStmt->fetch();
 
@@ -266,7 +266,7 @@ class DonationController
                             $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
 
                             // 3. Insert Receipt
-                            $insReceipt = $this->pdo->prepare("INSERT INTO receipts (donation_id, receipt_no, payer_name, amount, issued_at) VALUES (:did, :rno, :pname, :amt, NOW())");
+                            $insReceipt = $this->pdo->prepare("INSERT INTO edonation_receipts (donation_id, receipt_no, payer_name, amount, issued_at) VALUES (:did, :rno, :pname, :amt, NOW())");
                             $insReceipt->execute([
                                 ':did' => $donation['id'],
                                 ':rno' => $receiptNo,

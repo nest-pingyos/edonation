@@ -14,13 +14,18 @@ class LineNotificationService
     private bool $isEnabled = true;
 
     // ==========================================
-    // ตั้งค่าคงที่ (Hardcoded Settings)
+    // ตั้งค่าคงที่ (Settings)
     // ==========================================
     private const LINE_API_URL = 'https://mis.nurse.cmu.ac.th/LineConnext/API/SendLineOA';
     private const LINE_API_KEY = 'FON_ConnectAPI01';
     private const PROGRAM_NAME = 'e-Donation';
     private const MESSAGE_COLOR = '#FB974E';
-    private const OFFICE_BASE_URL = 'https://app.nurse.cmu.ac.th/edonation/office';
+
+    // ใช้ OFFICE_URL จาก env config (รองรับ Production และ Testing)
+    private function getOfficeBaseUrl(): string
+    {
+        return defined('OFFICE_URL') ? OFFICE_URL : 'https://app.nurse.cmu.ac.th/edonation/office';
+    }
 
     public function __construct()
     {
@@ -45,7 +50,7 @@ class LineNotificationService
     {
         try {
             $sql = "SELECT recipient_email, cmu_account 
-                    FROM notification_recipients 
+                    FROM edonation_notification_recipients 
                     WHERE notification_type = :type AND is_active = 1";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([':type' => $notificationType]);
@@ -213,7 +218,7 @@ class LineNotificationService
         ?int $referenceId
     ): void {
         try {
-            $sql = "INSERT INTO notification_logs 
+            $sql = "INSERT INTO edonation_notification_logs 
                     (notification_type, recipient_email, message, status, response, reference_id)
                     VALUES (:type, :cmu_account, :message, :status, :response, :ref_id)";
             $stmt = $this->pdo->prepare($sql);
@@ -272,7 +277,7 @@ class LineNotificationService
         $time = date('H:i');
         $message .= "เวลา: {$day} {$month} {$year} {$time}";
 
-        $weblink = self::OFFICE_BASE_URL . '/finance/donation_detail.php?id=' . urlencode($donationId);
+        $weblink = $this->getOfficeBaseUrl() . '/finance/donation_detail.php?id=' . urlencode($donationId);
 
         return $this->send('payment_success', $message, $weblink, $donationId);
     }
@@ -290,7 +295,7 @@ class LineNotificationService
         $message .= "จำนวน: {$formattedAmount} บาท\n";
         $message .= "สถานะ: รอชำระเงิน";
 
-        $weblink = self::OFFICE_BASE_URL . '/finance/donation_detail.php?id=' . urlencode($donationId);
+        $weblink = $this->getOfficeBaseUrl() . '/finance/donation_detail.php?id=' . urlencode($donationId);
 
         return $this->send('new_donation', $message, $weblink, $donationId);
     }
@@ -321,7 +326,7 @@ class LineNotificationService
     public function getAllRecipients(): array
     {
         try {
-            $sql = "SELECT * FROM notification_recipients ORDER BY notification_type, id";
+            $sql = "SELECT * FROM edonation_notification_recipients ORDER BY notification_type, id";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
@@ -335,7 +340,7 @@ class LineNotificationService
     public function getLogs(int $limit = 50, int $offset = 0): array
     {
         try {
-            $sql = "SELECT * FROM notification_logs ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+            $sql = "SELECT * FROM edonation_notification_logs ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
