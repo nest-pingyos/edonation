@@ -414,6 +414,26 @@
                 </div>
 
                 <div class="endpoint-group">
+                    <div class="endpoint-group-title">Members</div>
+                    <div class="endpoint"
+                        onclick="selectEndpoint('GET', '/api/v1/members/lookup?id_card=1234567890123')">
+                        <span class="method get">GET</span> /members/lookup
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/members/1234567890123')">
+                        <span class="method get">GET</span> /members/:id_card
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/members/1234567890123/donations')">
+                        <span class="method get">GET</span> /members/:id_card/donations
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/members/1234567890123/receipts')">
+                        <span class="method get">GET</span> /members/:id_card/receipts
+                    </div>
+                    <div class="endpoint" onclick="selectEndpoint('GET', '/api/v1/members/1234567890123/summary')">
+                        <span class="method get">GET</span> /members/:id_card/summary
+                    </div>
+                </div>
+
+                <div class="endpoint-group">
                     <div class="endpoint-group-title">Auth</div>
                     <div class="endpoint" onclick="selectEndpoint('POST', '/api/v1/auth/login')">
                         <span class="method post">POST</span> /auth/login

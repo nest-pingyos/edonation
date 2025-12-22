@@ -17,6 +17,7 @@ edonation/
 │   ├── donat/              # ระบบบริจาค
 │   ├── list/               # ค้นหาใบเสร็จ
 │   ├── office/             # Admin Dashboard (Legacy)
+│   ├── receipts/           # PDF Generation (TCPDF)
 │   ├── config/             
 │   │   ├── env.php         # Environment loader
 │   │   ├── database.php    # DB connection
@@ -24,11 +25,23 @@ edonation/
 │   └── assets/             # CSS, JS, Images
 │
 ├── api/                    # REST API (Pure PHP)
-│   ├── controllers/        # Request Handlers
+│   ├── controllers/        # Request Handlers (11 controllers)
+│   │   ├── AuthController.php
+│   │   ├── BenefitsController.php
+│   │   ├── DonationController.php
+│   │   ├── MemberController.php
+│   │   ├── NewsController.php
+│   │   ├── NotificationsController.php
+│   │   ├── PaymentController.php
+│   │   ├── ProjectController.php
+│   │   ├── ReceiptController.php
+│   │   └── SignatureController.php
 │   ├── config/             
+│   │   ├── bootstrap.php   # App bootstrap
 │   │   ├── env.php         # Environment loader
 │   │   ├── database.php    # DB connection
 │   │   └── scb.php         # SCB config
+│   ├── docs/               # API Manager (Interactive Docs)
 │   ├── helpers/            # Response & Validator
 │   ├── middleware/         # Auth Middleware
 │   └── services/           # Wrappers for shared services
@@ -37,9 +50,13 @@ edonation/
 │   └── services/
 │       └── SCBPaymentService.php
 │
-├── admin/                  # Admin UI (Coming Soon)
-│   ├── README.md
-│   └── CLAUDE.md
+├── admin/                  # Admin UI
+│   ├── src/                # PHP source files
+│   │   ├── assets/         # CSS, JS, Images
+│   │   ├── config/         # Configuration
+│   │   ├── partials/       # Template partials
+│   │   └── services/       # Backend services
+│   └── README.md
 │
 └── .agent/workflows/       # Development workflows
     ├── setup-dev.md
@@ -55,15 +72,15 @@ edonation/
 |--------|------------|-------------|
 | `web` | `shared/`, `.env` | Frontend website |
 | `api` | `shared/`, `.env` | REST API backend |
-| `admin` | `api` (via HTTP) | Admin UI (Coming Soon) |
+| `admin` | `api` (via HTTP) | Admin UI |
 | `shared` | `.env` only | Shared services |
 
 ## URLs
 
-| Environment | Web | API |
-|-------------|-----|-----|
-| **Production** | https://app.nurse.cmu.ac.th/edonation | https://app.nurse.cmu.ac.th/edonation/api |
-| **Development** | http://localhost/appdev/edonation | http://localhost/appdev/edonation/api |
+| Environment | Web | API | Admin |
+|-------------|-----|-----|-------|
+| **Production** | https://app.nurse.cmu.ac.th/edonation | https://app.nurse.cmu.ac.th/edonation/api | https://app.nurse.cmu.ac.th/edonation/admin |
+| **Development** | http://localhost/appdev/edonation | http://localhost/appdev/edonation/api | http://localhost/appdev/edonation/admin |
 
 ## Environment Configuration
 
@@ -79,16 +96,95 @@ BASE_PATH=/edonation  # Production
 # BASE_PATH=/appdev/edonation  # Development
 ```
 
-## API Endpoints (v1)
+## API Endpoints (v1) - Complete List
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/projects` | รายการโครงการ |
-| GET | `/api/v1/donations` | รายการบริจาค |
-| POST | `/api/v1/donations` | สร้างการบริจาค |
-| GET | `/api/v1/receipts/{id}` | ใบเสร็จ |
-| POST | `/api/v1/auth/login` | เข้าสู่ระบบ |
-| POST | `/api/v1/payments/callback` | PromptPay callback |
+### Projects - โครงการบริจาค
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/v1/projects` | รายการโครงการ | - |
+| GET | `/api/v1/projects/:id` | รายละเอียดโครงการ | - |
+| POST | `/api/v1/projects` | สร้างโครงการ | Admin |
+| PUT | `/api/v1/projects/:id` | แก้ไขโครงการ | Admin |
+
+### Donations - การบริจาค
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/donations` | สร้างการบริจาค | - |
+| GET | `/api/v1/donations/:id/qr` | QR Code | - |
+| GET | `/api/v1/donations/:id/status` | สถานะการชำระ | - |
+| GET | `/api/v1/donations` | รายการทั้งหมด | Admin |
+| GET | `/api/v1/donations/:id` | รายละเอียด | Admin |
+| PUT | `/api/v1/donations/:id` | แก้ไข | Admin |
+
+### Receipts - ใบเสร็จ
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/v1/receipts/search` | ค้นหาใบเสร็จ | - |
+| GET | `/api/v1/receipts/:id/verify` | ยืนยัน Tax ID | - |
+| GET | `/api/v1/receipts/:id/pdf` | ดาวน์โหลด PDF | Token |
+| GET | `/api/v1/receipts/:id/details` | รายละเอียดสำหรับ PDF | - |
+| GET | `/api/v1/receipts/:id` | ดูใบเสร็จ | - |
+| GET | `/api/v1/receipts` | รายการทั้งหมด | Admin |
+| POST | `/api/v1/receipts/generate` | ออกใบเสร็จ manual | Admin |
+| POST | `/api/v1/receipts/:id/cancel` | ยกเลิกใบเสร็จ | Admin |
+| POST | `/api/v1/receipts/:id/resend` | ส่งใบเสร็จซ้ำ | Admin |
+
+### Members - สมาชิก
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/v1/members/lookup` | ค้นหาสมาชิก | - |
+| GET | `/api/v1/members/:id_card` | ข้อมูลสมาชิก | - |
+| GET | `/api/v1/members/:id_card/donations` | รายการบริจาค | - |
+| GET | `/api/v1/members/:id_card/receipts` | รายการใบเสร็จ | - |
+| GET | `/api/v1/members/:id_card/summary` | สรุปยอด | - |
+
+### Auth - ยืนยันตัวตน
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/auth/login` | เข้าสู่ระบบ | - |
+| POST | `/api/v1/auth/oauth/cmu` | CMU OAuth | - |
+| POST | `/api/v1/auth/logout` | ออกจากระบบ | - |
+| GET | `/api/v1/auth/me` | ข้อมูลผู้ใช้ปัจจุบัน | Bearer |
+
+### Payments - การชำระเงิน
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/payments/callback` | PromptPay callback | - |
+
+### Benefits - ระดับผู้มีอุปการคุณ
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/v1/benefits` | รายการระดับ | - |
+| GET | `/api/v1/benefits/:id` | รายละเอียด | - |
+| POST | `/api/v1/benefits` | เพิ่มระดับ | Admin |
+| PUT | `/api/v1/benefits/:id` | แก้ไขระดับ | Admin |
+| DELETE | `/api/v1/benefits/:id` | ลบระดับ | Admin |
+
+### News - ข่าวสาร
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/v1/news` | รายการข่าว | - |
+| GET | `/api/v1/news/:id` | รายละเอียด | - |
+| POST | `/api/v1/news` | เพิ่มข่าว | Admin |
+| PUT | `/api/v1/news/:id` | แก้ไขข่าว | Admin |
+| DELETE | `/api/v1/news/:id` | ลบข่าว | Admin |
+| POST | `/api/v1/news/upload` | อัพโหลดรูป | Admin |
+
+### Signatures - ลายเซ็น
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/v1/signatures` | รายการทั้งหมด | - |
+| GET | `/api/v1/signatures/:year` | ตามปีงบประมาณ | - |
+| POST | `/api/v1/signatures` | เพิ่มลายเซ็น | Admin |
+| PUT | `/api/v1/signatures/:year` | แก้ไข | Admin |
+| DELETE | `/api/v1/signatures/:year` | ลบ | Admin |
+
+### Notifications - การแจ้งเตือน
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/notifications/send` | ส่งแจ้งเตือนทั่วไป | Admin |
+| POST | `/api/v1/notifications/email` | ส่งอีเมล | Admin |
+| POST | `/api/v1/notifications/line` | ส่ง LINE | Admin |
 
 ## JavaScript API Configuration
 
@@ -111,6 +207,15 @@ fetch(API_BASE + '/projects');
 2. **Shared Services**: SCBPaymentService อยู่ใน `shared/`
 3. **Fiscal Year**: Buddhist Era (BE = CE + 543)
 4. **Authentication**: Azure AD for office/, JWT for API
+5. **Response Format**: 
+   ```json
+   {
+     "success": true|false,
+     "data": {...},
+     "message": "...",
+     "meta": {...}
+   }
+   ```
 
 ## Workflows
 
@@ -126,6 +231,9 @@ fetch(API_BASE + '/projects');
 
 # Install dependencies
 cd web && composer install
+
+# API Docs
+http://localhost/appdev/edonation/api/docs/
 ```
 
 ## Important Notes
@@ -134,3 +242,4 @@ cd web && composer install
 - Development `BASE_PATH`: `/appdev/edonation`
 - All file paths must be absolute
 - Thai UTF-8 encoding throughout
+- PHP 8.0+ required for typed properties

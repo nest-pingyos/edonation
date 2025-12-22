@@ -1,6 +1,6 @@
 # eDonation Admin Panel
 
-ระบบจัดการการบริจาค มหาวิทยาลัยเชียงใหม่
+ระบบจัดการการบริจาค คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่
 
 ## 📋 ข้อกำหนดเบื้องต้น
 
@@ -111,12 +111,74 @@ Admin panel เชื่อมต่อกับ API ที่:
 /api/v1/
 ```
 
-### Available Endpoints:
-- `/api/v1/members` - ข้อมูลสมาชิก
-- `/api/v1/donations` - การบริจาค
-- `/api/v1/projects` - โครงการ
-- `/api/v1/receipts` - ใบเสร็จ
-- `/api/v1/news` - ข่าวสาร
+### Complete API Endpoints
+
+#### Projects - โครงการ
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/projects` | รายการโครงการ |
+| GET | `/api/v1/projects/:id` | รายละเอียดโครงการ |
+| POST | `/api/v1/projects` | สร้างโครงการ |
+| PUT | `/api/v1/projects/:id` | แก้ไขโครงการ |
+
+#### Donations - การบริจาค
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/donations` | รายการบริจาค |
+| GET | `/api/v1/donations/:id` | รายละเอียด |
+| PUT | `/api/v1/donations/:id` | แก้ไข |
+
+#### Receipts - ใบเสร็จ
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/receipts` | รายการใบเสร็จ |
+| POST | `/api/v1/receipts/generate` | ออกใบเสร็จ manual |
+| POST | `/api/v1/receipts/:id/cancel` | ยกเลิกใบเสร็จ |
+| POST | `/api/v1/receipts/:id/resend` | ส่งใบเสร็จซ้ำ |
+
+#### Members - สมาชิก
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/members/lookup` | ค้นหาสมาชิก |
+| GET | `/api/v1/members/:id_card` | ข้อมูลสมาชิก |
+| GET | `/api/v1/members/:id_card/donations` | รายการบริจาคของสมาชิก |
+| GET | `/api/v1/members/:id_card/receipts` | รายการใบเสร็จของสมาชิก |
+| GET | `/api/v1/members/:id_card/summary` | สรุปยอดบริจาค |
+
+#### Benefits - ระดับผู้มีอุปการคุณ
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/benefits` | รายการระดับ |
+| GET | `/api/v1/benefits/:id` | รายละเอียด |
+| POST | `/api/v1/benefits` | เพิ่มระดับ |
+| PUT | `/api/v1/benefits/:id` | แก้ไขระดับ |
+| DELETE | `/api/v1/benefits/:id` | ลบระดับ |
+
+#### News - ข่าวสาร
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/news` | รายการข่าว |
+| GET | `/api/v1/news/:id` | รายละเอียด |
+| POST | `/api/v1/news` | เพิ่มข่าว |
+| PUT | `/api/v1/news/:id` | แก้ไขข่าว |
+| DELETE | `/api/v1/news/:id` | ลบข่าว |
+| POST | `/api/v1/news/upload` | อัพโหลดรูปภาพ |
+
+#### Signatures - ลายเซ็น
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/signatures` | รายการลายเซ็น |
+| GET | `/api/v1/signatures/:year` | ตามปีงบประมาณ |
+| POST | `/api/v1/signatures` | เพิ่มลายเซ็น |
+| PUT | `/api/v1/signatures/:year` | แก้ไขลายเซ็น |
+| DELETE | `/api/v1/signatures/:year` | ลบลายเซ็น |
+
+#### Notifications - การแจ้งเตือน
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/notifications/send` | ส่งแจ้งเตือนทั่วไป |
+| POST | `/api/v1/notifications/email` | ส่งอีเมล |
+| POST | `/api/v1/notifications/line` | ส่ง LINE |
 
 ## 🔒 Security
 
@@ -124,7 +186,8 @@ Admin panel เชื่อมต่อกับ API ที่:
 - CSRF Token protection
 - Session timeout (1 ชั่วโมง)
 - Prepared statements ป้องกัน SQL Injection
+- JWT Token สำหรับ API Authentication
 
 ## 📝 License
 
-© 2024 Chiang Mai University
+© 2025 Chiang Mai University
