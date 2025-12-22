@@ -71,6 +71,9 @@ class BenefitsController
             $item['image_url'] = $item['img_file']
                 ? $baseImageUrl . $item['img_file']
                 : $baseImageUrl . 'default.jpg';
+            // Ensure amount is numeric
+            $item['amount'] = floatval($item['amount'] ?? 0);
+            $item['is_active'] = (bool) $item['is_active'];
         }
 
         return Response::success($results, null, [

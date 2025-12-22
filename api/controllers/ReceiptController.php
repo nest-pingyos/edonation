@@ -416,11 +416,19 @@ class ReceiptController
         $sql = "SELECT 
                     r.id,
                     r.receipt_no,
-                    r.payer_name,
+                    COALESCE(
+                        NULLIF(r.payer_name, ''), 
+                        CONCAT(COALESCE(du.first_name, ''), ' ', COALESCE(du.last_name, '')),
+                        'ไม่ระบุชื่อ'
+                    ) as payer_name,
                     r.amount,
                     r.issued_at,
                     r.bank_transaction_id,
+                    r.donation_id,
                     du.project_name,
+                    du.first_name,
+                    du.last_name,
+                    du.status_donat,
                     bt.billPaymentRef2
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
@@ -433,11 +441,23 @@ class ReceiptController
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
 
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Format payer_name properly
+        foreach ($results as &$row) {
+            $name = trim($row['payer_name'] ?? '');
+            if (empty($name) || $name === ' ') {
+                // Try to build from first_name + last_name
+                $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+            }
+            $row['payer_name'] = !empty($name) ? $name : 'ไม่ระบุชื่อ';
+        }
+
         // Count total
         $countStmt = $this->pdo->query("SELECT COUNT(*) FROM edonation_receipts");
         $total = (int) $countStmt->fetchColumn();
 
-        return Response::success($stmt->fetchAll(PDO::FETCH_ASSOC), null, [
+        return Response::success($results, null, [
             'page' => $page,
             'limit' => $limit,
             'total' => $total,
@@ -448,64 +468,154 @@ class ReceiptController
 
     /**
      * POST /receipts/generate (Admin)
-     * สร้างใบเสร็จใหม่
+     * สร้างใบเสร็จใหม่ - รองรับทั้งเชื่อมกับ donation ที่มีอยู่ และสร้าง donation ใหม่
      */
     private function generate(): array
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        $v = new Validator($data);
-        $v->required('payer_name')
-            ->required('amount')
-            ->required('donation_id');
-
-        if (!$v->passes())
-            return Response::validation($v->errors());
-
-        // สร้างเลขที่ใบเสร็จ Format: YYYY-EXXXX
-        $year = date('Y') + 543; // พ.ศ.
-        $prefix = $year . '-E';
-        $countStmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM edonation_receipts WHERE receipt_no LIKE :prefix"
-        );
-        $countStmt->execute([':prefix' => $prefix . '%']);
-        $count = (int) $countStmt->fetchColumn() + 1;
-        $receiptNo = $prefix . str_pad($count, 4, '0', STR_PAD_LEFT);
-
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at)
-             VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW())"
-        );
-
-        $stmt->execute([
-            ':donation_id' => $data['donation_id'],
-            ':bank_transaction_id' => $data['bank_transaction_id'] ?? null,
-            ':receipt_no' => $receiptNo,
-            ':payer_name' => $data['payer_name'],
-            ':amount' => $data['amount']
-        ]);
-
-        $id = $this->pdo->lastInsertId();
-
-        // สร้าง access_token สำหรับเปิด PDF (Admin)
-        $accessToken = bin2hex(random_bytes(32));
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        // Validate required fields
+        $requiredFields = ['first_name', 'last_name', 'id_card', 'address', 'project_number', 'amount'];
+        $missing = [];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                $missing[] = $field;
+            }
         }
-        $_SESSION['pdf_access_tokens'][$id] = [
-            'token' => $accessToken,
-            'expire_at' => time() + 3600 // 1 ชั่วโมงสำหรับ Admin
-        ];
+        if (!empty($missing)) {
+            return Response::error('VALIDATION_ERROR', 'กรุณากรอกข้อมูลให้ครบ: ' . implode(', ', $missing));
+        }
 
-        // Use BASE_PATH from config
-        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-        return Response::success([
-            'id' => (int) $id,
-            'receipt_no' => $receiptNo,
-            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
-            'access_token' => $accessToken,
-            'api_version' => self::VERSION
-        ], 'ออกใบเสร็จสำเร็จ');
+        // Validate ID card format
+        if (strlen(preg_replace('/\D/', '', $data['id_card'])) !== 13) {
+            return Response::error('VALIDATION_ERROR', 'เลขบัตรประชาชนต้องมี 13 หลัก');
+        }
+
+        // Validate amount
+        if (floatval($data['amount']) <= 0) {
+            return Response::error('VALIDATION_ERROR', 'จำนวนเงินต้องมากกว่า 0');
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $donationId = $data['donation_id'] ?? null;
+            $payerName = trim(($data['title'] ?? '') . ' ' . $data['first_name'] . ' ' . $data['last_name']);
+
+            // If no donation_id, create new donation record
+            if (!$donationId) {
+                // Get project name
+                $projectStmt = $this->pdo->prepare("SELECT project_name FROM edonation_projects WHERE project_number = :pn");
+                $projectStmt->execute([':pn' => $data['project_number']]);
+                $project = $projectStmt->fetch();
+                $projectName = $project['project_name'] ?? $data['project_name'] ?? $data['project_number'];
+
+                // Generate billPaymentRef1
+                $year = date('Y') + 543;
+                $rand = rand(10000, 99999);
+                $projNumRaw = preg_replace('/\D/', '', $data['project_number']);
+                $projNum = str_pad(substr($projNumRaw, 0, 6), 6, '0', STR_PAD_LEFT);
+                $ref1 = $year . $projNum . $rand;
+
+                // Create donation record
+                $donationStmt = $this->pdo->prepare("
+                    INSERT INTO edonation_donat_user (
+                        billPaymentRef1, project_number, project_name, type, phone, amount, 
+                        fiscal_year, status_donat, payby, receiptDate,
+                        need_receipt, first_name, last_name, id_card, receipt_address, shipping_address
+                    ) VALUES (
+                        :ref1, :project_number, :project_name, :type, :phone, :amount, 
+                        :fiscal_year, 'completed', :payby, :receipt_date,
+                        1, :first_name, :last_name, :id_card, :address, :address
+                    )
+                ");
+
+                $donationStmt->execute([
+                    ':ref1' => $ref1,
+                    ':project_number' => $data['project_number'],
+                    ':project_name' => $projectName,
+                    ':type' => $data['type'] ?? 'manual',
+                    ':phone' => $data['phone'] ?? '',
+                    ':amount' => $data['amount'],
+                    ':fiscal_year' => $year,
+                    ':payby' => $data['payment_method'] ?? 'เงินสด',
+                    ':receipt_date' => $data['donation_date'] ?? date('Y-m-d'),
+                    ':first_name' => $data['first_name'],
+                    ':last_name' => $data['last_name'],
+                    ':id_card' => preg_replace('/\D/', '', $data['id_card']),
+                    ':address' => $data['address']
+                ]);
+
+                $donationId = $this->pdo->lastInsertId();
+            }
+
+            // Generate receipt number Format: YYYY-EXXXX
+            $year = date('Y') + 543; // พ.ศ.
+            $prefix = $year . '-E';
+
+            // Lock for safe increment
+            $maxStmt = $this->pdo->prepare("SELECT MAX(receipt_no) as max_no FROM edonation_receipts WHERE receipt_no LIKE :prefix FOR UPDATE");
+            $maxStmt->execute([':prefix' => $prefix . '%']);
+            $maxRow = $maxStmt->fetch();
+
+            $nextNum = 1;
+            if ($maxRow && $maxRow['max_no']) {
+                $numPart = preg_replace('/^\d{4}-E/', '', $maxRow['max_no']);
+                $nextNum = intval($numPart) + 1;
+            }
+            $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+
+            // Create receipt record
+            $receiptStmt = $this->pdo->prepare("
+                INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at)
+                VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW())
+            ");
+
+            $receiptStmt->execute([
+                ':donation_id' => $donationId,
+                ':bank_transaction_id' => $data['bank_transaction_id'] ?? null,
+                ':receipt_no' => $receiptNo,
+                ':payer_name' => $payerName,
+                ':amount' => $data['amount']
+            ]);
+
+            $receiptId = $this->pdo->lastInsertId();
+
+            // Store email for later if provided and send_email is true
+            if (!empty($data['email']) && !empty($data['send_email'])) {
+                // TODO: Queue email sending
+                error_log("Receipt {$receiptNo} created for {$data['email']} - email would be sent");
+            }
+
+            $this->pdo->commit();
+
+            // Create access token for PDF
+            $accessToken = bin2hex(random_bytes(32));
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $_SESSION['pdf_access_tokens'][$receiptId] = [
+                'token' => $accessToken,
+                'expire_at' => time() + 3600 // 1 hour for Admin
+            ];
+
+            $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+            return Response::success([
+                'id' => (int) $receiptId,
+                'donation_id' => (int) $donationId,
+                'receipt_no' => $receiptNo,
+                'payer_name' => $payerName,
+                'amount' => floatval($data['amount']),
+                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'access_token' => $accessToken,
+                'api_version' => self::VERSION
+            ], 'ออกใบเสร็จสำเร็จ');
+
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Receipt generate error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถออกใบเสร็จได้: ' . $e->getMessage(), 500);
+        }
     }
 
     /**

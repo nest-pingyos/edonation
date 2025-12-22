@@ -1,0 +1,443 @@
+<?php include 'partials/main.php'; ?>
+<?php requireAuth(); ?>
+
+<!doctype html>
+<html lang="th">
+
+<head>
+    <?php
+    $title = "ใบเสร็จรับเงิน";
+    include 'partials/title-meta.php'; ?>
+
+    <?php include 'partials/head-css.php'; ?>
+</head>
+
+<body>
+    <div class="wrapper">
+        <?php include 'partials/edonation-nav.php'; ?>
+
+        <div class="page-content">
+            <?php include 'partials/edonation-topbar.php'; ?>
+
+            <div class="container-xxl">
+                <?php
+                $pageTitle = "ใบเสร็จรับเงิน";
+                $subTitle = "รายการใบเสร็จ";
+                include 'partials/page-title.php'; ?>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-primary rounded">
+                                        <iconify-icon icon="iconamoon:invoice-duotone"
+                                            class="avatar-title text-primary fs-32"></iconify-icon>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0" id="total-receipts">-</h3>
+                                        <p class="text-muted mb-0">ใบเสร็จทั้งหมด</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-success rounded">
+                                        <iconify-icon icon="iconamoon:check-circle-1-duotone"
+                                            class="avatar-title text-success fs-32"></iconify-icon>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0" id="issued-count">-</h3>
+                                        <p class="text-muted mb-0">ออกแล้ว</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-danger rounded">
+                                        <iconify-icon icon="iconamoon:close-circle-1-duotone"
+                                            class="avatar-title text-danger fs-32"></iconify-icon>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0" id="cancelled-count">-</h3>
+                                        <p class="text-muted mb-0">ยกเลิก</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-white bg-opacity-25 rounded">
+                                        <iconify-icon icon="iconamoon:trend-up-duotone"
+                                            class="avatar-title text-white fs-32"></iconify-icon>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0 text-white" id="total-amount">-</h3>
+                                        <p class="mb-0 opacity-75">ยอดรวม (บาท)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Card -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">รายการใบเสร็จรับเงิน</h4>
+                        <div>
+                            <button class="btn btn-outline-success me-2" onclick="exportExcel()">
+                                <iconify-icon icon="iconamoon:file-download-duotone" class="me-1"></iconify-icon>
+                                ส่งออก Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filters -->
+                        <div class="row mb-3 g-2">
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <iconify-icon icon="iconamoon:search-duotone"></iconify-icon>
+                                    </span>
+                                    <input type="text" id="searchInput" class="form-control"
+                                        placeholder="ค้นหาเลขใบเสร็จ, ชื่อ, เลขบัตร...">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <select id="statusFilter" class="form-select">
+                                    <option value="">ทุกสถานะ</option>
+                                    <option value="issued">ออกแล้ว</option>
+                                    <option value="cancelled">ยกเลิก</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select id="yearFilter" class="form-select">
+                                    <option value="">ทุกปี</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="date" id="dateFrom" class="form-control" placeholder="จากวันที่">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="date" id="dateTo" class="form-control" placeholder="ถึงวันที่">
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-primary w-100" onclick="loadReceipts()">
+                                    <iconify-icon icon="iconamoon:search-duotone"></iconify-icon>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-nowrap align-middle">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th style="width: 130px;">เลขที่ใบเสร็จ</th>
+                                        <th>ผู้บริจาค</th>
+                                        <th>โครงการ</th>
+                                        <th class="text-end" style="width: 120px;">จำนวนเงิน</th>
+                                        <th style="width: 120px;">วันที่ออก</th>
+                                        <th style="width: 100px;">สถานะ</th>
+                                        <th style="width: 150px;" class="text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="receiptsTable">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <div class="spinner-border text-primary"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div id="pagination-info" class="text-muted small"></div>
+                            <nav id="pagination"></nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <?php include 'partials/footer.php'; ?>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">รายละเอียดใบเสร็จ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detailContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-outline-danger" id="cancelReceiptBtn"
+                        onclick="cancelReceipt()">
+                        <iconify-icon icon="iconamoon:close-circle-1-duotone" class="me-1"></iconify-icon>
+                        ยกเลิกใบเสร็จ
+                    </button>
+                    <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
+                        <iconify-icon icon="iconamoon:file-download-duotone" class="me-1"></iconify-icon>
+                        ดาวน์โหลด PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php include 'partials/vendor-scripts.php'; ?>
+    <script src="assets/js/api-helper.js"></script>
+
+    <script>
+        let receipts = [];
+        let currentPage = 1;
+        let currentReceipt = null;
+        const perPage = 20;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Populate year filter
+            const yearSelect = document.getElementById('yearFilter');
+            const currentYear = new Date().getFullYear() + 543; // BE Year
+            for (let y = currentYear; y >= currentYear - 5; y--) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.textContent = y;
+                yearSelect.appendChild(option);
+            }
+
+            loadReceipts();
+
+            // Filter handlers
+            document.getElementById('searchInput').addEventListener('input', debounce(loadReceipts, 500));
+            document.getElementById('statusFilter').addEventListener('change', loadReceipts);
+            document.getElementById('yearFilter').addEventListener('change', loadReceipts);
+        });
+
+        async function loadReceipts() {
+            showTableLoading('receiptsTable', 7);
+
+            try {
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('limit', perPage);
+
+                const search = document.getElementById('searchInput').value;
+                if (search) params.append('search', search);
+
+                const status = document.getElementById('statusFilter').value;
+                if (status) params.append('status', status);
+
+                const year = document.getElementById('yearFilter').value;
+                if (year) params.append('year', year);
+
+                const dateFrom = document.getElementById('dateFrom').value;
+                if (dateFrom) params.append('from', dateFrom);
+
+                const dateTo = document.getElementById('dateTo').value;
+                if (dateTo) params.append('to', dateTo);
+
+                const response = await apiGet('/receipts?' + params.toString());
+                receipts = response.data || [];
+
+                // Update stats
+                const stats = response.meta || {};
+                document.getElementById('total-receipts').textContent = formatNumber(stats.total || receipts.length);
+                document.getElementById('issued-count').textContent = formatNumber(stats.issued || receipts.filter(r => r.status !== 'cancelled').length);
+                document.getElementById('cancelled-count').textContent = formatNumber(stats.cancelled || receipts.filter(r => r.status === 'cancelled').length);
+
+                // Calculate total amount
+                const totalAmount = receipts.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+                document.getElementById('total-amount').textContent = formatNumber(stats.total_amount || totalAmount);
+
+                renderTable(receipts);
+
+                // Update pagination info
+                const total = stats.total || receipts.length;
+                const from = (currentPage - 1) * perPage + 1;
+                const to = Math.min(currentPage * perPage, total);
+                document.getElementById('pagination-info').textContent = `แสดง ${from}-${to} จาก ${total} รายการ`;
+
+            } catch (error) {
+                showTableError('receiptsTable', 7, error.message);
+                showError(error.message);
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('receiptsTable');
+
+            if (!data || data.length === 0) {
+                showTableEmpty('receiptsTable', 7, 'ไม่พบใบเสร็จ');
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => `
+        <tr>
+            <td>
+                <span class="badge bg-light text-dark font-monospace">${escapeHtml(item.receipt_no || item.id)}</span>
+            </td>
+            <td>
+                <div class="fw-medium">${escapeHtml(item.payer_name || 'ไม่ระบุชื่อ')}</div>
+                ${item.billPaymentRef2 ? `<small class="text-muted">${maskIdCard(item.billPaymentRef2)}</small>` : ''}
+            </td>
+            <td>${escapeHtml(item.project_name || '-')}</td>
+            <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
+            <td>${formatThaiDateShort(item.issued_at || item.created_at)}</td>
+            <td>${getReceiptStatusBadge(item.status_donat || 'issued')}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-soft-primary me-1" onclick="viewDetail('${item.id}')" title="ดูรายละเอียด">
+                    <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
+                </button>
+                <a href="../web/pdf/receipt.php?id=${item.id}" target="_blank" class="btn btn-sm btn-soft-success me-1" title="ดาวน์โหลด PDF">
+                    <iconify-icon icon="iconamoon:file-download-duotone"></iconify-icon>
+                </a>
+                ${item.status !== 'cancelled' ? `
+                <button class="btn btn-sm btn-soft-warning" onclick="resendReceipt('${item.id}')" title="ส่งอีเมลใหม่">
+                    <iconify-icon icon="iconamoon:send-duotone"></iconify-icon>
+                </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+        }
+
+        function getReceiptStatusBadge(status) {
+            const badges = {
+                'issued': '<span class="badge badge-soft-success">ออกแล้ว</span>',
+                'pending': '<span class="badge badge-soft-warning">รอออก</span>',
+                'cancelled': '<span class="badge badge-soft-danger">ยกเลิก</span>'
+            };
+            return badges[status] || badges['issued'];
+        }
+
+        async function viewDetail(id) {
+            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+            modal.show();
+
+            const content = document.getElementById('detailContent');
+            content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+
+            try {
+                const response = await apiGet('/receipts/' + id);
+                const r = response.data;
+                currentReceipt = r;
+
+                content.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">ข้อมูลใบเสร็จ</h6>
+                    <table class="table table-sm">
+                        <tr><td class="text-muted" width="130">เลขที่ใบเสร็จ</td><td class="fw-medium font-monospace">${escapeHtml(r.receipt_number)}</td></tr>
+                        <tr><td class="text-muted">วันที่ออก</td><td>${formatThaiDate(r.receipt_date || r.created_at)}</td></tr>
+                        <tr><td class="text-muted">จำนวนเงิน</td><td class="fw-semibold text-primary fs-18">${formatCurrency(r.amount)}</td></tr>
+                        <tr><td class="text-muted">โครงการ</td><td>${escapeHtml(r.project_name || r.project_number)}</td></tr>
+                        <tr><td class="text-muted">สถานะ</td><td>${getReceiptStatusBadge(r.status)}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">ข้อมูลผู้บริจาค</h6>
+                    <table class="table table-sm">
+                        <tr><td class="text-muted" width="130">ชื่อ</td><td class="fw-medium">${escapeHtml(r.donor_name || r.name)}</td></tr>
+                        <tr><td class="text-muted">เลขบัตรประชาชน</td><td>${formatIdCard(r.id_card)}</td></tr>
+                        <tr><td class="text-muted">อีเมล</td><td>${r.email || '-'}</td></tr>
+                        <tr><td class="text-muted">โทรศัพท์</td><td>${formatPhone(r.phone)}</td></tr>
+                        <tr><td class="text-muted">ที่อยู่</td><td>${escapeHtml(r.address) || '-'}</td></tr>
+                    </table>
+                </div>
+            </div>
+            ${r.note ? `
+            <div class="mt-3">
+                <h6 class="text-muted">หมายเหตุ</h6>
+                <p class="mb-0">${escapeHtml(r.note)}</p>
+            </div>
+            ` : ''}
+        `;
+
+                // Update buttons
+                document.getElementById('downloadPdfBtn').href = '../web/pdf/receipt.php?id=' + r.id;
+                document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
+
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function cancelReceipt() {
+            if (!currentReceipt) return;
+
+            const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${currentReceipt.receipt_number} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
+            if (!result.isConfirmed) return;
+
+            try {
+                await apiPost('/receipts/' + currentReceipt.id + '/cancel');
+                showSuccess('ยกเลิกใบเสร็จสำเร็จ');
+                bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+                loadReceipts();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function resendReceipt(id) {
+            const result = await confirmAction('ส่งใบเสร็จทางอีเมล?', 'ระบบจะส่งใบเสร็จไปยังอีเมลของผู้บริจาคอีกครั้ง', 'ส่งอีเมล');
+            if (!result.isConfirmed) return;
+
+            try {
+                await apiPost('/receipts/' + id + '/resend');
+                showSuccess('ส่งใบเสร็จทางอีเมลสำเร็จ');
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function exportExcel() {
+            // Build query string for export
+            const params = new URLSearchParams();
+            params.append('export', 'excel');
+
+            const status = document.getElementById('statusFilter').value;
+            if (status) params.append('status', status);
+
+            const year = document.getElementById('yearFilter').value;
+            if (year) params.append('year', year);
+
+            const dateFrom = document.getElementById('dateFrom').value;
+            if (dateFrom) params.append('from', dateFrom);
+
+            const dateTo = document.getElementById('dateTo').value;
+            if (dateTo) params.append('to', dateTo);
+
+            window.open('../api/v1/receipts/export?' + params.toString(), '_blank');
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadReceipts();
+        }
+    </script>
+
+</body>
+
+</html>

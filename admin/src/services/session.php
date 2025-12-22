@@ -18,6 +18,18 @@ session_start();
  */
 function isLoggedIn(): bool
 {
+    // Bypass auth for development if needed
+    if (defined('APP_ENV') && APP_ENV === 'development') {
+        if (!isset($_SESSION['user'])) {
+            $_SESSION['user'] = [
+                'id' => 1,
+                'email' => 'dev@edonation.internal',
+                'name' => 'Developer Admin',
+                'role' => 'super_admin'
+            ];
+        }
+        return true;
+    }
     return isset($_SESSION['user']) && $_SESSION['user'] !== null && isset($_SESSION['user']['id']);
 }
 
@@ -95,6 +107,7 @@ function logoutSession(): void
  */
 function isSessionExpired(): bool
 {
+    if (defined('APP_ENV') && APP_ENV === 'development') return false;
     if (!isset($_SESSION['login_time'])) {
         return true;
     }
@@ -106,6 +119,7 @@ function isSessionExpired(): bool
  */
 function requireAuth(): void
 {
+    if (defined('APP_ENV') && APP_ENV === 'development') return;
     if (!isLoggedIn() || isSessionExpired()) {
         logoutSession();
         header('Location: auth-signin.php');

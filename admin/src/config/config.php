@@ -15,8 +15,10 @@ $envFile = dirname(ADMIN_ROOT, 2) . '/.env';
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) continue;
-        if (strpos($line, '=') === false) continue;
+        if (strpos(trim($line), '#') === 0)
+            continue;
+        if (strpos($line, '=') === false)
+            continue;
         list($name, $value) = explode('=', $line, 2);
         $name = trim($name);
         $value = trim($value, " \t\n\r\0\x0B\"'");
@@ -27,6 +29,7 @@ if (file_exists($envFile)) {
 }
 
 // Application Config
+define('APP_ENV', getenv('APP_ENV') ?: 'production');
 define('APP_NAME', 'eDonation Admin');
 define('APP_VERSION', '1.0.0');
 define('APP_DESCRIPTION', 'ระบบจัดการการบริจาค มหาวิทยาลัยเชียงใหม่');

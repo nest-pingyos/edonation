@@ -32,6 +32,12 @@ class DonationController
             }
         }
 
+        // Handle POST /donations/admin - Admin creates donation + receipt
+        if ($id === 'admin' && $method === 'POST') {
+            AuthMiddleware::requireAdmin();
+            return $this->createFromAdmin();
+        }
+
         switch ($method) {
             case 'GET':
                 if ($id) {
@@ -139,6 +145,156 @@ class DonationController
 
         } catch (PDOException $e) {
             error_log("Donation create error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถบันทึกข้อมูลได้: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /donations/admin - สร้างรายการบริจาคจาก Admin
+     * Flow: 
+     * 1. บันทึกข้อมูลไป edonation_donat_user (เหมือน web)
+     * 2. ตั้ง status_donat = 'completed' (เพราะเป็น manual จาก admin)
+     * 3. สร้างใบเสร็จอัตโนมัติ
+     */
+    private function createFromAdmin(): array
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        // Validate required fields
+        $requiredFields = ['first_name', 'last_name', 'id_card', 'address', 'project_number', 'amount'];
+        $missing = [];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                $missing[] = $field;
+            }
+        }
+        if (!empty($missing)) {
+            return Response::error('VALIDATION_ERROR', 'กรุณากรอกข้อมูลให้ครบ: ' . implode(', ', $missing));
+        }
+
+        // Validate ID card format (13 digits)
+        $idCard = preg_replace('/\D/', '', $data['id_card']);
+        if (strlen($idCard) !== 13) {
+            return Response::error('VALIDATION_ERROR', 'เลขบัตรประชาชนต้องมี 13 หลัก');
+        }
+
+        // Validate amount
+        if (floatval($data['amount']) <= 0) {
+            return Response::error('VALIDATION_ERROR', 'จำนวนเงินต้องมากกว่า 0');
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            // Step 1: Generate billPaymentRef1 (same format as web)
+            $year = date('Y') + 543; // พ.ศ.
+            $rand = rand(10000, 99999);
+            $projNumRaw = preg_replace('/\D/', '', $data['project_number']);
+            $projNum = str_pad(substr($projNumRaw, 0, 6), 6, '0', STR_PAD_LEFT);
+            $ref1 = $year . $projNum . $rand;
+
+            // Get project name
+            $projectStmt = $this->pdo->prepare("SELECT project_name FROM edonation_projects WHERE project_number = :pn");
+            $projectStmt->execute([':pn' => $data['project_number']]);
+            $project = $projectStmt->fetch();
+            $projectName = $project['project_name'] ?? $data['project_name'] ?? $data['project_number'];
+
+            // Payer name
+            $payerName = trim(($data['title'] ?? '') . ' ' . $data['first_name'] . ' ' . $data['last_name']);
+
+            // Step 2: Insert into edonation_donat_user with status_donat = 'completed'
+            $donationStmt = $this->pdo->prepare("
+                INSERT INTO edonation_donat_user (
+                    billPaymentRef1, project_number, project_name, type, phone, amount, 
+                    fiscal_year, status_donat, payby, receiptDate,
+                    need_receipt, first_name, last_name, id_card, receipt_address, shipping_address
+                ) VALUES (
+                    :ref1, :project_number, :project_name, :type, :phone, :amount, 
+                    :fiscal_year, 'completed', :payby, :receipt_date,
+                    1, :first_name, :last_name, :id_card, :receipt_address, :shipping_address
+                )
+            ");
+
+            $donationStmt->execute([
+                ':ref1' => $ref1,
+                ':project_number' => $data['project_number'],
+                ':project_name' => $projectName,
+                ':type' => $data['type'] ?? 'manual',
+                ':phone' => $data['phone'] ?? '',
+                ':amount' => $data['amount'],
+                ':fiscal_year' => $year,
+                ':payby' => $data['payment_method'] ?? 'เงินสด',
+                ':receipt_date' => $data['donation_date'] ?? date('Y-m-d'),
+                ':first_name' => $data['first_name'],
+                ':last_name' => $data['last_name'],
+                ':id_card' => $idCard,
+                ':receipt_address' => $data['address'],
+                ':shipping_address' => $data['address']
+            ]);
+
+            $donationId = $this->pdo->lastInsertId();
+
+            // Step 3: Since status_donat = 'completed', auto-generate receipt
+            // Generate receipt number Format: YYYY-EXXXX
+            $prefix = $year . '-E';
+
+            // Lock for safe increment
+            $maxStmt = $this->pdo->prepare("SELECT MAX(receipt_no) as max_no FROM edonation_receipts WHERE receipt_no LIKE :prefix FOR UPDATE");
+            $maxStmt->execute([':prefix' => $prefix . '%']);
+            $maxRow = $maxStmt->fetch();
+
+            $nextNum = 1;
+            if ($maxRow && $maxRow['max_no']) {
+                $numPart = preg_replace('/^\d{4}-E/', '', $maxRow['max_no']);
+                $nextNum = intval($numPart) + 1;
+            }
+            $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+
+            // Insert receipt
+            $receiptStmt = $this->pdo->prepare("
+                INSERT INTO edonation_receipts (donation_id, receipt_no, payer_name, amount, issued_at)
+                VALUES (:donation_id, :receipt_no, :payer_name, :amount, NOW())
+            ");
+
+            $receiptStmt->execute([
+                ':donation_id' => $donationId,
+                ':receipt_no' => $receiptNo,
+                ':payer_name' => $payerName,
+                ':amount' => $data['amount']
+            ]);
+
+            $receiptId = $this->pdo->lastInsertId();
+
+            $this->pdo->commit();
+
+            // Create access token for PDF
+            $accessToken = bin2hex(random_bytes(32));
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $_SESSION['pdf_access_tokens'][$receiptId] = [
+                'token' => $accessToken,
+                'expire_at' => time() + 3600 // 1 hour for Admin
+            ];
+
+            $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+
+            return Response::success([
+                'donation_id' => (int) $donationId,
+                'billPaymentRef1' => $ref1,
+                'receipt_id' => (int) $receiptId,
+                'receipt_no' => $receiptNo,
+                'payer_name' => $payerName,
+                'amount' => floatval($data['amount']),
+                'project_name' => $projectName,
+                'status' => 'completed',
+                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'access_token' => $accessToken
+            ], 'บันทึกข้อมูลและออกใบเสร็จสำเร็จ');
+
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Admin donation create error: " . $e->getMessage());
             return Response::error('DATABASE_ERROR', 'ไม่สามารถบันทึกข้อมูลได้: ' . $e->getMessage(), 500);
         }
     }
@@ -363,58 +519,88 @@ class DonationController
     // GET /donations (Admin)
     private function index(): array
     {
-        $page = max(1, intval($_GET['page'] ?? 1));
-        $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
-        $offset = ($page - 1) * $limit;
+        try {
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
+            $offset = ($page - 1) * $limit;
 
-        $sql = "SELECT id, payerAccountName, amount, project_name, status_payment, 
-                       receipt_no, receiptDate, created_at 
-                FROM donat ORDER BY id DESC LIMIT :limit OFFSET :offset";
+            // Use edonation_donat_user table with correct column names
+            $sql = "SELECT id, billPaymentRef1, first_name, last_name, id_card, 
+                           amount, project_number, project_name, status_donat as status, 
+                           phone, receiptDate, created_at 
+                    FROM edonation_donat_user ORDER BY id DESC LIMIT :limit OFFSET :offset";
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
 
-        return Response::success($stmt->fetchAll());
+            $results = $stmt->fetchAll();
+
+            // Map column names for frontend
+            foreach ($results as &$row) {
+                $row['donor_name'] = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+                $row['transaction_date'] = $row['created_at'];
+            }
+
+            return Response::success($results);
+        } catch (PDOException $e) {
+            error_log("Donations index error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+        }
     }
 
     // GET /donations/:id (Admin)
     private function show(string $id): array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM donat WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-        $donation = $stmt->fetch();
+        try {
+            $stmt = $this->pdo->prepare("SELECT * FROM edonation_donat_user WHERE id = :id OR billPaymentRef1 = :ref");
+            $stmt->execute([':id' => $id, ':ref' => $id]);
+            $donation = $stmt->fetch();
 
-        if (!$donation)
-            return Response::notFound();
+            if (!$donation)
+                return Response::notFound('ไม่พบรายการบริจาค');
 
-        return Response::success($donation);
+            // Add donor_name for frontend
+            $donation['donor_name'] = trim(($donation['first_name'] ?? '') . ' ' . ($donation['last_name'] ?? ''));
+            $donation['transaction_date'] = $donation['created_at'];
+
+            return Response::success($donation);
+        } catch (PDOException $e) {
+            error_log("Donation show error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+        }
     }
 
     // PUT /donations/:id (Admin)
     private function update(string $id): array
     {
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        try {
+            $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        $allowedFields = ['payerAccountName', 'address', 'province', 'amphure', 'district', 'zip_code', 'comment'];
-        $fields = [];
-        $params = [':id' => $id];
+            // Fields that can be updated in edonation_donat_user table
+            $allowedFields = ['first_name', 'last_name', 'phone', 'receipt_address', 'shipping_address', 'status_donat'];
+            $fields = [];
+            $params = [':id' => $id];
 
-        foreach ($allowedFields as $field) {
-            if (isset($data[$field])) {
-                $fields[] = "{$field} = :{$field}";
-                $params[":{$field}"] = $data[$field];
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $fields[] = "{$field} = :{$field}";
+                    $params[":{$field}"] = $data[$field];
+                }
             }
+
+            if (empty($fields))
+                return Response::error('NO_DATA', 'ไม่มีข้อมูลที่จะอัปเดต');
+
+            $sql = "UPDATE edonation_donat_user SET " . implode(', ', $fields) . " WHERE id = :id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+
+            return Response::success(null, 'อัปเดตสำเร็จ');
+        } catch (PDOException $e) {
+            error_log("Donation update error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถอัปเดตได้: ' . $e->getMessage(), 500);
         }
-
-        if (empty($fields))
-            return Response::error('NO_DATA', 'ไม่มีข้อมูลที่จะอัปเดต');
-
-        $sql = "UPDATE donat SET " . implode(', ', $fields) . " WHERE id = :id";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-
-        return Response::success(null, 'อัปเดตสำเร็จ');
     }
 }

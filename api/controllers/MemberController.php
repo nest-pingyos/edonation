@@ -21,10 +21,15 @@ class MemberController
     public function handle(string $method, ?string $id, ?string $action): array
     {
         // id ในที่นี้คือ id_card หรือ action เฉพาะ
-        
+
         // GET /members/lookup?id_card=xxx
         if ($id === 'lookup') {
             return $this->lookup();
+        }
+
+        // GET /members/search?q=xxx - ค้นหาด้วยชื่อ, เลขบัตร, หรือคำค้น
+        if ($id === 'search') {
+            return $this->search();
         }
 
         // GET /members/:id_card/donations
@@ -57,7 +62,7 @@ class MemberController
     private function lookup(): array
     {
         $idCard = $_GET['id_card'] ?? '';
-        
+
         if (empty($idCard)) {
             return Response::error('VALIDATION_ERROR', 'กรุณาระบุเลขบัตรประชาชน');
         }
@@ -70,6 +75,182 @@ class MemberController
         }
 
         return $this->getMember($cleanIdCard);
+    }
+
+    /**
+     * GET /members/search?q=xxx&type=name|id_card|all
+     * ค้นหาผู้บริจาคด้วยชื่อ, เลขบัตรประชาชน, หรือคำค้นทั่วไป
+     */
+    private function search(): array
+    {
+        $query = trim($_GET['q'] ?? '');
+        $type = $_GET['type'] ?? 'all';
+        $limit = min(50, max(1, intval($_GET['limit'] ?? 20)));
+
+        if (empty($query)) {
+            return Response::error('VALIDATION_ERROR', 'กรุณาระบุคำค้นหา');
+        }
+
+        $results = [];
+
+        // ค้นหาจาก edonation_donat_user (รายการบริจาคใหม่)
+        try {
+            $sql = "SELECT 
+                        id,
+                        CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) as name,
+                        first_name,
+                        last_name,
+                        id_card,
+                        phone,
+                        receipt_address as address,
+                        project_name,
+                        project_number,
+                        amount,
+                        status_donat,
+                        created_at as donation_date,
+                        payby as payment_method,
+                        'donat_user' as source
+                    FROM edonation_donat_user 
+                    WHERE status_donat = 'completed' AND (";
+
+            $params = [];
+            $conditions = [];
+
+            if ($type === 'name' || $type === 'all') {
+                $conditions[] = "CONCAT(first_name, ' ', last_name) LIKE :name_query";
+                $params[':name_query'] = '%' . $query . '%';
+            }
+
+            if ($type === 'id_card' || $type === 'all') {
+                $cleanQuery = preg_replace('/\D/', '', $query);
+                if (!empty($cleanQuery)) {
+                    $conditions[] = "id_card LIKE :id_query";
+                    $params[':id_query'] = '%' . $cleanQuery . '%';
+                }
+            }
+
+            if (empty($conditions)) {
+                $conditions[] = "1=0"; // No match
+            }
+
+            $sql .= implode(' OR ', $conditions) . ") ORDER BY created_at DESC LIMIT :limit";
+
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $donatResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($donatResults as $row) {
+                $results[] = [
+                    'id' => (int) $row['id'],
+                    'name' => trim($row['name']),
+                    'first_name' => $row['first_name'],
+                    'last_name' => $row['last_name'],
+                    'id_card' => $row['id_card'],
+                    'id_card_formatted' => $this->formatIdCard($row['id_card'] ?? ''),
+                    'phone' => $row['phone'],
+                    'address' => $row['address'],
+                    'project_name' => $row['project_name'],
+                    'project_number' => $row['project_number'],
+                    'amount' => floatval($row['amount']),
+                    'donation_date' => $row['donation_date'],
+                    'payment_method' => $row['payment_method'],
+                    'source' => 'donat_user',
+                    'source_label' => 'รายการบริจาค'
+                ];
+            }
+        } catch (PDOException $e) {
+            error_log("Search donat_user error: " . $e->getMessage());
+        }
+
+        // ค้นหาจาก bank_transactions
+        try {
+            $sql = "SELECT 
+                        bt.id,
+                        bt.payerAccountName as name,
+                        bt.billPaymentRef2 as id_card,
+                        bt.amount,
+                        bt.transactionDateandTime as donation_date,
+                        du.project_name,
+                        du.project_number,
+                        du.phone,
+                        du.receipt_address as address,
+                        'bank' as source
+                    FROM edonation_bank_transactions bt
+                    LEFT JOIN edonation_donat_user du ON bt.billPaymentRef1 COLLATE utf8mb4_unicode_ci = du.billPaymentRef1
+                    WHERE ";
+
+            $params = [];
+            $conditions = [];
+
+            if ($type === 'name' || $type === 'all') {
+                $conditions[] = "bt.payerAccountName LIKE :name_query";
+                $params[':name_query'] = '%' . $query . '%';
+            }
+
+            if ($type === 'id_card' || $type === 'all') {
+                $cleanQuery = preg_replace('/\D/', '', $query);
+                if (!empty($cleanQuery)) {
+                    $conditions[] = "bt.billPaymentRef2 LIKE :id_query";
+                    $params[':id_query'] = '%' . $cleanQuery . '%';
+                }
+            }
+
+            if (empty($conditions)) {
+                $conditions[] = "1=0";
+            }
+
+            $sql .= "(" . implode(' OR ', $conditions) . ") ORDER BY bt.transactionDateandTime DESC LIMIT :limit";
+
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $bankResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($bankResults as $row) {
+                // หลีกเลี่ยงข้อมูลซ้ำ
+                $exists = false;
+                foreach ($results as $r) {
+                    if (!empty($row['id_card']) && $r['id_card'] === $row['id_card']) {
+                        $exists = true;
+                        break;
+                    }
+                }
+
+                if (!$exists) {
+                    $results[] = [
+                        'id' => 'bank_' . $row['id'],
+                        'name' => $row['name'],
+                        'id_card' => $row['id_card'],
+                        'id_card_formatted' => $this->formatIdCard($row['id_card'] ?? ''),
+                        'phone' => $row['phone'],
+                        'address' => $row['address'],
+                        'project_name' => $row['project_name'],
+                        'project_number' => $row['project_number'],
+                        'amount' => floatval($row['amount']),
+                        'donation_date' => $row['donation_date'],
+                        'source' => 'bank',
+                        'source_label' => 'ธนาคาร'
+                    ];
+                }
+            }
+        } catch (PDOException $e) {
+            error_log("Search bank error: " . $e->getMessage());
+        }
+
+        return Response::success($results, 'พบ ' . count($results) . ' รายการ', [
+            'count' => count($results),
+            'query' => $query,
+            'type' => $type
+        ]);
     }
 
     /**
@@ -99,7 +280,7 @@ class MemberController
                     FROM edonation_bank_transactions 
                     WHERE billPaymentRef2 = :id_card
                     GROUP BY payerAccountName, payerName, billPaymentRef2";
-        
+
         $stmt = $this->pdo->prepare($bankSql);
         $stmt->execute([':id_card' => $cleanIdCard]);
         $bankResult = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -127,7 +308,7 @@ class MemberController
                      FROM edonation_donat_user 
                      WHERE id_card = :id_card AND status_donat = 'completed'
                      GROUP BY first_name, last_name, id_card, phone";
-        
+
         $stmt = $this->pdo->prepare($donatSql);
         $stmt->execute([':id_card' => $cleanIdCard]);
         $donatResult = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -154,7 +335,7 @@ class MemberController
 
         // ค้นหาจากตารางใบเสร็จรายปี (legacy data)
         $legacyTables = ['edonation_receipt_2566', 'edonation_receipt_2567'];
-        
+
         foreach ($legacyTables as $table) {
             $legacySql = "SELECT 
                             payerAccountName as name,
@@ -167,7 +348,7 @@ class MemberController
                           FROM {$table} 
                           WHERE billPaymentRef2 = :id_card AND status_payment = 'confirm'
                           GROUP BY payerAccountName, billPaymentRef2, phone, email";
-            
+
             try {
                 $stmt = $this->pdo->prepare($legacySql);
                 $stmt->execute([':id_card' => $cleanIdCard]);
@@ -244,11 +425,11 @@ class MemberController
                     LEFT JOIN edonation_receipts r ON bt.id = r.bank_transaction_id
                     WHERE bt.billPaymentRef2 = :id_card
                     ORDER BY bt.transactionDateandTime DESC";
-        
+
         $stmt = $this->pdo->prepare($bankSql);
         $stmt->execute([':id_card' => $cleanIdCard]);
         $bankDonations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         foreach ($bankDonations as $d) {
             $donations[] = [
                 'id' => 'bank_' . $d['id'],
@@ -311,7 +492,7 @@ class MemberController
         }
 
         // Sort by date descending
-        usort($donations, function($a, $b) {
+        usort($donations, function ($a, $b) {
             return strtotime($b['donation_date'] ?? '1970-01-01') - strtotime($a['donation_date'] ?? '1970-01-01');
         });
 
@@ -352,7 +533,7 @@ class MemberController
                         LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
                         WHERE bt.billPaymentRef2 = :id_card
                         ORDER BY r.issued_at DESC";
-        
+
         $stmt = $this->pdo->prepare($receiptsSql);
         $stmt->execute([':id_card' => $cleanIdCard]);
         $newReceipts = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -420,7 +601,7 @@ class MemberController
         }
 
         // Sort by issued_at descending
-        usort($receipts, function($a, $b) {
+        usort($receipts, function ($a, $b) {
             return strtotime($b['issued_at'] ?? '1970-01-01') - strtotime($a['issued_at'] ?? '1970-01-01');
         });
 
@@ -461,7 +642,7 @@ class MemberController
                     FROM edonation_bank_transactions bt
                     LEFT JOIN edonation_donat_user du ON bt.billPaymentRef1 COLLATE utf8mb4_unicode_ci = du.billPaymentRef1
                     WHERE bt.billPaymentRef2 = :id_card";
-        
+
         $stmt = $this->pdo->prepare($bankSql);
         $stmt->execute([':id_card' => $cleanIdCard]);
         $bankDonations = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -478,7 +659,7 @@ class MemberController
 
         // 2. ดึงจากตารางใบเสร็จรายปี
         $legacyTables = ['edonation_receipt_2566', 'edonation_receipt_2567'];
-        
+
         foreach ($legacyTables as $table) {
             $legacySql = "SELECT 
                             amount,
@@ -550,7 +731,7 @@ class MemberController
 
         // Sort and format
         krsort($byYear);
-        usort($byProject, function($a, $b) {
+        usort($byProject, function ($a, $b) {
             return $b['amount'] <=> $a['amount'];
         });
 
@@ -578,10 +759,10 @@ class MemberController
             return $idCard;
         }
         return substr($idCard, 0, 1) . '-' .
-               substr($idCard, 1, 4) . '-' .
-               substr($idCard, 5, 5) . '-' .
-               substr($idCard, 10, 2) . '-' .
-               substr($idCard, 12, 1);
+            substr($idCard, 1, 4) . '-' .
+            substr($idCard, 5, 5) . '-' .
+            substr($idCard, 10, 2) . '-' .
+            substr($idCard, 12, 1);
     }
 
     /**
