@@ -65,8 +65,8 @@ class BenefitsController
         $stmt = $this->pdo->query($sql);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // เพิ่ม URL รูปภาพ
-        $baseImageUrl = '/appdev/edonation/assets/images/benefits/';
+        // เพิ่ม URL รูปภาพ - use BASE_PATH from config (assets are in web/ folder)
+        $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/web/assets/images/benefits/';
         foreach ($results as &$item) {
             $item['image_url'] = $item['img_file']
                 ? $baseImageUrl . $item['img_file']
@@ -95,8 +95,8 @@ class BenefitsController
             return Response::notFound('ไม่พบข้อมูลระดับนี้');
         }
 
-        // เพิ่ม URL รูปภาพ
-        $baseImageUrl = '/appdev/edonation/assets/images/benefits/';
+        // เพิ่ม URL รูปภาพ - use BASE_PATH from config (assets are in web/ folder)
+        $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/web/assets/images/benefits/';
         $result['image_url'] = $result['img_file']
             ? $baseImageUrl . $result['img_file']
             : $baseImageUrl . 'default.jpg';

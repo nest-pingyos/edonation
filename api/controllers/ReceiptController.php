@@ -291,9 +291,10 @@ class ReceiptController
             return Response::notFound('ไม่พบใบเสร็จ');
         }
 
-        // ส่ง receipt ID พร้อม token
+        // ส่ง receipt ID พร้อม token - use BASE_PATH from config
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return Response::success([
-            'pdf_url' => "/appdev/edonation/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
             'receipt_no' => $receipt['receipt_no'],
             'api_version' => self::VERSION
         ]);
@@ -496,10 +497,12 @@ class ReceiptController
             'expire_at' => time() + 3600 // 1 ชั่วโมงสำหรับ Admin
         ];
 
+        // Use BASE_PATH from config
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return Response::success([
             'id' => (int) $id,
             'receipt_no' => $receiptNo,
-            'pdf_url' => "/appdev/edonation/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
             'access_token' => $accessToken,
             'api_version' => self::VERSION
         ], 'ออกใบเสร็จสำเร็จ');

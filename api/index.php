@@ -27,8 +27,9 @@ require_once __DIR__ . '/config/bootstrap.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-// ใช้ BASE_PATH จาก env config (รองรับทั้ง Production และ Testing)
-$apiBasePath = (defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation') . '/api';
+// ใช้ BASE_PATH จาก env config (รองรับทั้ง Production และ Development)
+// Production default: /edonation, Development: /appdev/edonation
+$apiBasePath = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/api';
 $uri = str_replace($apiBasePath, '', $uri);
 $uri = trim($uri, '/');
 $segments = $uri ? explode('/', $uri) : [];
@@ -98,6 +99,12 @@ try {
             $response = $controller->handle($method, $id, $action);
             break;
 
+        case 'members':
+            require_once __DIR__ . '/controllers/MemberController.php';
+            $controller = new MemberController();
+            $response = $controller->handle($method, $id, $action);
+            break;
+
         default:
             $response = [
                 'success' => true,
@@ -110,7 +117,8 @@ try {
                     'notifications' => '/api/v1/notifications',
                     'payments' => '/api/v1/payments/callback',
                     'benefits' => '/api/v1/benefits',
-                    'news' => '/api/v1/news'
+                    'news' => '/api/v1/news',
+                    'members' => '/api/v1/members'
                 ]
             ];
     }

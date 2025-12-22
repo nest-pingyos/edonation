@@ -123,8 +123,9 @@ class NewsController
         $countStmt->execute();
         $total = $countStmt->fetchColumn();
 
-        // Add image URLs
-        $baseImageUrl = '/appdev/edonation/assets/images/news/';
+        // Add image URLs - use BASE_PATH from config
+        // Note: assets are in web/ folder, so URL needs /web/ prefix
+        $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/web/assets/images/news/';
         foreach ($results as &$item) {
             $item['image_url'] = $item['img_file']
                 ? $baseImageUrl . $item['img_file']
@@ -168,8 +169,8 @@ class NewsController
         $updateStmt->execute([':id' => $id]);
         $result['view_count']++;
 
-        // Add image URL
-        $baseImageUrl = '/appdev/edonation/assets/images/news/';
+        // Add image URL - use BASE_PATH from config (assets are in web/ folder)
+        $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/web/assets/images/news/';
         $result['image_url'] = $result['img_file']
             ? $baseImageUrl . $result['img_file']
             : $baseImageUrl . 'default.jpg';
@@ -384,8 +385,8 @@ class NewsController
         $randomStr = substr(md5(uniqid(mt_rand(), true)), 0, 6);
         $newFilename = "news_{$timestamp}_{$randomStr}.{$extension}";
 
-        // Upload directory
-        $uploadDir = dirname(__DIR__, 2) . '/assets/images/news/';
+        // Upload directory (assets are in web/ folder)
+        $uploadDir = dirname(__DIR__, 2) . '/web/assets/images/news/';
 
         // Create directory if not exists
         if (!is_dir($uploadDir)) {
@@ -399,8 +400,8 @@ class NewsController
             return Response::error('UPLOAD_ERROR', 'ไม่สามารถบันทึกไฟล์ได้');
         }
 
-        // Return success with file info
-        $baseImageUrl = '/appdev/edonation/assets/images/news/';
+        // Return success with file info - use BASE_PATH from config (assets are in web/ folder)
+        $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/web/assets/images/news/';
 
         return Response::success([
             'filename' => $newFilename,

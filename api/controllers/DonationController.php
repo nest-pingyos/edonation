@@ -326,7 +326,9 @@ class DonationController
                         'expire_at' => $expireAt
                     ];
 
-                    $pdfUrl = "/appdev/edonation/receipts/pdf_maker.php?id={$receipt['id']}&token={$accessToken}";
+                    // Use BASE_PATH from config
+                    $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+                    $pdfUrl = "{$basePath}/receipts/pdf_maker.php?id={$receipt['id']}&token={$accessToken}";
                 }
 
                 return Response::success([
