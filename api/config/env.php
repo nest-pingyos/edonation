@@ -3,12 +3,15 @@
  * Environment Configuration
  * eDonation API
  * 
- * Production URL: https://app.nurse.cmu.ac.th/edonation
- * Development URL: http://localhost/appdev/edonation
+ * รองรับ API แยก domain พร้อม CORS
+ * 
+ * @version 2.0
  */
 
 // Load .env file from project root
 $envFile = dirname(__DIR__, 2) . '/.env';
+$envVars = [];
+
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
@@ -22,28 +25,51 @@ if (file_exists($envFile)) {
         list($key, $value) = explode('=', $line, 2);
         $key = trim($key);
         $value = trim($value);
-        // ไม่ override ค่าที่มีอยู่แล้ว
+        $envVars[$key] = $value;
         if (!isset($_ENV[$key])) {
             $_ENV[$key] = $value;
         }
     }
 }
 
+// Handle variable interpolation
+foreach ($envVars as $key => $value) {
+    if (preg_match_all('/\$\{([^}]+)\}/', $value, $matches)) {
+        foreach ($matches[1] as $varName) {
+            if (isset($envVars[$varName])) {
+                $value = str_replace('${' . $varName . '}', $envVars[$varName], $value);
+            }
+        }
+        $_ENV[$key] = $value;
+    }
+}
+
+// ===========================================
+// Domain & URL Configuration
+// ===========================================
+define('APP_DOMAIN', $_ENV['APP_DOMAIN'] ?? 'http://localhost');
+define('API_DOMAIN', $_ENV['API_DOMAIN'] ?? APP_DOMAIN);
+define('BASE_PATH', $_ENV['BASE_PATH'] ?? '/edonation');
+define('API_BASE_PATH', $_ENV['API_BASE_PATH'] ?? BASE_PATH . '/api');
+
+// Full URLs
+define('APP_URL', APP_DOMAIN . BASE_PATH);
+define('API_URL', API_DOMAIN . API_BASE_PATH);
+define('WEB_URL', APP_URL);
+define('ADMIN_URL', APP_URL . '/admin');
+
+// ===========================================
+// CORS Configuration
+// ===========================================
+// Allowed origins for CORS (comma-separated in .env)
+$allowedOrigins = $_ENV['CORS_ALLOWED_ORIGINS'] ?? APP_DOMAIN;
+define('CORS_ALLOWED_ORIGINS', explode(',', $allowedOrigins));
+
 // ===========================================
 // Application Settings
 // ===========================================
 define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
 define('APP_DEBUG', ($_ENV['APP_DEBUG'] ?? 'false') === 'true');
-
-// Production URL ใหม่: https://app.nurse.cmu.ac.th/edonation
-define('APP_URL', $_ENV['APP_URL'] ?? 'https://app.nurse.cmu.ac.th/edonation');
-define('BASE_PATH', $_ENV['BASE_PATH'] ?? '/edonation');
-
-// URLs ที่ใช้งาน
-define('WEB_URL', APP_URL);
-define('API_URL', APP_URL . '/api');
-define('ADMIN_URL', APP_URL . '/admin');
-define('OFFICE_URL', APP_URL . '/office');
 
 // ===========================================
 // Database Configuration
@@ -73,3 +99,39 @@ define('SCB_BILLER_ID', $_ENV['SCB_BILLER_ID'] ?? '');
 define('SCB_API_KEY', $_ENV['SCB_API_KEY'] ?? '');
 define('SCB_API_SECRET', $_ENV['SCB_API_SECRET'] ?? '');
 
+/**
+ * Handle CORS headers
+ * เรียกใช้ function นี้ก่อน output ใดๆ
+ */
+function handleCors(): void
+{
+    // Get origin
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+    // Check if origin is allowed
+    $allowed = false;
+    foreach (CORS_ALLOWED_ORIGINS as $allowedOrigin) {
+        $allowedOrigin = trim($allowedOrigin);
+        if ($origin === $allowedOrigin || $allowedOrigin === '*') {
+            $allowed = true;
+            break;
+        }
+    }
+
+    // If development, allow localhost
+    if (APP_ENV === 'development' && strpos($origin, 'localhost') !== false) {
+        $allowed = true;
+    }
+
+    if ($allowed && $origin) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Access-Control-Allow-Credentials: true');
+    } elseif (empty($origin)) {
+        // Same-origin request
+        header('Access-Control-Allow-Origin: *');
+    }
+
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Max-Age: 86400'); // 24 hours cache for preflight
+}

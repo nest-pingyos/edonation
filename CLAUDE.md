@@ -66,16 +66,59 @@ edonation/
 
 ## Independence of Modules
 
-**✅ web, api, admin แยกกันสมบูรณ์**
+**✅ web, api, admin แยกกันสมบูรณ์ - เชื่อมต่อผ่าน HTTP API เท่านั้น**
 
-| Module | Depends On | Description |
-|--------|------------|-------------|
-| `web` | `shared/`, `.env` | Frontend website |
-| `api` | `shared/`, `.env` | REST API backend |
-| `admin` | `api` (via HTTP) | Admin UI |
-| `shared` | `.env` only | Shared services |
+| Module | Location | Depends On | Description |
+|--------|----------|------------|-------------|
+| `web` | `/web/` | `.env`, `shared/` | Frontend website (PHP) |
+| `api` | `/api/` | `.env` | REST API (Pure PHP, ไม่ต้องใช้ shared) |
+| `admin` | `/admin/` | **API via HTTP** | Admin Dashboard |
+| `shared` | `/shared/` | `.env` | Utilities (AutoProvince, SCB) |
+
+### การเชื่อมต่อระหว่าง Modules
+
+```
+┌─────────────┐     HTTP/HTTPS      ┌─────────────┐
+│   Web/Admin │ ◄────────────────► │    API      │
+│ (Same Domain)│     JSON REST      │(Same/Other) │
+└─────────────┘                     └─────────────┘
+      │                                   │
+      ▼                                   ▼
+   ┌──────┐                          ┌──────┐
+   │ .env │                          │ .env │
+   └──────┘                          └──────┘
+```
+
+## Domain Configuration
+
+### ⚙️ รองรับ 2 รูปแบบ:
+
+**1. Same Domain (Default)**
+```
+Web:   https://app.nurse.cmu.ac.th/edonation
+Admin: https://app.nurse.cmu.ac.th/edonation/admin
+API:   https://app.nurse.cmu.ac.th/edonation/api
+```
+
+**2. Separate API Domain**
+```
+Web:   https://app.nurse.cmu.ac.th/edonation
+Admin: https://app.nurse.cmu.ac.th/edonation/admin
+API:   https://api.nurse.cmu.ac.th/api  (แยก domain)
+```
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `APP_DOMAIN` | Domain สำหรับ Web/Admin | `https://app.nurse.cmu.ac.th` |
+| `API_DOMAIN` | Domain สำหรับ API | Same as APP_DOMAIN หรือแยก |
+| `BASE_PATH` | Path หลัง domain | `/edonation` |
+| `API_BASE_PATH` | Path ของ API | `/edonation/api` |
+| `CORS_ALLOWED_ORIGINS` | Domain ที่อนุญาต CORS | `https://app.nurse.cmu.ac.th` |
 
 ## URLs
+
 
 | Environment | Web | API | Admin |
 |-------------|-----|-----|-------|

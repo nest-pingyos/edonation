@@ -2,17 +2,29 @@
 /**
  * API Router - eDonation
  * Main entry point for all API requests
+ * 
+ * รองรับ API แยก domain พร้อม CORS
+ * 
+ * @version 2.0
  */
 
-// Error handling - TEMP DEBUG
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+// Error handling
+if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+} else {
+    ini_set('display_errors', 0);
+    error_reporting(0);
+}
 
-// Headers
+// Autoload first to get config
+require_once __DIR__ . '/config/bootstrap.php';
+
+// Set content type
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+// Handle CORS with dynamic origins
+handleCors();
 
 // Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -20,8 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Autoload
-require_once __DIR__ . '/config/bootstrap.php';
 
 // Get request info
 $method = $_SERVER['REQUEST_METHOD'];
