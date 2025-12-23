@@ -624,7 +624,7 @@ include_once('../config/head.php');
         <button id="scrollTopBtn"><i class="fas fa-long-arrow-alt-up"></i></button>
     </div>
 
-    <script src="../assets/js/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="../assets/js/plugins.js"></script>
     <script src="../assets/js/main.js"></script>
     <!-- <script src="phpscript.php"></script> -->
