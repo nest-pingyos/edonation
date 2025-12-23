@@ -11,6 +11,11 @@
 
     <?php include 'partials/head-css.php'; ?>
 
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet" />
+
     <style>
         .receipt-preview {
             background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
@@ -267,12 +272,48 @@
                                                 placeholder="email@example.com">
                                             <div class="form-text">ใช้สำหรับส่งใบเสร็จทางอีเมล</div>
                                         </div>
+                                    </div>
 
+                                    <!-- ที่อยู่ with AutoProvince -->
+                                    <hr class="my-3">
+                                    <h6 class="text-muted mb-3">
+                                        <iconify-icon icon="iconamoon:location-duotone" class="me-1"></iconify-icon>
+                                        ที่อยู่สำหรับใบเสร็จ
+                                    </h6>
+                                    <div class="row g-3">
                                         <div class="col-12">
-                                            <label class="form-label">ที่อยู่ <span class="text-danger">*</span></label>
-                                            <textarea class="form-control" id="address" name="address" rows="3" required
-                                                placeholder="บ้านเลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์"></textarea>
+                                            <label class="form-label">ที่อยู่ (บ้านเลขที่ ซอย ถนน) <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="address_line"
+                                                name="address_line" placeholder="บ้านเลขที่ ซอย ถนน หมู่" required>
                                         </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">จังหวัด <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="province" name="province" required>
+                                                <option value="">-- เลือกจังหวัด --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">อำเภอ/เขต <span
+                                                    class="text-danger">*</span></label>
+                                            <select class="form-select" id="district" name="district" required disabled>
+                                                <option value="">-- เลือกอำเภอ/เขต --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">ตำบล/แขวง <span
+                                                    class="text-danger">*</span></label>
+                                            <select class="form-select" id="subdistrict" name="subdistrict" required
+                                                disabled>
+                                                <option value="">-- เลือกตำบล/แขวง --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">รหัสไปรษณีย์</label>
+                                            <input type="text" class="form-control" id="postcode" name="postcode"
+                                                readonly>
+                                        </div>
+                                        <input type="hidden" id="address" name="address">
                                     </div>
                                 </div>
                             </div>
@@ -480,7 +521,12 @@
     <?php include 'partials/vendor-scripts.php'; ?>
     <script src="assets/js/api-helper.js"></script>
 
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <script>
+        // AutoProvince API URL
+        const AUTOPROVINCE_API = '../../shared/autoprovince/api.php';
         let projects = [];
         let selectedDonation = null;
 
@@ -488,6 +534,7 @@
             loadProjects();
             setDefaultDate();
             setupFormListeners();
+            initAutoProvince();
 
             // Form submit
             document.getElementById('receiptForm').addEventListener('submit', handleSubmit);
@@ -498,14 +545,126 @@
                 updatePreview();
             });
 
-            document.getElementById('searchIdCard').addEventListener('input', function (e) {
-                this.value = this.value.replace(/\D/g, '').substring(0, 13);
-            });
+            const searchIdCard = document.getElementById('searchIdCard');
+            if (searchIdCard) {
+                searchIdCard.addEventListener('input', function (e) {
+                    this.value = this.value.replace(/\D/g, '').substring(0, 13);
+                });
+            }
 
             document.getElementById('phone').addEventListener('input', function (e) {
                 this.value = this.value.replace(/\D/g, '').substring(0, 10);
             });
         });
+
+        // ===== AUTOPROVINCE FUNCTIONS =====
+        function initAutoProvince() {
+            const $province = $('#province');
+            const $district = $('#district');
+            const $subdistrict = $('#subdistrict');
+            const $postcode = $('#postcode');
+
+            // Initialize Select2
+            [$province, $district, $subdistrict].forEach($el => {
+                $el.select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    placeholder: 'เลือก...',
+                    allowClear: true
+                });
+            });
+
+            // Load provinces
+            $.get(AUTOPROVINCE_API + '?action=get_provinces', function (res) {
+                if (res.status === 'success') {
+                    $province.empty().append('<option value="">-- เลือกจังหวัด --</option>');
+                    res.data.forEach(item => {
+                        $province.append(new Option(item.name, item.id));
+                    });
+                }
+            });
+
+            // Province change -> load districts
+            $province.on('change', function () {
+                const provinceId = $(this).val();
+                $district.empty().append('<option value="">-- เลือกอำเภอ/เขต --</option>').prop('disabled', true).trigger('change.select2');
+                $subdistrict.empty().append('<option value="">-- เลือกตำบล/แขวง --</option>').prop('disabled', true).trigger('change.select2');
+                $postcode.val('');
+                updateFullAddress();
+
+                if (provinceId) {
+                    $.post(AUTOPROVINCE_API + '?action=get_districts', { province_id: provinceId }, function (res) {
+                        if (res.status === 'success') {
+                            $district.prop('disabled', false);
+                            res.data.forEach(item => {
+                                $district.append(new Option(item.name, item.id));
+                            });
+                        }
+                    });
+                }
+            });
+
+            // District change -> load subdistricts
+            $district.on('change', function () {
+                const districtId = $(this).val();
+                $subdistrict.empty().append('<option value="">-- เลือกตำบล/แขวง --</option>').prop('disabled', true).trigger('change.select2');
+                $postcode.val('');
+                updateFullAddress();
+
+                if (districtId) {
+                    $.post(AUTOPROVINCE_API + '?action=get_subdistricts', { district_id: districtId }, function (res) {
+                        if (res.status === 'success') {
+                            $subdistrict.prop('disabled', false);
+                            res.data.forEach(item => {
+                                const opt = new Option(item.name, item.id);
+                                $(opt).data('postcode', item.postcode);
+                                $subdistrict.append(opt);
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Subdistrict change -> auto-fill postcode
+            $subdistrict.on('change', function () {
+                const selected = $(this).select2('data')[0];
+                if (selected && selected.element) {
+                    const postcode = $(selected.element).data('postcode');
+                    if (postcode && postcode !== '0') {
+                        $postcode.val(postcode);
+                    }
+                }
+                updateFullAddress();
+            });
+
+            // Address line change
+            $('#address_line').on('change blur', updateFullAddress);
+        }
+
+        function updateFullAddress() {
+            const parts = [];
+            const addressLine = $('#address_line').val();
+            const subdistrict = $('#subdistrict option:selected').text();
+            const district = $('#district option:selected').text();
+            const province = $('#province option:selected').text();
+            const postcode = $('#postcode').val();
+
+            if (addressLine) parts.push(addressLine);
+            if (subdistrict && !subdistrict.includes('--')) parts.push('ต.' + subdistrict);
+            if (district && !district.includes('--')) parts.push('อ.' + district);
+            if (province && !province.includes('--')) parts.push('จ.' + province);
+            if (postcode) parts.push(postcode);
+
+            $('#address').val(parts.join(' '));
+        }
+
+        // Helper to set address from search result
+        function setAddressFromText(addressText) {
+            // If we have structured address, set address_line only
+            // The dropdowns should be selected manually or via lookup
+            $('#address_line').val(addressText);
+            $('#address').val(addressText);
+        }
 
         async function loadProjects() {
             try {
@@ -711,7 +870,9 @@
                 document.getElementById('phone').value = item.phone;
             }
             if (item.address) {
+                // Set address to both hidden and address_line
                 document.getElementById('address').value = item.address;
+                document.getElementById('address_line').value = item.address;
             }
             if (item.project_number) {
                 document.getElementById('project_number').value = item.project_number;
@@ -762,7 +923,9 @@
             }
 
             document.getElementById('phone').value = donation.phone || '';
-            document.getElementById('address').value = donation.receipt_address || donation.shipping_address || donation.address || '';
+            const addrValue = donation.receipt_address || donation.shipping_address || donation.address || '';
+            document.getElementById('address').value = addrValue;
+            document.getElementById('address_line').value = addrValue;
             document.getElementById('project_number').value = donation.project_number || '';
             document.getElementById('amount').value = donation.amount || '';
             document.getElementById('payment_method').value = donation.payby || donation.payment_method || 'QR PromptPay';
@@ -799,7 +962,8 @@
             const firstName = document.getElementById('first_name').value;
             const lastName = document.getElementById('last_name').value;
             const idCard = document.getElementById('id_card').value;
-            const address = document.getElementById('address').value;
+            const addressLine = document.getElementById('address_line').value;
+            const address = document.getElementById('address').value || addressLine;
             const projectNumber = document.getElementById('project_number').value;
             const amount = document.getElementById('amount').value;
             const donationDate = document.getElementById('donation_date').value;
@@ -814,7 +978,7 @@
                 return;
             }
 
-            if (!address) {
+            if (!addressLine && !address) {
                 showWarning('กรุณากรอกที่อยู่');
                 return;
             }

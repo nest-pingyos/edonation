@@ -12,12 +12,18 @@ $basePath = '';
 ?>
 
 <?php if ($localJsExists): ?>
+    <!-- jQuery (required for Select2 and other plugins) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
     <!-- Local JS Files -->
     <script src="<?php echo $basePath; ?>assets/js/vendor.js"></script>
     <script src="<?php echo $basePath; ?>assets/js/app.js"></script>
 
 <?php else: ?>
     <!-- CDN Fallback (Before Build) -->
+
+    <!-- jQuery (for Select2 and other plugins) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
