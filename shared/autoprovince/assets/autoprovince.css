@@ -1,0 +1,166 @@
+/**
+ * AutoProvince Styles
+ * สไตล์สำหรับ component เลือกที่อยู่
+ * 
+ * @version 2.0 - eDonation Edition
+ */
+
+/* Loading Overlay for AutoProvince */
+.autoprovince-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    z-index: 10;
+}
+
+.autoprovince-loader.active {
+    display: flex;
+}
+
+.autoprovince-loader .spinner-border {
+    width: 2rem;
+    height: 2rem;
+    color: var(--bs-primary, #4f46e5);
+}
+
+/* AutoProvince Container */
+.autoprovince-container {
+    position: relative;
+}
+
+/* Form styles for address section */
+.address-section .form-label {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+}
+
+.address-section .form-select,
+.address-section .form-control {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background-color: #f9fafb;
+}
+
+.address-section .form-select:focus,
+.address-section .form-control:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    background-color: #fff;
+}
+
+.address-section .form-select:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Postcode field styling */
+.address-section input[id*="postcode"],
+.address-section input[name*="postcode"] {
+    background-color: #f3f4f6;
+    font-weight: 600;
+    color: #4f46e5;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+/* Select2 customization for address fields */
+.address-section .select2-container--bootstrap-5 .select2-selection {
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    min-height: 42px !important;
+    padding: 4px 8px !important;
+}
+
+.address-section .select2-container--bootstrap-5 .select2-selection:focus,
+.address-section .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
+}
+
+.address-section .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    padding-left: 8px !important;
+    color: #374151 !important;
+}
+
+.address-section .select2-container--bootstrap-5 .select2-selection__placeholder {
+    color: #9ca3af !important;
+}
+
+/* Disabled state for Select2 */
+.address-section .select2-container--disabled .select2-selection {
+    background-color: #f3f4f6 !important;
+    cursor: not-allowed !important;
+}
+
+/* Address row layout */
+.address-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.address-row > .form-group {
+    margin-bottom: 0;
+}
+
+/* Compact mode */
+.autoprovince-compact .form-label {
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+}
+
+.autoprovince-compact .form-select,
+.autoprovince-compact .form-control {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+}
+
+.autoprovince-compact .select2-container--bootstrap-5 .select2-selection {
+    min-height: 38px !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .address-section .form-label {
+        color: #e5e7eb;
+    }
+    
+    .address-section .form-select,
+    .address-section .form-control {
+        background-color: #1f2937;
+        border-color: #374151;
+        color: #f3f4f6;
+    }
+    
+    .address-section .form-select:focus,
+    .address-section .form-control:focus {
+        background-color: #111827;
+    }
+    
+    .autoprovince-loader {
+        background: rgba(17, 24, 39, 0.85);
+    }
+}
+
+/* Animation for loading */
+@keyframes autoprovince-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.autoprovince-loading {
+    animation: autoprovince-pulse 1.5s ease-in-out infinite;
+}
