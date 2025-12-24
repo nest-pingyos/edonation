@@ -9,8 +9,10 @@ $currentPage = basename(dirname($_SERVER['PHP_SELF']));
 <header class="header header-layout1">
   <nav class="navbar navbar-expand-lg sticky-navbar">
     <div class="container-fluid">
-      <a class="navbar-brand" href="../home/<?= $langParam ?>">
-        <img src="../assets/images/logo/logo-nurse.png" class="logo-dark" alt="logo">
+      <a class="navbar-brand" href="<?= BASE_PATH ?>/web/home/<?= $langParam ?>">
+        <?php $imgSrc = BASE_PATH . '/web/assets/images/logo/logo.svg'; ?>
+        <img src="<?= $imgSrc ?>" class="logo-light" alt="logo" style="height: 50px;">
+        <img src="<?= $imgSrc ?>" class="logo-dark" alt="logo" style="height: 50px;">
       </a>
       <button class="navbar-toggler" type="button">
         <span class="menu-lines"><span></span></span>

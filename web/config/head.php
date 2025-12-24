@@ -15,8 +15,8 @@ $host = $_SERVER['HTTP_HOST'];
 // Use BASE_PATH from config instead of hardcoded value
 $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
 $baseUrl = "$protocol://$host" . $basePath;
-$baseImgUrl = "$baseUrl/assets/images";
-$currentImage = isset($pageImage) ? $pageImage : "$baseImgUrl/logo/logo-nurse.png";
+$baseImgUrl = "$baseUrl/web/assets/images";
+$currentImage = isset($pageImage) ? $pageImage : "$baseImgUrl/logo/logo.svg";
 $currentUrl = "$protocol://$host" . $_SERVER['REQUEST_URI'];
 
 // Canonical URL (remove query strings for canonical)
@@ -72,7 +72,7 @@ $canonicalUrl = isset($pageCanonical) ? $pageCanonical : strtok($currentUrl, '?'
         "name": "คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่",
         "alternateName": "Faculty of Nursing, Chiang Mai University",
         "url": "<?php echo $baseUrl; ?>",
-        "logo": "<?php echo $baseImgUrl; ?>/logo/logo-nurse.png",
+        "logo": "<?php echo $baseImgUrl; ?>/logo/logo.svg",
         "contactPoint": {
             "@type": "ContactPoint",
             "telephone": "+66-53-935012",
@@ -92,18 +92,18 @@ $canonicalUrl = isset($pageCanonical) ? $pageCanonical : strtok($currentUrl, '?'
     </script>
 
     <!-- Favicon & Mobile Icons -->
-    <link rel="icon" href="../assets/images/favicon/favicon.png">
-    <link rel="apple-touch-icon" href="../assets/images/favicon/favicon.png">
-    <link rel="icon" sizes="32x32" href="../assets/images/favicon/favicon.png">
-    <link rel="icon" sizes="192x192" href="../assets/images/favicon/favicon.png">
+    <link rel="icon" href="<?= BASE_PATH ?>/web/assets/images/favicon/favicon.png">
+    <link rel="apple-touch-icon" href="<?= BASE_PATH ?>/web/assets/images/favicon/favicon.png">
+    <link rel="icon" sizes="32x32" href="<?= BASE_PATH ?>/web/assets/images/favicon/favicon.png">
+    <link rel="icon" sizes="192x192" href="<?= BASE_PATH ?>/web/assets/images/favicon/favicon.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.3/css/all.css">
-    <link rel="stylesheet" href="../assets/css/libraries.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/custom.css"> <!-- Custom Styles -->
+    <link rel="stylesheet" href="<?= BASE_PATH ?>/web/assets/css/libraries.css">
+    <link rel="stylesheet" href="<?= BASE_PATH ?>/web/assets/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_PATH ?>/web/assets/css/custom.css"> <!-- Custom Styles -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css">
 

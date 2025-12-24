@@ -56,8 +56,21 @@ if (!defined('API_DOMAIN'))
     define('API_DOMAIN', $_ENV['API_DOMAIN'] ?? APP_DOMAIN);
 
 // Base paths
-if (!defined('BASE_PATH'))
-    define('BASE_PATH', $_ENV['BASE_PATH'] ?? '/edonation');
+if (!defined('BASE_PATH')) {
+    // Detect BASE_PATH automatically (e.g., /appdev/edonation)
+    $script_path = str_replace('\\', '/', dirname(__DIR__, 2));
+    $root_path = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
+
+    if (empty($root_path)) {
+        // Fallback for CLI
+        $auto_base = $_ENV['BASE_PATH'] ?? '/edonation';
+    } else {
+        $auto_base = str_replace($root_path, '', $script_path);
+        if ($auto_base && $auto_base[0] !== '/')
+            $auto_base = '/' . $auto_base;
+    }
+    define('BASE_PATH', $auto_base ?: '/edonation');
+}
 if (!defined('API_BASE_PATH'))
     define('API_BASE_PATH', $_ENV['API_BASE_PATH'] ?? BASE_PATH . '/api');
 

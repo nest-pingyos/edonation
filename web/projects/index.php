@@ -22,7 +22,7 @@ include_once('../config/head.php');
 
     .projects-header h1 {
         font-size: 2.5rem;
-        font-weight: 700;
+        font-weight: 600;
         color: #1a3a5c;
         margin-bottom: 15px;
     }
@@ -102,21 +102,22 @@ include_once('../config/head.php');
         font-size: 1.2rem;
         font-weight: 600;
         color: #1a3a5c;
-        margin-bottom: 12px;
-        line-height: 1.5;
+        margin-bottom: 16px;
+        line-height: 1.6;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        min-height: 3.6em;
+        min-height: 3.8em;
         /* Fixed height for 2 lines */
+        padding-bottom: 2px;
     }
 
     .project-card-desc {
         font-size: 0.95rem;
         color: #666;
         line-height: 1.6;
-        margin-bottom: 20px;
+        margin-bottom: 24px;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
@@ -141,7 +142,7 @@ include_once('../config/head.php');
         color: #fff;
         border-radius: 50px;
         text-decoration: none;
-        font-weight: 600;
+        font-weight: 500;
         font-size: 0.95rem;
         transition: all 0.3s ease;
         width: 100%;

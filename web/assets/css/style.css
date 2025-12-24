@@ -2541,7 +2541,8 @@ input[type=radio] {
 
 .slick-arrow.slick-next:before,
 .slick-arrow.slick-prev:before {
-  font-family: "icomoon";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
   font-size: 40px;
 }
 
@@ -2550,7 +2551,7 @@ input[type=radio] {
 }
 
 .slick-arrow.slick-next:before {
-  content: "\e906";
+  content: "\f105";
 }
 
 .slick-arrow.slick-prev {
@@ -2558,7 +2559,7 @@ input[type=radio] {
 }
 
 .slick-arrow.slick-prev:before {
-  content: "\e904";
+  content: "\f104";
 }
 
 .carousel-arrows-light .slick-arrow {
@@ -4153,7 +4154,7 @@ input[type=radio] {
 
 .footer .footer-widget-contact:before {
   content: "\e916";
-  font-family: icomoon;
+  font-family: inherit;
   position: absolute;
   right: -30px;
   bottom: -15px;
@@ -4879,7 +4880,7 @@ input[type=radio] {
 }
 
 .features-layout3 .feature-item-custom:before {
-  font-family: icomoon;
+  font-family: inherit;
   content: "\e93f";
   position: absolute;
   right: -50px;
@@ -5459,7 +5460,7 @@ input[type=radio] {
 }
 
 .testimonials-layout1 .testimonials-wrapper:before {
-  font-family: icomoon;
+  font-family: inherit;
   content: "\e95c";
   position: absolute;
   top: -160px;
@@ -5497,7 +5498,7 @@ input[type=radio] {
 
 .testimonials-layout2 .testimonial__meta .testimonial__thmb:before,
 .testimonials-layout3 .testimonial__meta .testimonial__thmb:before {
-  font-family: icomoon;
+  font-family: inherit;
   content: "\e95c";
   position: absolute;
   top: -5px;
@@ -5832,7 +5833,7 @@ input[type=radio] {
 }
 
 .widget-nav .widget-nav__img:before {
-  font-family: icomoon;
+  font-family: inherit;
   font-size: 10px;
   position: absolute;
   top: 50%;
