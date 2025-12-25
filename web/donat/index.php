@@ -142,23 +142,34 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                                     <div class="receipt-section">
                                         <div class="receipt-title">ข้อมูลสำหรับใบเสร็จ</div>
 
-                                        <div class="form-row cols-3">
+                                        <div class="form-row cols-4">
+                                            <div>
+                                                <label class="form-label">คำนำหน้า <span class="required">*</span></label>
+                                                <select class="form-select" id="title">
+                                                    <option value="นาย">นาย</option>
+                                                    <option value="นาง">นาง</option>
+                                                    <option value="นางสาว">นางสาว</option>
+                                                    <option value="ด.ช.">ด.ช.</option>
+                                                    <option value="ด.ญ.">ด.ญ.</option>
+                                                    <option value="บริษัท">บริษัท</option>
+                                                    <option value="ห้างหุ้นส่วน">ห้างหุ้นส่วน</option>
+                                                    <option value="มูลนิธิ">มูลนิธิ</option>
+                                                    <option value="สมาคม">สมาคม</option>
+                                                    <option value="อื่นๆ">อื่นๆ</option>
+                                                </select>
+                                                <div class="form-text text-danger" style="font-size: 0.8rem;">* คำนำหน้าต้องตามบัตรประชาชนเท่านั้น</div>
+                                            </div>
                                             <div>
                                                 <label class="form-label">ชื่อ <span class="required">*</span></label>
-                                                <input type="text" class="form-control" id="firstName"
-                                                    placeholder="ชื่อ">
+                                                <input type="text" class="form-control" id="firstName" placeholder="ชื่อ">
                                             </div>
                                             <div>
-                                                <label class="form-label">นามสกุล <span
-                                                        class="required">*</span></label>
-                                                <input type="text" class="form-control" id="lastName"
-                                                    placeholder="นามสกุล">
+                                                <label class="form-label">นามสกุล <span class="required">*</span></label>
+                                                <input type="text" class="form-control" id="lastName" placeholder="นามสกุล">
                                             </div>
                                             <div>
-                                                <label class="form-label">เลขบัตรประชาชน <span
-                                                        class="required">*</span></label>
-                                                <input type="text" class="form-control" id="idCard"
-                                                    placeholder="x-xxxx-xxxxx-xx-x" maxlength="17">
+                                                <label class="form-label">เลขบัตรประชาชน <span class="required">*</span></label>
+                                                <input type="text" class="form-control" id="idCard" placeholder="x-xxxx-xxxxx-xx-x" maxlength="17">
                                             </div>
                                         </div>
 
@@ -281,10 +292,20 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                             </div>
 
                             <!-- Timer -->
-                            <div style="margin-bottom: 20px;">
+                            <div style="margin-bottom: 16px;">
                                 <div id="paymentTimer"
                                     style="font-size: 1.8rem; font-weight: 600; color: var(--secondary);">15:00
                                 </div>
+                            </div>
+
+                            <!-- Reference Number -->
+                            <div id="refDisplay"
+                                style="margin-bottom: 20px; padding: 12px 20px; background: #f8f9fa; border-radius: 8px; display: inline-block;">
+                                <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 4px;">เลขอ้างอิง (Ref.1)
+                                </div>
+                                <div id="refNumber"
+                                    style="font-size: 1.1rem; font-weight: 600; color: var(--primary); font-family: monospace; letter-spacing: 1px;">
+                                    -</div>
                             </div>
 
                             <!-- Waiting Button -->
@@ -706,11 +727,24 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             };
 
             if (nr) {
+                data.title = document.getElementById('title').value;
                 data.firstName = document.getElementById('firstName').value;
                 data.lastName = document.getElementById('lastName').value;
                 data.idCard = document.getElementById('idCard').value;
                 data.receiptAddress = document.getElementById('receiptAddress').value;
                 data.shippingAddress = document.getElementById('shippingAddress').value;
+
+                // Send split address fields
+                data.addressLine = document.getElementById('receiptAddressLine').value;
+                // Get text from Select2
+                const pData = $('#receiptProvince').select2('data')[0];
+                const aData = $('#receiptDistrict').select2('data')[0];
+                const dData = $('#receiptSubdistrict').select2('data')[0];
+
+                data.province = pData ? pData.text : '';
+                data.amphure = aData ? aData.text : '';
+                data.district = dData ? dData.text : '';
+                data.zipCode = document.getElementById('receiptPostcode').value;
             }
 
             try {
@@ -752,6 +786,28 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             const timestamp = new Date().getTime();
             document.getElementById('qrImage').src = `qrcode_api.php?id=${data.id}&ref=${data.billPaymentRef1}&ref2=${data.billPaymentRef2 || ''}&amount=${data.amount}&t=${timestamp}`;
 
+            // Show Info Popup
+            Swal.fire({
+                icon: 'info',
+                title: 'ข้อแนะนำการชำระเงิน',
+                html: '<div style="text-align: left; font-size: 0.95rem; line-height: 1.6;">' +
+                    '<p style="margin-bottom: 15px;">เพื่อประโยชน์ในการลดหย่อนภาษี กรุณาใช้ <strong>"บัญชีอิเล็กทรอนิกส์"</strong> หรือ <strong>"แอปธนาคาร"</strong> ที่เป็นชื่อของตัวท่านเองในการสแกนจ่าย</p>' +
+                    '<hr style="margin: 15px 0; border-top: 1px solid #eee;">' +
+                    '<p style="margin-bottom: 5px; color: #666; font-size: 0.9rem;">กรณีที่ท่านไม่สะดวกในการดำเนินการบริจาคด้วยตนเอง กรุณาติดต่อ:</p>' +
+                    '<p style="margin-bottom: 0px; color: #213360; font-weight: 500;"><i class="fas fa-phone-alt me-2"></i> 053-949075 (คุณชนิดา ต้นพิพัฒน์)</p>' +
+                    '</div>',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#fb974e',
+                customClass: {
+                    content: 'text-start'
+                }
+            });
+
+            // Display Ref Number
+            if (data.billPaymentRef1) {
+                document.getElementById('refNumber').textContent = data.billPaymentRef1;
+            }
+
             // Start Timer (15 mins)
             let timeLeft = 15 * 60;
             const timerEl = document.getElementById('paymentTimer');
@@ -775,8 +831,19 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                             icon: 'success',
                             title: 'ชำระเงินสำเร็จ!',
                             text: 'ขอบคุณที่ร่วมบริจาค',
-                            confirmButtonText: 'ตกลง'
-                        }).then(() => window.location.href = '../home/');
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="fas fa-receipt"></i> แสดงใบเสร็จรับเงิน',
+                            cancelButtonText: '<i class="fas fa-home"></i> หน้าหลัก',
+                            confirmButtonColor: '#fb974e',
+                            cancelButtonColor: '#213360',
+                            reverseButtons: true
+                        }).then((res) => {
+                            if (res.isConfirmed) {
+                                window.location.href = '../receipts/';
+                            } else {
+                                window.location.href = '../home/';
+                            }
+                        });
                     }
                 } catch (e) { }
             }, 3000);

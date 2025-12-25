@@ -294,7 +294,7 @@ class ReceiptController
         // ส่ง receipt ID พร้อม token - use BASE_PATH from config
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return Response::success([
-            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
             'receipt_no' => $receipt['receipt_no'],
             'api_version' => self::VERSION
         ]);
@@ -320,6 +320,11 @@ class ReceiptController
                     du.first_name,
                     du.last_name,
                     du.receipt_address AS address,
+                    du.address_line,
+                    du.province,
+                    du.amphure,
+                    du.district,
+                    du.zip_code,
                     bt.billPaymentRef2,
                     bt.payerAccountName
                 FROM edonation_receipts r
@@ -348,11 +353,12 @@ class ReceiptController
             'project_number' => $receipt['project_number'] ?? '',
             'pay_by' => $receipt['pay_by'] ?? 'QR PromptPay',
             'fiscal_year' => $receipt['fiscal_year'] ?? (date('Y') + 543),
-            'address' => $address,
-            'province' => '',
-            'amphure' => '',
-            'district' => '',
-            'zip_code' => '',
+            'address' => $address, // ยังคงส่ง full address ไปเผื่อใช้
+            'address_line' => $receipt['address_line'] ?? '',
+            'province' => $receipt['province'] ?? '',
+            'amphure' => $receipt['amphure'] ?? '',
+            'district' => $receipt['district'] ?? '',
+            'zip_code' => $receipt['zip_code'] ?? '',
             'billPaymentRef2' => $receipt['billPaymentRef2'] ?? '',
             'api_version' => self::VERSION
         ]);
@@ -606,7 +612,7 @@ class ReceiptController
                 'receipt_no' => $receiptNo,
                 'payer_name' => $payerName,
                 'amount' => floatval($data['amount']),
-                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
                 'access_token' => $accessToken,
                 'api_version' => self::VERSION
             ], 'ออกใบเสร็จสำเร็จ');

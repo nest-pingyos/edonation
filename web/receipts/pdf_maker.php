@@ -60,7 +60,7 @@ function Convert($amount_number)
 
     $satang = ReadNumber($fraction);
     if ($satang != "")
-        $ret .=  $satang . "สตางค์";
+        $ret .= $satang . "สตางค์";
     else
         $ret .= "ถ้วน";
     return $ret;
@@ -72,7 +72,8 @@ function ReadNumber($number)
     $number_call = array("", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า");
     $number = $number + 0;
     $ret = "";
-    if ($number == 0) return $ret;
+    if ($number == 0)
+        return $ret;
     if ($number > 1000000) {
         $ret .= ReadNumber(intval($number / 1000000)) . "ล้าน";
         $number = intval(fmod($number, 1000000));
@@ -96,12 +97,12 @@ class Currency
     public function bahtEng($thb)
     {
         // แปลงเป็น string และตรวจสอบจุดทศนิยม
-        $thb = number_format((float)$thb, 2, '.', '');
+        $thb = number_format((float) $thb, 2, '.', '');
         $parts = explode('.', $thb);
         $baht = $parts[0] ?? '0';
         $satang = $parts[1] ?? '00';
         $satang = substr($satang . '00', 0, 2);
-        
+
         $result = $this->engFormat(intval($baht)) . ' Baht';
         if (intval($satang) > 0) {
             $result .= ' and ' . $this->engFormat(intval($satang)) . ' Satang';
@@ -123,33 +124,77 @@ class Currency
                     $suffix = $this->engFormat(-1 * $number);
                     $string = $prefix . " " . $suffix;
                     break;
-                case 1: $string = "one"; break;
-                case 2: $string = "two"; break;
-                case 3: $string = "three"; break;
-                case 4: $string = "four"; break;
-                case 5: $string = "five"; break;
-                case 6: $string = "six"; break;
-                case 7: $string = "seven"; break;
-                case 8: $string = "eight"; break;
-                case 9: $string = "nine"; break;
-                case 10: $string = "ten"; break;
-                case 11: $string = "eleven"; break;
-                case 12: $string = "twelve"; break;
-                case 13: $string = "thirteen"; break;
-                case 15: $string = "fifteen"; break;
+                case 1:
+                    $string = "one";
+                    break;
+                case 2:
+                    $string = "two";
+                    break;
+                case 3:
+                    $string = "three";
+                    break;
+                case 4:
+                    $string = "four";
+                    break;
+                case 5:
+                    $string = "five";
+                    break;
+                case 6:
+                    $string = "six";
+                    break;
+                case 7:
+                    $string = "seven";
+                    break;
+                case 8:
+                    $string = "eight";
+                    break;
+                case 9:
+                    $string = "nine";
+                    break;
+                case 10:
+                    $string = "ten";
+                    break;
+                case 11:
+                    $string = "eleven";
+                    break;
+                case 12:
+                    $string = "twelve";
+                    break;
+                case 13:
+                    $string = "thirteen";
+                    break;
+                case 15:
+                    $string = "fifteen";
+                    break;
                 case $number < 20:
                     $string = $this->engFormat($number % 10);
                     $suffix = ($number == 18) ? "een" : "teen";
                     $string .= $suffix;
                     break;
-                case 20: $string = "twenty"; break;
-                case 30: $string = "thirty"; break;
-                case 40: $string = "forty"; break;
-                case 50: $string = "fifty"; break;
-                case 60: $string = "sixty"; break;
-                case 70: $string = "seventy"; break;
-                case 80: $string = "eighty"; break;
-                case 90: $string = "ninety"; break;
+                case 20:
+                    $string = "twenty";
+                    break;
+                case 30:
+                    $string = "thirty";
+                    break;
+                case 40:
+                    $string = "forty";
+                    break;
+                case 50:
+                    $string = "fifty";
+                    break;
+                case 60:
+                    $string = "sixty";
+                    break;
+                case 70:
+                    $string = "seventy";
+                    break;
+                case 80:
+                    $string = "eighty";
+                    break;
+                case 90:
+                    $string = "ninety";
+                    break;
                 case $number < 100:
                     $prefix = $this->engFormat($number - $number % 10);
                     $suffix = $this->engFormat($number % 10);
@@ -157,32 +202,38 @@ class Currency
                     break;
                 case $number < pow(10, 3):
                     $prefix = $this->engFormat(intval(floor($number / pow(10, 2)))) . " hundred";
-                    if ($number % pow(10, 2)) $suffix = " " . $this->engFormat($number % pow(10, 2));
+                    if ($number % pow(10, 2))
+                        $suffix = " " . $this->engFormat($number % pow(10, 2));
                     $string = $prefix . $suffix;
                     break;
                 case $number < pow(10, 6):
                     $prefix = $this->engFormat(intval(floor($number / pow(10, 3)))) . " thousand";
-                    if ($number % pow(10, 3)) $suffix = $this->engFormat($number % pow(10, 3));
+                    if ($number % pow(10, 3))
+                        $suffix = $this->engFormat($number % pow(10, 3));
                     $string = $prefix . " " . $suffix;
                     break;
                 case $number < pow(10, 9):
                     $prefix = $this->engFormat(intval(floor($number / pow(10, 6)))) . " million";
-                    if ($number % pow(10, 6)) $suffix = $this->engFormat($number % pow(10, 6));
+                    if ($number % pow(10, 6))
+                        $suffix = $this->engFormat($number % pow(10, 6));
                     $string = $prefix . " " . $suffix;
                     break;
                 case $number < pow(10, 12):
                     $prefix = $this->engFormat(intval(floor($number / pow(10, 9)))) . " billion";
-                    if ($number % pow(10, 9)) $suffix = $this->engFormat($number % pow(10, 9));
+                    if ($number % pow(10, 9))
+                        $suffix = $this->engFormat($number % pow(10, 9));
                     $string = $prefix . " " . $suffix;
                     break;
                 case $number < pow(10, 15):
                     $prefix = $this->engFormat(intval(floor($number / pow(10, 12)))) . " trillion";
-                    if ($number % pow(10, 12)) $suffix = $this->engFormat($number % pow(10, 12));
+                    if ($number % pow(10, 12))
+                        $suffix = $this->engFormat($number % pow(10, 12));
                     $string = $prefix . " " . $suffix;
                     break;
                 case $number < pow(10, 18):
                     $prefix = $this->engFormat(intval(floor($number / pow(10, 15)))) . " quadrillion";
-                    if ($number % pow(10, 15)) $suffix = $this->engFormat($number % pow(10, 15));
+                    if ($number % pow(10, 15))
+                        $suffix = $this->engFormat($number % pow(10, 15));
                     $string = $prefix . " " . $suffix;
                     break;
             }
@@ -200,11 +251,12 @@ function convertToEnglish($thb)
 /**
  * เรียกข้อมูลผ่าน API
  */
-function fetchReceiptData($receiptId) {
+function fetchReceiptData($receiptId)
+{
     // Use BASE_PATH from config
     $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
     $apiUrl = "http://" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "{$basePath}/api/v1/receipts/{$receiptId}/details";
-    
+
     // สร้าง context สำหรับ HTTP request
     $context = stream_context_create([
         'http' => [
@@ -213,49 +265,50 @@ function fetchReceiptData($receiptId) {
             'timeout' => 10
         ]
     ]);
-    
+
     $response = @file_get_contents($apiUrl, false, $context);
-    
+
     if ($response === false) {
         return null;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (!$data || !$data['success']) {
         return null;
     }
-    
+
     return $data['data'];
 }
 
 /**
  * ตรวจสอบ access token
  */
-function validateAccessToken($receiptId, $token) {
+function validateAccessToken($receiptId, $token)
+{
     if (empty($token)) {
         return false;
     }
-    
+
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-    
+
     $storedToken = $_SESSION['pdf_access_tokens'][$receiptId] ?? null;
-    
+
     if (!$storedToken) {
         return false;
     }
-    
+
     if ($storedToken['token'] !== $token) {
         return false;
     }
-    
+
     if ($storedToken['expire_at'] < time()) {
         unset($_SESSION['pdf_access_tokens'][$receiptId]);
         return false;
     }
-    
+
     return true;
 }
 
@@ -306,14 +359,14 @@ $receiptData = fetchReceiptData($id);
 if (!$receiptData) {
     // Fallback: ใช้ SQL query ถ้า API ไม่ทำงาน
     include('../config/connect_pdf.php');
-    
+
     $table = isset($_GET['table']) ? $_GET['table'] : 'donat_user';
     $valid_tables = ['donat', 'donat_user', 'receipt_2568', 'receipt_2567', 'receipt_2566'];
-    
+
     if (!in_array($table, $valid_tables)) {
         die("ตารางไม่ถูกต้อง");
     }
-    
+
     $stmt = $con->prepare("SELECT T1.id, T1.billPaymentRef2, T1.payerAccountName, T1.billPaymentRef1, 
                                   T1.amount, T1.address, T1.province, T1.amphure, T1.district, T1.zip_code, 
                                   T1.project_name, T1.project_number, T1.receiptDate, T1.fiscal_year, 
@@ -322,20 +375,22 @@ if (!$receiptData) {
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows == 0) {
         die("ไม่พบข้อมูลใบเสร็จ");
     }
-    
+
     $receiptData = $result->fetch_assoc();
 }
 
+// Map field names (API อาจใช้ชื่อ field ต่างจาก SQL)
 // Map field names (API อาจใช้ชื่อ field ต่างจาก SQL)
 $data = [
     'id' => $receiptData['id'] ?? $id,
     'payerAccountName' => $receiptData['payer_name'] ?? $receiptData['payerAccountName'] ?? '',
     'amount' => $receiptData['amount'] ?? 0,
     'address' => $receiptData['address'] ?? '',
+    'address_line' => $receiptData['address_line'] ?? '',
     'province' => $receiptData['province'] ?? '',
     'amphure' => $receiptData['amphure'] ?? '',
     'district' => $receiptData['district'] ?? '',
@@ -347,6 +402,35 @@ $data = [
     'receipt_no' => $receiptData['receipt_no'] ?? '',
     'payby' => $receiptData['pay_by'] ?? $receiptData['payby'] ?? 'QR PromptPay'
 ];
+
+// Construct Full Address
+$fullAddress = $data['address']; // Default to legacy full address
+
+if (!empty($data['address_line'])) {
+    $parts = [];
+    $parts[] = trim($data['address_line']);
+
+    if (!empty($data['district'])) {
+        $d = trim($data['district']);
+        $parts[] = (strpos($d, 'ต.') === 0 || strpos($d, 'แขวง') === 0) ? $d : 'ต.' . $d;
+    }
+
+    if (!empty($data['amphure'])) {
+        $a = trim($data['amphure']);
+        $parts[] = (strpos($a, 'อ.') === 0 || strpos($a, 'เขต') === 0) ? $a : 'อ.' . $a;
+    }
+
+    if (!empty($data['province'])) {
+        $p = trim($data['province']);
+        $parts[] = (strpos($p, 'จ.') === 0 || strpos($p, 'กรุงเทพ') === 0) ? $p : 'จ.' . $p;
+    }
+
+    if (!empty($data['zip_code'])) {
+        $parts[] = trim($data['zip_code']);
+    }
+
+    $fullAddress = implode(' ', $parts);
+}
 
 // Process dates and amounts
 $receiptDate = $data['receiptDate'];
@@ -367,11 +451,12 @@ $fiscalYear = intval($data['fiscal_year']);
 /**
  * ดึง config ลายเซ็นจาก API
  */
-function fetchSignatureConfig($year) {
+function fetchSignatureConfig($year)
+{
     // Use BASE_PATH from config
     $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
     $apiUrl = "http://" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "{$basePath}/api/v1/signatures/{$year}";
-    
+
     $context = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -379,19 +464,19 @@ function fetchSignatureConfig($year) {
             'timeout' => 5
         ]
     ]);
-    
+
     $response = @file_get_contents($apiUrl, false, $context);
-    
+
     if ($response === false) {
         return null;
     }
-    
+
     $data = json_decode($response, true);
-    
+
     if (!$data || !$data['success']) {
         return null;
     }
-    
+
     return $data['data'];
 }
 
@@ -524,7 +609,7 @@ $content = '
         <td width="40%" align="right"><b>เลขที่ใบเสร็จ/Receipt No. </b>' . htmlspecialchars($data['receipt_no']) . '</td>
     </tr>
     <tr>
-        <td colspan="2"><b>ที่อยู่/Address :</b> ' . htmlspecialchars($data['address']) . ' ' . htmlspecialchars($data['district']) . ' ' . htmlspecialchars($data['amphure']) . ' ' . htmlspecialchars($data['province']) . ' ' . htmlspecialchars($data['zip_code']) . '</td>
+        <td colspan="2"><b>ที่อยู่/Address :</b> ' . htmlspecialchars($fullAddress) . '</td>
     </tr>
     
     <br>

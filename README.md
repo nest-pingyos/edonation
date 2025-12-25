@@ -88,7 +88,7 @@ edonation/
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/donations` | สร้างรายการบริจาค | - |
+| `POST` | `/donations` | สร้างรายการบริจาค (รองรับ split address, title) | - |
 | `GET` | `/donations/:id/qr` | ดึง QR Code PromptPay | - |
 | `GET` | `/donations/:id/status` | ตรวจสอบสถานะการชำระเงิน | - |
 | `GET` | `/donations` | รายการบริจาคทั้งหมด | Admin |

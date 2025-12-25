@@ -103,11 +103,13 @@ class DonationController
                 "INSERT INTO edonation_donat_user (
                     billPaymentRef1, project_number, project_name, type, phone, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
-                    need_receipt, first_name, last_name, id_card, receipt_address, shipping_address
+                    need_receipt, title, first_name, last_name, id_card, receipt_address, shipping_address,
+                    address_line, province, amphure, district, zip_code
                 ) VALUES (
                     :ref1, :project_number, :project_name, :type, :phone, :amount, 
                     :fiscal_year, 'pending', 'QR PromptPay', CURDATE(),
-                    :need_receipt, :first_name, :last_name, :id_card, :receipt_address, :shipping_address
+                    :need_receipt, :title, :first_name, :last_name, :id_card, :receipt_address, :shipping_address,
+                    :address_line, :province, :amphure, :district, :zip_code
                 )"
             );
 
@@ -125,11 +127,17 @@ class DonationController
                 ':amount' => $data['amount'],
                 ':fiscal_year' => (date('Y') + 543),
                 ':need_receipt' => !empty($data['needReceipt']) ? 1 : 0,
+                ':title' => $data['title'] ?? null,
                 ':first_name' => $data['firstName'] ?? null,
                 ':last_name' => $data['lastName'] ?? null,
                 ':id_card' => $data['idCard'] ?? null,
                 ':receipt_address' => $data['receiptAddress'] ?? null,
-                ':shipping_address' => $data['shippingAddress'] ?? null
+                ':shipping_address' => $data['shippingAddress'] ?? null,
+                ':address_line' => $data['addressLine'] ?? null,
+                ':province' => $data['province'] ?? null,
+                ':amphure' => $data['amphure'] ?? null,
+                ':district' => $data['district'] ?? null,
+                ':zip_code' => $data['zipCode'] ?? null
             ]);
 
             $id = $this->pdo->lastInsertId();
@@ -202,16 +210,22 @@ class DonationController
             // Payer name
             $payerName = trim(($data['title'] ?? '') . ' ' . $data['first_name'] . ' ' . $data['last_name']);
 
-            // Step 2: Insert into edonation_donat_user with status_donat = 'completed'
+            // Payer name construction logic might change if we use title separately, 
+            // but for now, we just save title.
+            // Note: The original code combined title+first+last into payerName for Receipts but DonationUser table uses separate fields.
+            // We should save title to donation user table too.
+
             $donationStmt = $this->pdo->prepare("
                 INSERT INTO edonation_donat_user (
                     billPaymentRef1, project_number, project_name, type, phone, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
-                    need_receipt, first_name, last_name, id_card, receipt_address, shipping_address
+                    need_receipt, title, first_name, last_name, id_card, receipt_address, shipping_address,
+                    address_line, province, amphure, district, zip_code
                 ) VALUES (
                     :ref1, :project_number, :project_name, :type, :phone, :amount, 
                     :fiscal_year, 'completed', :payby, :receipt_date,
-                    1, :first_name, :last_name, :id_card, :receipt_address, :shipping_address
+                    1, :title, :first_name, :last_name, :id_card, :receipt_address, :shipping_address,
+                    :address_line, :province, :amphure, :district, :zip_code
                 )
             ");
 
@@ -225,11 +239,17 @@ class DonationController
                 ':fiscal_year' => $year,
                 ':payby' => $data['payment_method'] ?? 'เงินสด',
                 ':receipt_date' => $data['donation_date'] ?? date('Y-m-d'),
+                ':title' => $data['title'] ?? null,
                 ':first_name' => $data['first_name'],
                 ':last_name' => $data['last_name'],
                 ':id_card' => $idCard,
                 ':receipt_address' => $data['address'],
-                ':shipping_address' => $data['address']
+                ':shipping_address' => $data['address'],
+                ':address_line' => $data['address_line'] ?? null,
+                ':province' => $data['province'] ?? null,
+                ':amphure' => $data['amphure'] ?? null,
+                ':district' => $data['district'] ?? null,
+                ':zip_code' => $data['zip_code'] ?? null
             ]);
 
             $donationId = $this->pdo->lastInsertId();
@@ -288,7 +308,7 @@ class DonationController
                 'amount' => floatval($data['amount']),
                 'project_name' => $projectName,
                 'status' => 'completed',
-                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
                 'access_token' => $accessToken
             ], 'บันทึกข้อมูลและออกใบเสร็จสำเร็จ');
 

@@ -237,6 +237,8 @@
                                                 <option value="สมาคม">สมาคม</option>
                                                 <option value="อื่นๆ">อื่นๆ</option>
                                             </select>
+                                            <div class="form-text text-danger" style="font-size: 0.8rem;">*
+                                                คำนำหน้าต้องตามบัตรประชาชนเท่านั้น</div>
                                         </div>
                                         <div class="col-md-6"></div>
 
@@ -1012,6 +1014,11 @@
                     phone: document.getElementById('phone').value,
                     email: document.getElementById('email').value,
                     address: address,
+                    address_line: addressLine,
+                    province: $('#province option:selected').text(),
+                    amphure: $('#district option:selected').text(), // District in form is Amphure
+                    district: $('#subdistrict option:selected').text(), // Subdistrict in form is District (Tambon)
+                    zip_code: document.getElementById('postcode').value,
                     project_number: projectNumber,
                     project_name: projectName,
                     amount: parseFloat(amount),

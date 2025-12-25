@@ -259,8 +259,8 @@
 
 .form-row {
     display: grid;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 18px;
+    margin-bottom: 18px;
 }
 
 .form-row.cols-2 {

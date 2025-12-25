@@ -1,148 +1,208 @@
 <!DOCTYPE html>
 <html lang="th">
 
-<?php include_once('../config/head.php'); ?>
+<?php
+$pageTitle = "สิทธิประโยชน์ผู้บริจาค";
+$pageDesc = "เครื่องราชอิสริยาภรณ์อันเป็นที่สรรเสริญยิ่งดิเรกคุณาภรณ์ คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่";
+include_once('../config/head.php');
+?>
 
 <style>
-/* Benefits Section Styles */
-.benefits-section {
-    padding: 80px 0;
-    background: #ffffff;
-    min-height: 100vh;
-}
-
-.benefits-header {
-    text-align: center;
-    margin-bottom: 60px;
-}
-
-.benefits-header h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #1a3a5c;
-    margin-bottom: 15px;
-}
-
-.benefits-header p {
-    font-size: 1.1rem;
-    color: #6c757d;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-/* Benefits Grid - 4 cards per row */
-.benefits-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 25px;
-}
-
-@media (max-width: 1200px) {
-    .benefits-grid {
-        grid-template-columns: repeat(3, 1fr);
+    /* Benefits Section Styles */
+    .benefits-section {
+        padding: 80px 0;
+        background: #f8fafc;
+        min-height: 60vh;
     }
-}
 
-@media (max-width: 992px) {
-    .benefits-grid {
-        grid-template-columns: repeat(2, 1fr);
+    /* Royal Header */
+    .royal-header {
+        text-align: center;
+        margin-bottom: 30px;
     }
-}
 
-@media (max-width: 576px) {
-    .benefits-grid {
-        grid-template-columns: 1fr;
+    .royal-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a3a5c;
+        margin-bottom: 20px;
+        line-height: 1.5;
     }
-}
 
-/* Benefit Card */
-.benefit-card {
-    background: #ffffff;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-}
+    .royal-divider {
+        width: 100px;
+        height: 5px;
+        background: linear-gradient(90deg, #c9a227, #ffd700, #c9a227);
+        margin: 0 auto;
+        border-radius: 3px;
+    }
 
-.benefit-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
+    .royal-intro {
+        font-size: 1.05rem;
+        color: #4a5568;
+        line-height: 1.9;
+        text-align: center;
+        max-width: 900px;
+        margin: 30px auto 50px;
+    }
 
-/* Card Image */
-.benefit-card-image {
-    width: 100%;
-    height: 200px;
-    overflow: hidden;
-    background: #ffffff;
-}
+    .royal-intro strong {
+        color: #1a3a5c;
+    }
 
-.benefit-card-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
+    /* Benefits Grid - 4 cards per row */
+    .benefits-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 25px;
+    }
 
-.benefit-card:hover .benefit-card-image img {
-    transform: scale(1.05);
-}
+    @media (max-width: 1200px) {
+        .benefits-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
 
-/* Card Content */
-.benefit-card-content {
-    padding: 20px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
+    @media (max-width: 992px) {
+        .benefits-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
 
-.benefit-card-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1a3a5c;
-    margin-bottom: 10px;
-    line-height: 1.4;
-}
+    @media (max-width: 576px) {
+        .benefits-grid {
+            grid-template-columns: 1fr;
+        }
 
-.benefit-card-amount {
-    font-size: 0.9rem;
-    color: #FB974E;
-    font-weight: 500;
-    margin-top: auto;
-}
+        .royal-title {
+            font-size: 1.5rem;
+        }
+    }
 
-/* Loading State */
-.benefits-loading {
-    text-align: center;
-    padding: 60px 20px;
-}
+    /* Benefit Card - Original Style */
+    .benefit-card {
+        background: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
 
-.benefits-loading .spinner-border {
-    width: 3rem;
-    height: 3rem;
-}
+    .benefit-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
 
-/* Empty State */
-.benefits-empty {
-    text-align: center;
-    padding: 60px 20px;
-    color: #6c757d;
-}
+    /* Card Image */
+    .benefit-card-image {
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+        background: #f0f0f0;
+    }
+
+    .benefit-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .benefit-card:hover .benefit-card-image img {
+        transform: scale(1.05);
+    }
+
+    /* Card Content */
+    .benefit-card-content {
+        padding: 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .benefit-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1a3a5c;
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+
+    .benefit-card-desc {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+
+    .benefit-card-amount {
+        font-size: 0.95rem;
+        color: #FB974E;
+        font-weight: 600;
+        margin-top: auto;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+
+    /* Loading State */
+    .benefits-loading {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .benefits-loading .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    /* Empty State */
+    .benefits-empty {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+
+    /* Note */
+    .royal-note {
+        max-width: 900px;
+        margin: 40px auto 0;
+        padding: 20px;
+        background: #e8f4fd;
+        border-radius: 10px;
+        border-left: 4px solid #3182ce;
+        font-size: 0.9rem;
+        color: #4a5568;
+        line-height: 1.6;
+        text-align: center;
+    }
+
+    .royal-note i {
+        color: #3182ce;
+        margin-right: 10px;
+    }
 </style>
 
 <body>
     <div class="wrapper">
         <?php include_once('../config/header.php'); ?>
 
+        <!-- Benefits Section -->
         <section class="benefits-section">
             <div class="container">
-                <!-- Header -->
-                <div class="benefits-header">
-                    <h1>ระดับผู้มีอุปการคุณ</h1>
-                    <p>ขอบคุณสำหรับความกรุณาและน้ำใจของท่านผู้มีอุปการคุณทุกท่าน ที่ร่วมสนับสนุนคณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่</p>
+                <!-- Royal Header -->
+                <div class="royal-header">
+                    <h1 class="royal-title">เครื่องราชอิสริยาภรณ์อันเป็นที่สรรเสริญยิ่งดิเรกคุณาภรณ์</h1>
+                    <div class="royal-divider"></div>
                 </div>
+
+                <p class="royal-intro">
+                    เครื่องราชอิสริยาภรณ์อันเป็นที่สรรเสริญยิ่งดิเรกคุณาภรณ์ เป็นเครื่องราชอิสริยาภรณ์ที่
+                    <strong>พระบาทสมเด็จพระบรมชนกาธิเบศร มหาภูมิพลอดุลยเดชมหาราช บรมนาถบพิตร</strong>
+                    พระราชทานพระบรมราชานุญาตให้สร้างขึ้น สำหรับพระราชทานแก่ผู้กระทำความดีความชอบ
+                    อันเป็นประโยชน์แก่ประเทศ ศาสนา และประชาชน ตามที่ทรงพระราชดำริเห็นสมควร
+                </p>
 
                 <!-- Loading State -->
                 <div id="loadingState" class="benefits-loading">
@@ -162,6 +222,8 @@
                 <div id="benefitsGrid" class="benefits-grid" style="display: none;">
                     <!-- Cards will be loaded via JavaScript -->
                 </div>
+
+
             </div>
         </section>
 
@@ -173,70 +235,83 @@
     <script src="../assets/js/main.js"></script>
 
     <script>
-    // Get API_BASE from meta tag (set by PHP head.php)
-    const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '/edonation/api/v1';
+        const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '/edonation/api/v1';
 
-    document.addEventListener('DOMContentLoaded', function() {
-        loadBenefits();
-    });
-
-    async function loadBenefits() {
-        const loadingState = document.getElementById('loadingState');
-        const emptyState = document.getElementById('emptyState');
-        const benefitsGrid = document.getElementById('benefitsGrid');
-
-        try {
-            const response = await fetch(`${API_BASE}/benefits`);
-            const result = await response.json();
-
-            loadingState.style.display = 'none';
-
-            if (result.success && result.data && result.data.length > 0) {
-                benefitsGrid.style.display = 'grid';
-                renderBenefits(result.data);
-            } else {
-                emptyState.style.display = 'block';
-            }
-        } catch (error) {
-            console.error('Error loading benefits:', error);
-            loadingState.style.display = 'none';
-            emptyState.style.display = 'block';
-            emptyState.innerHTML = `
-                <h4>เกิดข้อผิดพลาด</h4>
-                <p>ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง</p>
-            `;
-        }
-    }
-
-    function renderBenefits(benefits) {
-        const benefitsGrid = document.getElementById('benefitsGrid');
-        
-        let html = '';
-        benefits.forEach((item, index) => {
-            html += `
-                <div class="benefit-card">
-                    <div class="benefit-card-image">
-                        <img src="${item.image_url}" alt="${item.name}" 
-                             onerror="this.src='../assets/images/benefits/default.jpg'">
-                    </div>
-                    <div class="benefit-card-content">
-                        <h3 class="benefit-card-title">${escapeHtml(item.name.replace(/ขั้นที่\s*\d+\s*/, ''))}</h3>
-                        <div class="benefit-card-amount">
-                            ${escapeHtml(item.amount)}
-                        </div>
-                    </div>
-                </div>
-            `;
+        document.addEventListener('DOMContentLoaded', function () {
+            loadBenefits();
         });
 
-        benefitsGrid.innerHTML = html;
-    }
+        async function loadBenefits() {
+            const loadingState = document.getElementById('loadingState');
+            const emptyState = document.getElementById('emptyState');
+            const benefitsGrid = document.getElementById('benefitsGrid');
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+            try {
+                const response = await fetch(`${API_BASE}/benefits`);
+                const result = await response.json();
+
+                loadingState.style.display = 'none';
+
+                if (result.success && result.data && result.data.length > 0) {
+                    benefitsGrid.style.display = 'grid';
+                    renderBenefits(result.data);
+                } else {
+                    emptyState.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading benefits:', error);
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = `
+                    <h4>เกิดข้อผิดพลาด</h4>
+                    <p>ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง</p>
+                `;
+            }
+        }
+
+        function renderBenefits(benefits) {
+            const benefitsGrid = document.getElementById('benefitsGrid');
+
+            let html = '';
+            benefits.forEach((item) => {
+                // Display order: 1.img_file, 2.name, 3.description + amount
+                html += `
+                    <div class="benefit-card">
+                        <div class="benefit-card-image">
+                            <img src="${item.image_url}" alt="${escapeHtml(item.name)}" 
+                                 onerror="this.src='../assets/images/benefits/1.jpg'">
+                        </div>
+                        <div class="benefit-card-content">
+                            <h3 class="benefit-card-title">${escapeHtml(item.name)}</h3>
+                            ${item.description ? `<p class="benefit-card-desc">${escapeHtml(item.description)}</p>` : ''}
+                            <div class="benefit-card-amount">
+                                ${formatAmount(item.amount)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            benefitsGrid.innerHTML = html;
+        }
+
+        function formatAmount(amount) {
+            if (typeof amount === 'string') {
+                return amount + ' บาทขึ้นไป';
+            }
+            return new Intl.NumberFormat('th-TH', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount) + ' บาทขึ้นไป';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
     </script>
 </body>
+
 </html>
