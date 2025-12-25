@@ -169,7 +169,17 @@ class DonationController
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         // Validate required fields
-        $requiredFields = ['first_name', 'last_name', 'id_card', 'address', 'project_number', 'amount'];
+        $requiredFields = ['first_name', 'id_card', 'address', 'project_number', 'amount']; // Removed last_name from required by default
+
+        // Check for Juristic Person
+        $juristicTitles = ['บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
+        $title = $data['title'] ?? '';
+        $isJuristic = in_array($title, $juristicTitles);
+
+        if (!$isJuristic) {
+            $requiredFields[] = 'last_name';
+        }
+
         $missing = [];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
@@ -205,7 +215,7 @@ class DonationController
             $projectStmt = $this->pdo->prepare("SELECT project_name FROM edonation_projects WHERE project_number = :pn");
             $projectStmt->execute([':pn' => $data['project_number']]);
             $project = $projectStmt->fetch();
-            $projectName = $project['project_name'] ?? $data['project_name'] ?? $data['project_number'];
+            $projectName = $data['project_name'] ?? $project['project_name'] ?? $data['project_number'];
 
             // Payer name
             $payerName = trim(($data['title'] ?? '') . ' ' . $data['first_name'] . ' ' . $data['last_name']);

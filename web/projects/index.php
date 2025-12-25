@@ -236,7 +236,7 @@ include_once('../config/head.php');
             const projectsGrid = document.getElementById('projectsGrid');
 
             try {
-                const response = await fetch(`${API_BASE}/projects`);
+                const response = await fetch(`${API_BASE}/projects?status=active`);
                 const result = await response.json();
 
                 loadingState.style.display = 'none';

@@ -120,7 +120,7 @@
                 <form id="receiptForm">
                     <div class="row">
                         <!-- Form Column -->
-                        <div class="col-lg-8">
+                        <div class="col-12">
 
                             <!-- ค้นหาผู้บริจาค -->
                             <div class="card mb-4">
@@ -132,31 +132,10 @@
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <!-- Search Type Selector -->
-                                    <div class="btn-group w-100 mb-3" role="group" id="searchTabs">
-                                        <input type="radio" class="btn-check" name="searchType" id="searchTypeAll"
-                                            value="all" checked>
-                                        <label class="btn btn-outline-primary" for="searchTypeAll"
-                                            onclick="setSearchType('all')">
-                                            <iconify-icon icon="iconamoon:search-duotone" class="me-1"></iconify-icon>
-                                            ค้นหาทั้งหมด
-                                        </label>
-
-                                        <input type="radio" class="btn-check" name="searchType" id="searchTypeName"
-                                            value="name">
-                                        <label class="btn btn-outline-primary" for="searchTypeName"
-                                            onclick="setSearchType('name')">
-                                            <iconify-icon icon="iconamoon:profile-duotone" class="me-1"></iconify-icon>
-                                            ชื่อ-นามสกุล
-                                        </label>
-
-                                        <input type="radio" class="btn-check" name="searchType" id="searchTypeIdCard"
-                                            value="id_card">
-                                        <label class="btn btn-outline-primary" for="searchTypeIdCard"
-                                            onclick="setSearchType('id_card')">
-                                            <iconify-icon icon="iconamoon:id-duotone" class="me-1"></iconify-icon>
-                                            เลขบัตรประชาชน
-                                        </label>
+                                    <!-- Search Type Selection -->
+                                    <div class="mb-3 d-none">
+                                        <label class="form-label d-block mb-2 text-muted small">ค้นหาจาก</label>
+                                        <input type="hidden" id="searchType" value="all">
                                     </div>
 
                                     <!-- Search Input -->
@@ -173,7 +152,6 @@
                                             ค้นหา
                                         </button>
                                     </div>
-                                    <input type="hidden" id="searchType" value="all">
 
                                     <!-- Search Results -->
                                     <div id="searchResults" class="mt-3" style="display: none;">
@@ -222,7 +200,37 @@
                                     <input type="hidden" id="donation_id" name="donation_id">
 
                                     <div class="row g-3">
-                                        <div class="col-md-6">
+
+                                        <!-- Donor Type Selection -->
+                                        <div class="col-12">
+                                            <div class="mb-2">
+                                                <label class="form-label d-block">ประเภทผู้บริจาค</label>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="donorType"
+                                                        id="typePerson" value="person" checked
+                                                        onchange="toggleDonorType()">
+                                                    <label class="form-check-label" for="typePerson">บุคคลธรรมดา</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="donorType"
+                                                        id="typeJuristic" value="juristic" onchange="toggleDonorType()">
+                                                    <label class="form-check-label" for="typeJuristic">นิติบุคคล
+                                                        (บริษัท/องค์กร)</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6" id="affiliationGroup">
+                                            <label class="form-label">ประเภท <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="affiliation" name="type">
+                                                <option value="บุคคลทั่วไป">บุคคลทั่วไป</option>
+                                                <option value="ศิษย์เก่าคณะพยาบาล มช.">ศิษย์เก่า มช.</option>
+                                                <option value="บุคลากร อาจารย์คณะพยาบาล มช.">บุคลากร/อาจารย์</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6" id="affiliationSpacer" style="display:none;"></div>
+
+                                        <div class="col-md-6" id="titleGroup">
                                             <label class="form-label">คำนำหน้า</label>
                                             <select class="form-select" id="title" name="title">
                                                 <option value="">-- เลือก --</option>
@@ -231,16 +239,12 @@
                                                 <option value="นางสาว">นางสาว</option>
                                                 <option value="ด.ช.">ด.ช.</option>
                                                 <option value="ด.ญ.">ด.ญ.</option>
-                                                <option value="บริษัท">บริษัท</option>
-                                                <option value="ห้างหุ้นส่วน">ห้างหุ้นส่วน</option>
-                                                <option value="มูลนิธิ">มูลนิธิ</option>
-                                                <option value="สมาคม">สมาคม</option>
                                                 <option value="อื่นๆ">อื่นๆ</option>
                                             </select>
                                             <div class="form-text text-danger" style="font-size: 0.8rem;">*
                                                 คำนำหน้าต้องตามบัตรประชาชนเท่านั้น</div>
                                         </div>
-                                        <div class="col-md-6"></div>
+
 
                                         <div class="col-md-6">
                                             <label class="form-label">ชื่อ <span class="text-danger">*</span></label>
@@ -255,8 +259,7 @@
 
                                         <div class="col-md-6">
                                             <label class="form-label">
-                                                เลขประจำตัวผู้เสียภาษี / เลขบัตรประชาชน <span
-                                                    class="text-danger">*</span>
+                                                เลขบัตรประชาชน / เลขผู้เสียภาษี <span class="text-danger">*</span>
                                             </label>
                                             <input type="text" class="form-control" id="id_card" name="id_card"
                                                 maxlength="13" required placeholder="กรอกเลข 13 หลัก">
@@ -311,10 +314,12 @@
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">รหัสไปรษณีย์</label>
+                                            <label class="form-label">รหัสไปรษณีย์ <span
+                                                    class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="postcode" name="postcode"
                                                 readonly>
                                         </div>
+                                        <!-- Hidden Full Address for compatibility -->
                                         <input type="hidden" id="address" name="address">
                                     </div>
                                 </div>
@@ -322,31 +327,31 @@
 
                             <!-- ข้อมูลการบริจาค -->
                             <div class="card mb-4">
-                                <div class="card-header bg-soft-success">
-                                    <h5 class="card-title mb-0 text-success">
-                                        <iconify-icon icon="iconamoon:heart-duotone" class="me-2"></iconify-icon>
+                                <div class="card-header bg-soft-primary">
+                                    <h5 class="card-title mb-0 text-primary">
+                                        <iconify-icon icon="iconamoon:invoice-duotone" class="me-2"></iconify-icon>
                                         ข้อมูลการบริจาค
                                     </h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
-                                        <div class="col-md-6">
+                                        <div class="col-md-12">
                                             <label class="form-label">โครงการ <span class="text-danger">*</span></label>
                                             <select class="form-select" id="project_number" name="project_number"
-                                                required>
+                                                required onchange="handleProjectChange()">
                                                 <option value="">-- เลือกโครงการ --</option>
                                             </select>
+                                            <!-- Custom Project Name Input -->
+                                            <input type="text" class="form-control mt-2" id="custom_project_name"
+                                                name="custom_project_name" style="display: none;"
+                                                placeholder="ระบุชื่อโครงการ">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">จำนวนเงิน (บาท) <span
                                                     class="text-danger">*</span></label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">฿</span>
-                                                <input type="number" class="form-control fs-18 fw-semibold" id="amount"
-                                                    name="amount" min="1" step="0.01" required placeholder="0.00">
-                                            </div>
+                                            <input type="number" class="form-control" id="amount" name="amount" min="1"
+                                                required>
                                         </div>
-
                                         <div class="col-md-6">
                                             <label class="form-label">วันที่บริจาค <span
                                                     class="text-danger">*</span></label>
@@ -354,21 +359,19 @@
                                                 name="donation_date" required>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">ช่องทางการบริจาค</label>
+                                            <label class="form-label">ช่องทางการชำระเงิน</label>
                                             <select class="form-select" id="payment_method" name="payment_method">
                                                 <option value="QR PromptPay">QR PromptPay</option>
-                                                <option value="โอนเงินผ่านธนาคาร">โอนเงินผ่านธนาคาร</option>
-                                                <option value="เงินสด">เงินสด</option>
-                                                <option value="เช็ค">เช็ค</option>
-                                                <option value="บัตรเครดิต">บัตรเครดิต</option>
-                                                <option value="อื่นๆ">อื่นๆ</option>
+                                                <option value="Bank Transfer">โอนเงินธนาคาร</option>
+                                                <option value="Cash">เงินสด</option>
+                                                <option value="Cheque">เช็ค</option>
+                                                <option value="Other">อื่นๆ</option>
                                             </select>
                                         </div>
-
-                                        <div class="col-12">
-                                            <label class="form-label">หมายเหตุ</label>
-                                            <textarea class="form-control" id="note" name="note" rows="2"
-                                                placeholder="บันทึกเพิ่มเติม (ถ้ามี)"></textarea>
+                                        <div class="col-md-6">
+                                            <label class="form-label">หมายเหตุ (ถ้ามี)</label>
+                                            <input type="text" class="form-control" id="note" name="note"
+                                                placeholder="เช่น เลขที่เช็ค, ข้อมูลเพิ่มเติม">
                                         </div>
                                     </div>
                                 </div>
@@ -376,107 +379,37 @@
 
                             <!-- ตัวเลือกเพิ่มเติม -->
                             <div class="card mb-4">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">
+                                <div class="card-header bg-soft-primary">
+                                    <h5 class="card-title mb-0 text-primary">
                                         <iconify-icon icon="iconamoon:settings-duotone" class="me-2"></iconify-icon>
                                         ตัวเลือกเพิ่มเติม
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="send_email" checked>
-                                                <label class="form-check-label" for="send_email">
-                                                    <iconify-icon icon="iconamoon:send-duotone"
-                                                        class="me-1"></iconify-icon>
-                                                    ส่งใบเสร็จทางอีเมล
-                                                </label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="print_receipt">
-                                                <label class="form-check-label" for="print_receipt">
-                                                    <iconify-icon icon="iconamoon:printer-duotone"
-                                                        class="me-1"></iconify-icon>
-                                                    พิมพ์ใบเสร็จทันที
-                                                </label>
-                                            </div>
-                                        </div>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="send_email">
+                                        <label class="form-check-label" for="send_email">ส่งใบเสร็จทางอีเมล</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="print_receipt" checked>
+                                        <label class="form-check-label"
+                                            for="print_receipt">เปิดหน้าต่างพิมพ์ใบเสร็จหลังบันทึก</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="notify_line" checked>
+                                        <label class="form-check-label" for="notify_line">แจ้งเตือนเจ้าหน้าที่
+                                            (Line)</label>
                                     </div>
                                 </div>
                             </div>
 
-                        </div>
-
-                        <!-- Preview Column -->
-                        <div class="col-lg-4">
-                            <div class="receipt-preview">
-                                <h6 class="text-muted mb-3">
-                                    <iconify-icon icon="iconamoon:eye-duotone" class="me-1"></iconify-icon>
-                                    ตัวอย่างใบเสร็จ
-                                </h6>
-
-                                <div class="receipt-preview-inner">
-                                    <div class="receipt-header text-center">
-                                        <h5 class="mb-1">ใบเสร็จรับเงิน</h5>
-                                        <small class="text-muted">ระบบ eDonation</small>
-                                    </div>
-
-                                    <div class="receipt-row">
-                                        <span class="receipt-label">เลขที่ใบเสร็จ</span>
-                                        <span class="receipt-value" id="preview_receipt_no">จะสร้างอัตโนมัติ</span>
-                                    </div>
-
-                                    <div class="receipt-row">
-                                        <span class="receipt-label">ผู้บริจาค</span>
-                                        <span class="receipt-value" id="preview_name">-</span>
-                                    </div>
-
-                                    <div class="receipt-row">
-                                        <span class="receipt-label">เลขประจำตัวผู้เสียภาษี</span>
-                                        <span class="receipt-value font-monospace" id="preview_id_card">-</span>
-                                    </div>
-
-                                    <div class="receipt-row">
-                                        <span class="receipt-label">โครงการ</span>
-                                        <span class="receipt-value" id="preview_project">-</span>
-                                    </div>
-
-                                    <div class="receipt-row">
-                                        <span class="receipt-label">วันที่บริจาค</span>
-                                        <span class="receipt-value" id="preview_date">-</span>
-                                    </div>
-
-                                    <hr>
-
-                                    <div class="text-center py-3">
-                                        <div class="text-muted small mb-1">จำนวนเงิน</div>
-                                        <div class="amount-display" id="preview_amount">฿0.00</div>
-                                    </div>
-
-                                    <hr>
-
-                                    <div class="text-center mt-3">
-                                        <small class="text-muted">ขอบคุณสำหรับการบริจาค</small>
-                                    </div>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="d-grid gap-2 mt-4">
-                                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                                        <span class="spinner-border spinner-border-sm me-2 d-none"
-                                            id="submitSpinner"></span>
-                                        <iconify-icon icon="iconamoon:invoice-duotone" class="me-1"></iconify-icon>
-                                        ออกใบเสร็จ
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
-                                        <iconify-icon icon="iconamoon:restart-duotone" class="me-1"></iconify-icon>
-                                        ล้างฟอร์ม
-                                    </button>
-                                </div>
-                            </div>
+                            <button type="submit" class="btn btn-primary w-100 py-3" id="submitBtn">
+                                <div class="spinner-border spinner-border-sm d-none me-2" id="submitSpinner"
+                                    role="status"></div>
+                                <iconify-icon icon="iconamoon:check-circle-1-duotone" class="me-2"
+                                    style="font-size: 1.2rem;"></iconify-icon>
+                                ยืนยันข้อมูลและออกใบเสร็จ
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -532,9 +465,76 @@
         let projects = [];
         let selectedDonation = null;
 
+        const JURISTIC_TITLES = ['บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
+
+        function toggleDonorType() {
+            const type = document.querySelector('input[name="donorType"]:checked').value;
+            const isJuristic = (type === 'juristic');
+
+            const affiliationGroup = document.getElementById('affiliationGroup');
+            const titleGroup = document.getElementById('titleGroup');
+            const titleSpacer = document.getElementById('titleSpacer');
+            const titleSelect = document.getElementById('title');
+
+            const firstNameInput = document.getElementById('first_name');
+            const lastNameInput = document.getElementById('last_name');
+            const firstNameCol = firstNameInput.closest('.col-md-6') || firstNameInput.closest('.col-md-12');
+            const lastNameCol = lastNameInput.closest('.col-md-6');
+
+            // Label for First Name & ID Card
+            const firstNameLabel = firstNameCol.querySelector('label');
+            const idCardLabel = document.getElementById('id_card').previousElementSibling;
+
+            if (isJuristic) {
+                // Juristic Person Layout
+                affiliationGroup.style.display = 'none'; // Hide Affiliation
+                titleGroup.style.display = 'none';
+                if (titleSpacer) titleSpacer.style.display = 'none';
+
+                titleSelect.value = 'บริษัท';
+
+                firstNameLabel.innerHTML = 'ชื่อหน่วยงาน/องค์กร <span class="text-danger">*</span>';
+                firstNameInput.placeholder = 'ระบุชื่อหน่วยงาน/องค์กร';
+                idCardLabel.innerHTML = 'เลขประจำตัวผู้เสียภาษี (13 หลัก) <span class="text-danger">*</span>';
+
+                // Expand First Name to full width
+                firstNameCol.classList.remove('col-md-6');
+                firstNameCol.classList.add('col-md-12');
+
+                // Hide Last Name
+                if (lastNameCol) lastNameCol.style.display = 'none';
+                lastNameInput.required = false;
+                lastNameInput.value = '';
+
+            } else {
+                // Ordinary Person Layout
+                affiliationGroup.style.display = 'block'; // Show Affiliation
+                titleGroup.style.display = 'block';
+                if (titleSpacer) titleSpacer.style.display = 'block';
+
+                titleSelect.value = ''; // Reset title
+
+                firstNameLabel.innerHTML = 'ชื่อ <span class="text-danger">*</span>';
+                firstNameInput.placeholder = '';
+                idCardLabel.innerHTML = 'เลขประจำตัวผู้เสียภาษี / เลขบัตรประชาชน <span class="text-danger">*</span>';
+
+                // Reset First Name width
+                firstNameCol.classList.remove('col-md-12');
+                firstNameCol.classList.add('col-md-6');
+
+                // Show Last Name
+                if (lastNameCol) lastNameCol.style.display = 'block';
+                lastNameInput.required = true;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             loadProjects();
             setDefaultDate();
+
+            // Initial Check
+            toggleDonorType();
+
             setupFormListeners();
             initAutoProvince();
 
@@ -703,25 +703,7 @@
         }
 
         function updatePreview() {
-            const title = document.getElementById('title').value;
-            const firstName = document.getElementById('first_name').value;
-            const lastName = document.getElementById('last_name').value;
-            const fullName = (title ? title + ' ' : '') + firstName + ' ' + lastName;
-
-            document.getElementById('preview_name').textContent = fullName.trim() || '-';
-
-            const idCard = document.getElementById('id_card').value;
-            document.getElementById('preview_id_card').textContent = idCard ? formatIdCard(idCard) : '-';
-
-            const projectSelect = document.getElementById('project_number');
-            const projectName = projectSelect.options[projectSelect.selectedIndex]?.dataset?.name || '-';
-            document.getElementById('preview_project').textContent = projectName;
-
-            const amount = parseFloat(document.getElementById('amount').value) || 0;
-            document.getElementById('preview_amount').textContent = formatCurrency(amount);
-
-            const date = document.getElementById('donation_date').value;
-            document.getElementById('preview_date').textContent = date ? formatThaiDateShort(date) : '-';
+            // Functionality removed as per request
         }
 
         function formatIdCard(id) {
@@ -957,6 +939,22 @@
             return statuses[status] || status || '-';
         }
 
+        function handleProjectChange() {
+            const projectNum = document.getElementById('project_number').value;
+            const customInput = document.getElementById('custom_project_name');
+
+            if (projectNum === '121210') {
+                customInput.style.display = 'block';
+                customInput.required = true;
+                customInput.focus();
+            } else {
+                customInput.style.display = 'none';
+                customInput.required = false;
+                customInput.value = '';
+            }
+            updatePreview();
+        }
+
         async function handleSubmit(e) {
             e.preventDefault();
 
@@ -970,8 +968,16 @@
             const amount = document.getElementById('amount').value;
             const donationDate = document.getElementById('donation_date').value;
 
-            if (!firstName || !lastName) {
-                showWarning('กรุณากรอกชื่อและนามสกุล');
+            if (!firstName) {
+                showWarning('กรุณากรอกชื่อ');
+                return;
+            }
+
+            const donorType = document.querySelector('input[name="donorType"]:checked').value;
+            const isJuristic = (donorType === 'juristic');
+
+            if (!isJuristic && !lastName) {
+                showWarning('กรุณากรอกนามสกุล');
                 return;
             }
 
@@ -990,6 +996,20 @@
                 return;
             }
 
+            // Custom project name check
+            let projectName = '';
+            const projectSelect = document.getElementById('project_number');
+            if (projectNumber === '121210') {
+                const customName = document.getElementById('custom_project_name').value;
+                if (!customName) {
+                    showWarning('กรุณาระบุชื่อโครงการ');
+                    return;
+                }
+                projectName = customName;
+            } else {
+                projectName = projectSelect.options[projectSelect.selectedIndex]?.dataset?.name || '';
+            }
+
             if (!amount || parseFloat(amount) <= 0) {
                 showWarning('กรุณากรอกจำนวนเงินที่ถูกต้อง');
                 return;
@@ -1002,22 +1022,21 @@
             spinner.classList.remove('d-none');
 
             try {
-                const projectSelect = document.getElementById('project_number');
-                const projectName = projectSelect.options[projectSelect.selectedIndex]?.dataset?.name || '';
-
                 const formData = {
                     donation_id: document.getElementById('donation_id').value || null,
+                    donor_type: donorType,
+                    type: document.getElementById('affiliation').value,
                     title: document.getElementById('title').value,
                     first_name: firstName,
                     last_name: lastName,
                     id_card: idCard,
                     phone: document.getElementById('phone').value,
                     email: document.getElementById('email').value,
-                    address: address,
+                    address: address, // Or use specific parts
                     address_line: addressLine,
                     province: $('#province option:selected').text(),
-                    amphure: $('#district option:selected').text(), // District in form is Amphure
-                    district: $('#subdistrict option:selected').text(), // Subdistrict in form is District (Tambon)
+                    amphure: $('#district option:selected').text(),
+                    district: $('#subdistrict option:selected').text(),
                     zip_code: document.getElementById('postcode').value,
                     project_number: projectNumber,
                     project_name: projectName,
@@ -1030,9 +1049,19 @@
                 };
 
                 // Call POST /donations/admin
-                // Flow: 1. บันทึก edonation_donat_user (status=completed)
-                //       2. สร้างใบเสร็จอัตโนมัติ
                 const response = await apiPost('/donations/admin', formData);
+
+                // Handle Line Notification
+                if (document.getElementById('notify_line').checked) {
+                    try {
+                        const nameShow = isJuristic ? firstName : `${formData.title}${firstName} ${lastName}`;
+                        const message = `\nแจ้งเตือนการบริจาค (Admin)\nผู้บริจาค: ${nameShow}\nจำนวน: ${formData.amount.toLocaleString()} บาท\nโครงการ: ${projectName}\nวันที่: ${donationDate}`;
+                        await apiPost('/notifications/line', { message: message });
+                    } catch (notifyErr) {
+                        console.error('Line notify error', notifyErr);
+                        // Don't block success flow
+                    }
+                }
 
                 // Show success
                 document.getElementById('result_receipt_no').textContent = response.data.receipt_no;

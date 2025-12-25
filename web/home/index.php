@@ -457,7 +457,7 @@ include_once('../config/head.php');
             function loadProjects() {
                 const container = document.getElementById('projectsContainer');
 
-                fetch(`${API_BASE}/projects?limit=3`)
+                fetch(`${API_BASE}/projects?limit=3&status=active`)
                     .then(response => {
                         if (!response.ok) throw new Error('API Error: ' + response.status);
                         return response.json();
