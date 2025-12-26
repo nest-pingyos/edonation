@@ -18,10 +18,10 @@
 
     <div class="scrollbar" data-simplebar>
         <ul class="navbar-nav" id="navbar-nav">
-            
+
             <!-- หน้าหลัก -->
             <li class="menu-title">หน้าหลัก</li>
-            
+
             <li class="nav-item">
                 <a class="nav-link" href="dashboard.php">
                     <span class="nav-icon">
@@ -44,7 +44,8 @@
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-arrow" href="#sidebarReceipts" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarReceipts">
+                <a class="nav-link menu-arrow" href="#sidebarReceipts" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarReceipts">
                     <span class="nav-icon">
                         <iconify-icon icon="iconamoon:invoice-duotone"></iconify-icon>
                     </span>
@@ -57,6 +58,9 @@
                         </li>
                         <li class="sub-nav-item">
                             <a class="sub-nav-link" href="receipts-generate.php">ออกใบเสร็จ</a>
+                        </li>
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="receipts-print-address.php">พิมพ์ที่อยู่จัดส่ง</a>
                         </li>
                     </ul>
                 </div>
@@ -111,7 +115,8 @@
             <li class="menu-title">รายงาน</li>
 
             <li class="nav-item">
-                <a class="nav-link menu-arrow" href="#sidebarReports" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarReports">
+                <a class="nav-link menu-arrow" href="#sidebarReports" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarReports">
                     <span class="nav-icon">
                         <iconify-icon icon="iconamoon:3d-duotone"></iconify-icon>
                     </span>
@@ -136,7 +141,8 @@
             <li class="menu-title">ตั้งค่าระบบ</li>
 
             <li class="nav-item">
-                <a class="nav-link menu-arrow" href="#sidebarSettings" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSettings">
+                <a class="nav-link menu-arrow" href="#sidebarSettings" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarSettings">
                     <span class="nav-icon">
                         <iconify-icon icon="iconamoon:settings-duotone"></iconify-icon>
                     </span>
