@@ -87,9 +87,7 @@ class MemberController
         $type = $_GET['type'] ?? 'all';
         $limit = min(50, max(1, intval($_GET['limit'] ?? 20)));
 
-        if (empty($query)) {
-            return Response::error('VALIDATION_ERROR', 'กรุณาระบุคำค้นหา');
-        }
+        // Removed empty query validation to allow listing
 
         $results = [];
 
@@ -111,29 +109,35 @@ class MemberController
                         payby as payment_method,
                         'donat_user' as source
                     FROM edonation_donat_user 
-                    WHERE status_donat = 'completed' AND (";
+                    WHERE status_donat = 'completed' ";
 
             $params = [];
             $conditions = [];
 
-            if ($type === 'name' || $type === 'all') {
-                $conditions[] = "CONCAT(first_name, ' ', last_name) LIKE :name_query";
-                $params[':name_query'] = '%' . $query . '%';
-            }
+            if (!empty($query)) {
+                $sql .= " AND (";
 
-            if ($type === 'id_card' || $type === 'all') {
-                $cleanQuery = preg_replace('/\D/', '', $query);
-                if (!empty($cleanQuery)) {
-                    $conditions[] = "id_card LIKE :id_query";
-                    $params[':id_query'] = '%' . $cleanQuery . '%';
+                if ($type === 'name' || $type === 'all') {
+                    $conditions[] = "CONCAT(first_name, ' ', last_name) LIKE :name_query";
+                    $params[':name_query'] = '%' . $query . '%';
                 }
+
+                if ($type === 'id_card' || $type === 'all') {
+                    $cleanQuery = preg_replace('/\D/', '', $query);
+                    if (!empty($cleanQuery)) {
+                        $conditions[] = "id_card LIKE :id_query";
+                        $params[':id_query'] = '%' . $cleanQuery . '%';
+                    }
+                }
+
+                if (empty($conditions)) {
+                    $conditions[] = "1=0"; // No match
+                }
+
+                $sql .= implode(' OR ', $conditions) . ") ";
             }
 
-            if (empty($conditions)) {
-                $conditions[] = "1=0"; // No match
-            }
-
-            $sql .= implode(' OR ', $conditions) . ") ORDER BY created_at DESC LIMIT :limit";
+            $sql .= "ORDER BY created_at DESC LIMIT :limit";
 
             $stmt = $this->pdo->prepare($sql);
             foreach ($params as $key => $value) {
@@ -167,89 +171,94 @@ class MemberController
             error_log("Search donat_user error: " . $e->getMessage());
         }
 
-        // ค้นหาจาก bank_transactions
-        try {
-            $sql = "SELECT 
-                        bt.id,
-                        bt.payerAccountName as name,
-                        bt.billPaymentRef2 as id_card,
-                        bt.amount,
-                        bt.transactionDateandTime as donation_date,
-                        du.project_name,
-                        du.project_number,
-                        du.phone,
-                        du.receipt_address as address,
-                        'bank' as source
-                    FROM edonation_bank_transactions bt
-                    LEFT JOIN edonation_donat_user du ON bt.billPaymentRef1 COLLATE utf8mb4_unicode_ci = du.billPaymentRef1
-                    WHERE ";
+        // ค้นหาจาก bank_transactions (เฉพาะเมื่อค้นหาด้วยชื่อหรือเลขบัตร)
+        if (!empty($query)) {
+            try {
+                $sql = "SELECT 
+                            bt.id,
+                            bt.payerAccountName as name,
+                            bt.billPaymentRef2 as id_card,
+                            bt.amount,
+                            bt.transactionDateandTime as donation_date,
+                            du.project_name,
+                            du.project_number,
+                            du.phone,
+                            du.receipt_address as address,
+                            'bank' as source
+                        FROM edonation_bank_transactions bt
+                        LEFT JOIN edonation_donat_user du ON bt.billPaymentRef1 COLLATE utf8mb4_unicode_ci = du.billPaymentRef1
+                        WHERE ";
 
-            $params = [];
-            $conditions = [];
+                $params = [];
+                $conditions = [];
 
-            if ($type === 'name' || $type === 'all') {
-                $conditions[] = "bt.payerAccountName LIKE :name_query";
-                $params[':name_query'] = '%' . $query . '%';
-            }
-
-            if ($type === 'id_card' || $type === 'all') {
-                $cleanQuery = preg_replace('/\D/', '', $query);
-                if (!empty($cleanQuery)) {
-                    $conditions[] = "bt.billPaymentRef2 LIKE :id_query";
-                    $params[':id_query'] = '%' . $cleanQuery . '%';
+                if ($type === 'name' || $type === 'all') {
+                    $conditions[] = "bt.payerAccountName LIKE :name_query";
+                    $params[':name_query'] = '%' . $query . '%';
                 }
-            }
 
-            if (empty($conditions)) {
-                $conditions[] = "1=0";
-            }
-
-            $sql .= "(" . implode(' OR ', $conditions) . ") ORDER BY bt.transactionDateandTime DESC LIMIT :limit";
-
-            $stmt = $this->pdo->prepare($sql);
-            foreach ($params as $key => $value) {
-                $stmt->bindValue($key, $value);
-            }
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->execute();
-
-            $bankResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($bankResults as $row) {
-                // หลีกเลี่ยงข้อมูลซ้ำ
-                $exists = false;
-                foreach ($results as $r) {
-                    if (!empty($row['id_card']) && $r['id_card'] === $row['id_card']) {
-                        $exists = true;
-                        break;
+                if ($type === 'id_card' || $type === 'all') {
+                    $cleanQuery = preg_replace('/\D/', '', $query);
+                    if (!empty($cleanQuery)) {
+                        $conditions[] = "bt.billPaymentRef2 LIKE :id_query";
+                        $params[':id_query'] = '%' . $cleanQuery . '%';
                     }
                 }
 
-                if (!$exists) {
-                    $results[] = [
-                        'id' => 'bank_' . $row['id'],
-                        'name' => $row['name'],
-                        'id_card' => $row['id_card'],
-                        'id_card_formatted' => $this->formatIdCard($row['id_card'] ?? ''),
-                        'phone' => $row['phone'],
-                        'address' => $row['address'],
-                        'project_name' => $row['project_name'],
-                        'project_number' => $row['project_number'],
-                        'amount' => floatval($row['amount']),
-                        'donation_date' => $row['donation_date'],
-                        'source' => 'bank',
-                        'source_label' => 'ธนาคาร'
-                    ];
+                if (empty($conditions)) {
+                    $conditions[] = "1=0";
                 }
+
+                $sql .= "(" . implode(' OR ', $conditions) . ") ORDER BY bt.transactionDateandTime DESC LIMIT :limit";
+
+                $stmt = $this->pdo->prepare($sql);
+                foreach ($params as $key => $value) {
+                    $stmt->bindValue($key, $value);
+                }
+                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+                $stmt->execute();
+
+                $bankResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($bankResults as $row) {
+                    // หลีกเลี่ยงข้อมูลซ้ำ
+                    $exists = false;
+                    foreach ($results as $r) {
+                        if (!empty($row['id_card']) && $r['id_card'] === $row['id_card']) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!$exists) {
+                        $results[] = [
+                            'id' => 'bank_' . $row['id'],
+                            'name' => trim($row['name']),
+                            'first_name' => '',
+                            'last_name' => '',
+                            'id_card' => $row['id_card'],
+                            'id_card_formatted' => $this->formatIdCard($row['id_card'] ?? ''),
+                            'phone' => $row['phone'],
+                            'address' => $row['address'],
+                            'project_name' => $row['project_name'],
+                            'project_number' => $row['project_number'],
+                            'amount' => floatval($row['amount']),
+                            'donation_date' => $row['donation_date'],
+                            'payment_method' => 'bank_transfer',
+                            'source' => 'bank_transaction',
+                            'source_label' => 'รายการธนาคาร'
+                        ];
+                    }
+                }
+            } catch (PDOException $e) {
+                error_log("Search bank error: " . $e->getMessage());
             }
-        } catch (PDOException $e) {
-            error_log("Search bank error: " . $e->getMessage());
         }
 
-        return Response::success($results, 'พบ ' . count($results) . ' รายการ', [
+        return Response::success($results, null, [
             'count' => count($results),
-            'query' => $query,
-            'type' => $type
+            'limit' => $limit,
+            'query' => $query
         ]);
     }
 

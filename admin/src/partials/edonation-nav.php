@@ -103,12 +103,23 @@
             <li class="menu-title">ผู้บริจาค</li>
 
             <li class="nav-item">
-                <a class="nav-link" href="members-search.php">
+                <a class="nav-link menu-arrow" href="#sidebarMembers" data-bs-toggle="collapse" role="button"
+                    aria-expanded="false" aria-controls="sidebarMembers">
                     <span class="nav-icon">
-                        <iconify-icon icon="iconamoon:search-duotone"></iconify-icon>
+                        <iconify-icon icon="iconamoon:profile-duotone"></iconify-icon>
                     </span>
-                    <span class="nav-text">ค้นหาประวัติ</span>
+                    <span class="nav-text">สมาชิก</span>
                 </a>
+                <div class="collapse" id="sidebarMembers">
+                    <ul class="nav sub-navbar-nav">
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="members-list.php">รายชื่อสมาชิก</a>
+                        </li>
+                        <li class="sub-nav-item">
+                            <a class="sub-nav-link" href="members-search.php">ค้นหาประวัติ</a>
+                        </li>
+                    </ul>
+                </div>
             </li>
 
             <!-- รายงาน -->

@@ -115,6 +115,12 @@ try {
             $response = $controller->handle($method, $id, $action);
             break;
 
+        case 'reports':
+            require_once __DIR__ . '/controllers/ReportController.php';
+            $controller = new ReportController();
+            $response = $controller->handle($method, $id, $action);
+            break;
+
         default:
             $response = [
                 'success' => true,

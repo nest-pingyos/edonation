@@ -15,6 +15,9 @@ $basePath = '';
     <!-- jQuery (required for Select2 and other plugins) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
+    <!-- SweetAlert2 (Ensure it is loaded) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.11.0/dist/sweetalert2.all.min.js"></script>
+
     <!-- Local JS Files -->
     <script src="<?php echo $basePath; ?>assets/js/vendor.js"></script>
     <script src="<?php echo $basePath; ?>assets/js/app.js"></script>

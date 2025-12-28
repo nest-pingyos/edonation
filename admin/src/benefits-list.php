@@ -25,6 +25,58 @@
                 $subTitle = "จัดการโครงการ";
                 include 'partials/page-title.php'; ?>
 
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-primary rounded">
+                                        <iconify-icon icon="iconamoon:gift-duotone"
+                                            class="avatar-title text-primary fs-32"></iconify-icon>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0" id="total-count">-</h3>
+                                        <p class="text-muted mb-0">ระดับทั้งหมด</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-success rounded">
+                                        <iconify-icon icon="iconamoon:check-circle-1-duotone"
+                                            class="avatar-title text-success fs-32"></iconify-icon>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0" id="active-count">-</h3>
+                                        <p class="text-muted mb-0">เปิดใช้งาน</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-warning rounded">
+                                        <iconify-icon icon="iconamoon:close-circle-1-duotone"
+                                            class="avatar-title text-warning fs-32"></iconify-icon>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0" id="inactive-count">-</h3>
+                                        <p class="text-muted mb-0">ปิดใช้งาน</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Main Card -->
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -35,11 +87,44 @@
                         </button>
                     </div>
                     <div class="card-body">
-                        <!-- Benefits Grid -->
-                        <div class="row" id="benefitsGrid">
-                            <div class="col-12 text-center py-5">
-                                <div class="spinner-border text-primary"></div>
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาชื่อระดับ..."
+                                    oninput="filterTable()">
                             </div>
+                            <div class="col-md-3">
+                                <select id="statusFilter" class="form-select" onchange="filterTable()">
+                                    <option value="">ทุกสถานะ</option>
+                                    <option value="active">เปิดใช้งาน</option>
+                                    <option value="inactive">ปิดใช้งาน</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-nowrap align-middle">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th style="width: 60px;">#</th>
+                                        <th style="width: 80px;">รูปภาพ</th>
+                                        <th>ชื่อระดับ</th>
+                                        <th>รายละเอียด</th>
+                                        <th class="text-end">ยอดขั้นต่ำ</th>
+                                        <th class="text-center">ลำดับ</th>
+                                        <th class="text-center">สถานะ</th>
+                                        <th class="text-center" style="width: 140px;">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="benefitsTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <div class="spinner-border text-primary"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -108,7 +193,7 @@
     </div>
 
     <?php include 'partials/vendor-scripts.php'; ?>
-<script src="assets/js/api-helper.js"></script>
+    <script src="assets/js/api-helper.js"></script>
 
     <script>
         let benefits = [];
@@ -123,54 +208,90 @@
             try {
                 const response = await apiGet('/benefits?active=0');
                 benefits = response.data || [];
-                renderGrid(benefits);
+
+                // Update stats
+                const activeCount = benefits.filter(b => b.is_active).length;
+                const inactiveCount = benefits.filter(b => !b.is_active).length;
+
+                document.getElementById('total-count').textContent = benefits.length;
+                document.getElementById('active-count').textContent = activeCount;
+                document.getElementById('inactive-count').textContent = inactiveCount;
+
+                renderTable(benefits);
             } catch (error) {
                 showError(error.message);
-                document.getElementById('benefitsGrid').innerHTML = `
-            <div class="col-12 text-center py-5 text-danger">${error.message}</div>
-        `;
+                document.getElementById('benefitsTable').innerHTML = `
+                    <tr><td colspan="8" class="text-center py-4 text-danger">${error.message}</td></tr>
+                `;
             }
         }
 
-        function renderGrid(data) {
-            const grid = document.getElementById('benefitsGrid');
+        function renderTable(data) {
+            const tbody = document.getElementById('benefitsTable');
 
             if (!data || data.length === 0) {
-                grid.innerHTML = '<div class="col-12 text-center py-5 text-muted">ยังไม่มีระดับสิทธิประโยชน์</div>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><iconify-icon icon="iconamoon:file-search-duotone" class="fs-48 d-block mb-2"></iconify-icon>ยังไม่มีระดับสิทธิประโยชน์</td></tr>';
                 return;
             }
 
-            grid.innerHTML = data.map(item => `
-        <div class="col-md-4 col-lg-3 mb-4">
-            <div class="card border h-100 ${!item.is_active ? 'opacity-50' : ''}">
-                <div class="card-body text-center">
-                    <div class="avatar-lg bg-soft-primary rounded-circle mx-auto mb-3">
+            tbody.innerHTML = data.map((item, idx) => `
+                <tr class="${!item.is_active ? 'table-secondary' : ''}">
+                    <td>${idx + 1}</td>
+                    <td>
                         <img src="${item.image_url || 'assets/images/placeholder.jpg'}" 
-                             class="rounded-circle" width="64" height="64" 
+                             class="rounded" width="48" height="48" 
                              style="object-fit: cover;"
                              onerror="this.src='assets/images/placeholder.jpg'">
-                    </div>
-                    <h5 class="mb-2">${escapeHtml(item.name)}</h5>
-                    <h3 class="text-primary mb-2">${formatCurrency(item.amount)}</h3>
-                    <p class="text-muted small mb-3">${escapeHtml(item.description || '-')}</p>
-                    
-                    <div class="d-flex justify-content-center gap-2">
-                        ${item.is_active ?
-                    '<span class="badge badge-soft-success">เปิดใช้งาน</span>' :
-                    '<span class="badge badge-soft-secondary">ปิดใช้งาน</span>'}
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent text-center">
-                    <button class="btn btn-sm btn-soft-primary me-1" onclick="openEditModal(${item.id})">
-                        <iconify-icon icon="iconamoon:edit-duotone"></iconify-icon> แก้ไข
-                    </button>
-                    <button class="btn btn-sm btn-soft-danger" onclick="deleteBenefit(${item.id}, '${escapeHtml(item.name)}')">
-                        <iconify-icon icon="iconamoon:trash-duotone"></iconify-icon>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `).join('');
+                    </td>
+                    <td>
+                        <div class="fw-semibold">${escapeHtml(item.name)}</div>
+                    </td>
+                    <td>
+                        <span class="text-muted small">${escapeHtml(truncateText(item.description || '-', 50))}</span>
+                    </td>
+                    <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount)}</td>
+                    <td class="text-center">
+                        <span class="badge bg-light text-dark">${item.sort_order || 0}</span>
+                    </td>
+                    <td class="text-center">
+                        ${item.is_active
+                    ? '<span class="badge badge-soft-success">เปิดใช้งาน</span>'
+                    : '<span class="badge badge-soft-secondary">ปิดใช้งาน</span>'}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-soft-primary me-1" onclick="openEditModal(${item.id})" title="แก้ไข">
+                            <iconify-icon icon="iconamoon:edit-duotone"></iconify-icon>
+                        </button>
+                        <button class="btn btn-sm btn-soft-${item.is_active ? 'warning' : 'success'}" onclick="toggleStatus(${item.id}, ${item.is_active})" title="${item.is_active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}">
+                            <iconify-icon icon="iconamoon:${item.is_active ? 'close' : 'check'}-duotone"></iconify-icon>
+                        </button>
+                        <button class="btn btn-sm btn-soft-danger" onclick="deleteBenefit(${item.id}, '${escapeHtml(item.name)}')" title="ลบ">
+                            <iconify-icon icon="iconamoon:trash-duotone"></iconify-icon>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+
+            const filtered = benefits.filter(item => {
+                const matchSearch = item.name.toLowerCase().includes(search) ||
+                    (item.description || '').toLowerCase().includes(search);
+                const matchStatus = !status ||
+                    (status === 'active' && item.is_active) ||
+                    (status === 'inactive' && !item.is_active);
+                return matchSearch && matchStatus;
+            });
+
+            renderTable(filtered);
+        }
+
+        function truncateText(text, max) {
+            if (!text) return '';
+            return text.length > max ? text.substring(0, max) + '...' : text;
         }
 
         function openCreateModal() {
@@ -235,6 +356,16 @@
             }
         }
 
+        async function toggleStatus(id, currentStatus) {
+            try {
+                await apiPut('/benefits/' + id, { is_active: currentStatus ? 0 : 1 });
+                showSuccess(currentStatus ? 'ปิดใช้งานแล้ว' : 'เปิดใช้งานแล้ว');
+                loadBenefits();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
         async function deleteBenefit(id, name) {
             const result = await confirmDelete(name);
             if (!result.isConfirmed) return;
@@ -246,13 +377,6 @@
             } catch (error) {
                 showError(error.message);
             }
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
         }
     </script>
 
