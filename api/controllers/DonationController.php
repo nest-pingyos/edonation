@@ -51,6 +51,9 @@ class DonationController
             case 'PUT':
                 AuthMiddleware::requireAdmin();
                 return $this->update($id);
+            case 'DELETE':
+                AuthMiddleware::requireAdmin();
+                return $this->delete($id);
             default:
                 return Response::error('METHOD_NOT_ALLOWED', 'Method not allowed', 405);
         }
@@ -554,26 +557,106 @@ class DonationController
             $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
             $offset = ($page - 1) * $limit;
 
-            // Use edonation_donat_user table with correct column names
+            $where = [];
+            $params = [];
+
+            // Search filter
+            if (!empty($_GET['search'])) {
+                $where[] = "(first_name LIKE :s1 OR last_name LIKE :s2 OR billPaymentRef1 LIKE :s3 OR id_card LIKE :s4)";
+                $searchVal = '%' . $_GET['search'] . '%';
+                $params[':s1'] = $searchVal;
+                $params[':s2'] = $searchVal;
+                $params[':s3'] = $searchVal;
+                $params[':s4'] = $searchVal;
+            }
+
+            // Status filter
+            if (!empty($_GET['status'])) {
+                $statusMap = [
+                    'CONFIRMED' => 'completed',
+                    'PENDING' => 'pending',
+                    'CANCELLED' => 'cancelled'
+                ];
+                $dbStatus = $statusMap[$_GET['status']] ?? $_GET['status'];
+                $where[] = "status_donat = :status";
+                $params[':status'] = $dbStatus;
+            }
+
+            // Project filter
+            if (!empty($_GET['project'])) {
+                $where[] = "project_number = :project";
+                $params[':project'] = $_GET['project'];
+            }
+
+            // Date filters
+            if (!empty($_GET['from'])) {
+                $where[] = "created_at >= :from";
+                $params[':from'] = $_GET['from'] . ' 00:00:00';
+            }
+            if (!empty($_GET['to'])) {
+                $where[] = "created_at <= :to";
+                $params[':to'] = $_GET['to'] . ' 23:59:59';
+            }
+
+            $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+            // Count total for pagination
+            $countSql = "SELECT COUNT(*) as total FROM edonation_donat_user $whereClause";
+            $countStmt = $this->pdo->prepare($countSql);
+            $countStmt->execute($params);
+            $total = (int) $countStmt->fetch()['total'];
+
+            // Get summary stats
+            $statsSql = "SELECT 
+                            COUNT(*) as total,
+                            SUM(CASE WHEN status_donat = 'completed' THEN 1 ELSE 0 END) as confirmed,
+                            SUM(CASE WHEN status_donat = 'pending' THEN 1 ELSE 0 END) as pending,
+                            SUM(amount) as totalAmount
+                         FROM edonation_donat_user";
+            $statsStmt = $this->pdo->prepare($statsSql);
+            $statsStmt->execute();
+            $stats = $statsStmt->fetch();
+
+            // Fetch results
             $sql = "SELECT id, billPaymentRef1, first_name, last_name, id_card, 
                            amount, project_number, project_name, status_donat as status, 
-                           phone, receiptDate, created_at 
-                    FROM edonation_donat_user ORDER BY id DESC LIMIT :limit OFFSET :offset";
+                           phone, receiptDate, created_at, receipt_address
+                    FROM edonation_donat_user 
+                    $whereClause
+                    ORDER BY id DESC LIMIT :limit OFFSET :offset";
 
             $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $val) {
+                $stmt->bindValue($key, $val);
+            }
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
 
             $results = $stmt->fetchAll();
 
-            // Map column names for frontend
+            // Map outcomes
             foreach ($results as &$row) {
                 $row['donor_name'] = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
                 $row['transaction_date'] = $row['created_at'];
+                // Normalize status
+                if ($row['status'] === 'completed')
+                    $row['status'] = 'CONFIRMED';
+                else if ($row['status'] === 'pending')
+                    $row['status'] = 'PENDING';
+                else if ($row['status'] === 'cancelled')
+                    $row['status'] = 'CANCELLED';
             }
 
-            return Response::success($results);
+            return Response::success($results, null, [
+                'total' => $total,
+                'totalPages' => ceil($total / $limit),
+                'currentPage' => $page,
+                'limit' => $limit,
+                'confirmed' => (int) $stats['confirmed'],
+                'pending' => (int) $stats['pending'],
+                'totalAmount' => (float) $stats['totalAmount']
+            ]);
         } catch (PDOException $e) {
             error_log("Donations index error: " . $e->getMessage());
             return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
@@ -631,6 +714,40 @@ class DonationController
         } catch (PDOException $e) {
             error_log("Donation update error: " . $e->getMessage());
             return Response::error('DATABASE_ERROR', 'ไม่สามารถอัปเดตได้: ' . $e->getMessage(), 500);
+        }
+    }
+
+    // DELETE /donations/:id (Admin)
+    private function delete(string $id): array
+    {
+        try {
+            $this->pdo->beginTransaction();
+
+            // Get donation details first (for Ref1 if needed)
+            $stmt = $this->pdo->prepare("SELECT billPaymentRef1 FROM edonation_donat_user WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+            $donation = $stmt->fetch();
+
+            if (!$donation) {
+                return Response::notFound('ไม่พบรายการบริจาค');
+            }
+
+            // 1. Delete associated receipts
+            $sqlReceipts = "DELETE FROM edonation_receipts WHERE donation_id = :id";
+            $stmtReceipts = $this->pdo->prepare($sqlReceipts);
+            $stmtReceipts->execute([':id' => $id]);
+
+            // 2. Delete the donation itself
+            $sqlDonation = "DELETE FROM edonation_donat_user WHERE id = :id";
+            $stmtDonation = $this->pdo->prepare($sqlDonation);
+            $stmtDonation->execute([':id' => $id]);
+
+            $this->pdo->commit();
+            return Response::success(null, 'ลบรายการบริจาคสำเร็จ');
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Donation delete error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถลบรายการได้: ' . $e->getMessage(), 500);
         }
     }
 }

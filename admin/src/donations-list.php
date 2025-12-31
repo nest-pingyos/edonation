@@ -135,18 +135,17 @@
                             <table class="table table-hover table-nowrap">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th>Ref</th>
+                                        <th style="width: 50px;">ลำดับ</th>
                                         <th>ผู้บริจาค</th>
                                         <th>โครงการ</th>
                                         <th class="text-end">จำนวนเงิน</th>
                                         <th>วันที่</th>
-                                        <th>สถานะ</th>
                                         <th class="text-center">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody id="donationsTable">
                                     <tr>
-                                        <td colspan="7" class="text-center py-4">
+                                        <td colspan="6" class="text-center py-4">
                                             <div class="spinner-border text-primary"></div>
                                         </td>
                                     </tr>
@@ -166,8 +165,6 @@
             <?php include 'partials/footer.php'; ?>
         </div>
     </div>
-
-    <!-- Detail Modal -->
     <div class="modal fade" id="detailModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -190,6 +187,58 @@
             </div>
         </div>
     </div>
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">แก้ไขข้อมูลการบริจาค</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editId" name="id">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">ชื่อ <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_first_name" name="first_name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">นามสกุล <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_last_name" name="last_name" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">เบอร์โทรศัพท์</label>
+                                <input type="text" class="form-control" id="edit_phone" name="phone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">สถานะ</label>
+                                <select class="form-select" id="edit_status" name="status_donat">
+                                    <option value="pending">รอยืนยัน</option>
+                                    <option value="completed">ยืนยันแล้ว</option>
+                                    <option value="cancelled">ยกเลิก</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ที่อยู่ใบเสร็จ</label>
+                            <textarea class="form-control" id="edit_receipt_address" name="receipt_address"
+                                rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary" id="editSubmitBtn">
+                            <span class="spinner-border spinner-border-sm me-1 d-none" id="editSubmitSpinner"></span>
+                            บันทึกการแก้ไข
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <?php include 'partials/vendor-scripts.php'; ?>
     <script src="assets/js/api-helper.js"></script>
@@ -208,6 +257,9 @@
             document.getElementById('searchInput').addEventListener('input', debounce(loadDonations, 500));
             document.getElementById('statusFilter').addEventListener('change', loadDonations);
             document.getElementById('projectFilter').addEventListener('change', loadDonations);
+
+            // Form submit handler
+            document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
         });
 
         async function loadProjects() {
@@ -229,7 +281,7 @@
 
         async function loadDonations() {
             const tbody = document.getElementById('donationsTable');
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>';
 
             try {
                 // Build query params
@@ -254,47 +306,66 @@
 
                 const response = await apiGet('/donations?' + params.toString());
                 donations = response.data || [];
+                const meta = response.meta || {};
 
                 // Update stats
-                const stats = response.stats || {};
-                document.getElementById('total-count').textContent = formatNumber(stats.total || donations.length);
-                document.getElementById('confirmed-count').textContent = formatNumber(stats.confirmed || donations.filter(d => d.status === 'CONFIRMED').length);
-                document.getElementById('pending-count').textContent = formatNumber(stats.pending || donations.filter(d => d.status === 'PENDING').length);
-                document.getElementById('total-amount').textContent = formatNumber(stats.totalAmount || donations.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0));
+                document.getElementById('total-count').textContent = formatNumber(meta.total || 0);
+                document.getElementById('confirmed-count').textContent = formatNumber(meta.confirmed || 0);
+                document.getElementById('pending-count').textContent = formatNumber(meta.pending || 0);
+                document.getElementById('total-amount').textContent = formatNumber(meta.totalAmount || 0);
+
+                // Update pagination info
+                const start = meta.total === 0 ? 0 : (currentPage - 1) * perPage + 1;
+                const end = Math.min(currentPage * perPage, meta.total);
+                document.getElementById('pagination-info').textContent = `แสดง ${start} ถึง ${end} จากทั้งหมด ${meta.total} รายการ`;
 
                 renderTable(donations);
+                renderPagination('pagination', currentPage, meta.totalPages, 'changePage');
 
             } catch (error) {
                 showError(error.message);
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">${error.message}</td></tr>`;
             }
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            loadDonations();
         }
 
         function renderTable(data) {
             const tbody = document.getElementById('donationsTable');
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">ไม่พบรายการบริจาค</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">ไม่พบรายการบริจาค</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = data.map(item => `
+            tbody.innerHTML = data.map((item, index) => `
         <tr>
             <td>
-                <span class="badge bg-light text-dark font-monospace">${item.billPaymentRef1 || item.ref || '-'}</span>
+                ${(currentPage - 1) * perPage + index + 1}
             </td>
-            <td>
-                <div class="fw-medium">${escapeHtml(item.donor_name || item.name || 'ไม่ระบุชื่อ')}</div>
-                ${item.id_card ? `<small class="text-muted">${maskIdCard(item.id_card)}</small>` : ''}
+            <td style="max-width: 200px;">
+                <div class="fw-medium text-truncate" title="${escapeHtml(item.donor_name || item.name || 'ไม่ระบุชื่อ')}">
+                    ${escapeHtml(item.donor_name || item.name || 'ไม่ระบุชื่อ')}
+                </div>
             </td>
             <td>${escapeHtml(item.project_name || item.project_number || '-')}</td>
             <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
             <td>${formatThaiDateShort(item.transaction_date || item.created_at)}</td>
-            <td>${getStatusBadge(item.status)}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-soft-primary" onclick="viewDetail('${item.billPaymentRef1 || item.id}')" title="ดูรายละเอียด">
-                    <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
-                </button>
+                <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-sm btn-soft-primary" onclick="viewDetail('${item.billPaymentRef1 || item.id}')" title="ดูรายละเอียด">
+                        <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
+                    </button>
+                    <button class="btn btn-sm btn-soft-info" onclick="editDonation('${item.id}')" title="แก้ไข">
+                        <iconify-icon icon="iconamoon:edit-duotone"></iconify-icon>
+                    </button>
+                    <button class="btn btn-sm btn-soft-danger" onclick="deleteDonation('${item.id}')" title="ลบ">
+                        <iconify-icon icon="iconamoon:trash-duotone"></iconify-icon>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -362,6 +433,67 @@
             const div = document.createElement('div');
             div.textContent = str;
             return div.innerHTML;
+        }
+
+        async function deleteDonation(id) {
+            const result = await confirmDelete('รายการบริจาคนี้');
+            if (!result.isConfirmed) return;
+
+            try {
+                await apiDelete('/donations/' + id);
+                showSuccess('ลบรายการสำเร็จ');
+                loadDonations();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function editDonation(id) {
+            try {
+                const response = await apiGet('/donations/' + id);
+                const d = response.data;
+
+                document.getElementById('editId').value = d.id;
+                document.getElementById('edit_first_name').value = d.first_name || '';
+                document.getElementById('edit_last_name').value = d.last_name || '';
+                document.getElementById('edit_phone').value = d.phone || '';
+                document.getElementById('edit_status').value = d.status_donat || 'pending';
+                document.getElementById('edit_receipt_address').value = d.receipt_address || '';
+
+                new bootstrap.Modal(document.getElementById('editModal')).show();
+            } catch (error) {
+                showError('ไม่สามารถโหลดข้อมูลได้: ' + error.message);
+            }
+        }
+
+        async function handleEditSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const submitBtn = document.getElementById('editSubmitBtn');
+            const spinner = document.getElementById('editSubmitSpinner');
+
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+
+            try {
+                const formData = {
+                    first_name: document.getElementById('edit_first_name').value,
+                    last_name: document.getElementById('edit_last_name').value,
+                    phone: document.getElementById('edit_phone').value,
+                    status_donat: document.getElementById('edit_status').value,
+                    receipt_address: document.getElementById('edit_receipt_address').value
+                };
+
+                await apiPut('/donations/' + id, formData);
+                showSuccess('อัปเดตข้อมูลสำเร็จ');
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                loadDonations();
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+            }
         }
 
         function debounce(func, wait) {

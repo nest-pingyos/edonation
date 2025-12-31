@@ -73,11 +73,18 @@ class ReportController
                         r.bank_transaction_id,
                         du.project_name,
                         du.project_number,
+                        du.title,
                         du.first_name,
                         du.last_name,
                         du.id_card,
                         du.payby,
                         du.status_donat,
+                        du.address_line,
+                        du.province,
+                        du.amphure,
+                        du.district,
+                        du.zip_code,
+                        du.phone,
                         bt.transactionId,
                         bt.transactionDateandTime,
                         bt.sendingBankCode,
@@ -156,10 +163,18 @@ class ReportController
                         r.bank_transaction_id,
                         du.project_name,
                         du.project_number,
+                        du.title,
                         du.first_name,
                         du.last_name,
+                        du.id_card,
                         du.payby,
                         du.status_donat,
+                        du.address_line,
+                        du.province,
+                        du.amphure,
+                        du.district,
+                        du.zip_code,
+                        du.phone,
                         bt.transactionId,
                         bt.billPaymentRef1,
                         bt.billPaymentRef2
@@ -245,8 +260,20 @@ class ReportController
                         r.donation_id,
                         du.project_name,
                         du.project_number,
+                        du.title,
+                        du.first_name,
+                        du.last_name,
+                        du.id_card,
                         du.payby,
-                        bt.billPaymentRef1
+                        du.status_donat,
+                        du.address_line,
+                        du.province,
+                        du.amphure,
+                        du.district,
+                        du.zip_code,
+                        du.phone,
+                        bt.billPaymentRef1,
+                        bt.billPaymentRef2
                     FROM edonation_receipts r
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
@@ -481,7 +508,18 @@ class ReportController
             'bank_transaction_id' => $row['bank_transaction_id'] ? (int) $row['bank_transaction_id'] : null,
             'transaction_id' => $row['transactionId'] ?? null,
             'ref1' => $row['billPaymentRef1'] ?? null,
-            'tax_id' => $row['billPaymentRef2'] ?? null
+            'tax_id' => $row['billPaymentRef2'] ?? $row['id_card'] ?? null,
+
+            // CVS-CMU fields
+            'title' => $row['title'] ?? '',
+            'first_name' => $row['first_name'] ?? '',
+            'last_name' => $row['last_name'] ?? '',
+            'address_line' => $row['address_line'] ?? '',
+            'province' => $row['province'] ?? '',
+            'amphure' => $row['amphure'] ?? '',
+            'district' => $row['district'] ?? '',
+            'zip_code' => $row['zip_code'] ?? '',
+            'phone' => $row['phone'] ?? ''
         ];
     }
 }

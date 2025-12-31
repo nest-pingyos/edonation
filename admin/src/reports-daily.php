@@ -49,10 +49,18 @@
                             </button>
                         </div>
                     </div>
-                    <div class="col-auto ms-auto">
-                        <button class="btn btn-outline-success" onclick="exportCSV()">
+                </div>
+
+                <!-- Export Buttons -->
+                <div class="row mb-4">
+                    <div class="col-12 text-end">
+                        <button class="btn btn-outline-success me-2" onclick="exportCSV()">
                             <iconify-icon icon="iconamoon:file-document-duotone" class="me-1"></iconify-icon>
-                            ส่งออก CSV
+                            ส่งออก CSV (ทั่วไป)
+                        </button>
+                        <button class="btn btn-primary" onclick="exportCSVCmu()">
+                            <iconify-icon icon="iconamoon:file-excel-duotone" class="me-1"></iconify-icon>
+                            รายงาน CVS-CMU
                         </button>
                     </div>
                 </div>
@@ -341,6 +349,84 @@
             link.click();
 
             showSuccess('ส่งออกไฟล์ CSV สำเร็จ');
+        }
+
+        function exportCSVCmu() {
+            if (donations.length === 0) {
+                showWarning('ไม่มีข้อมูลให้ส่งออก');
+                return;
+            }
+
+            const date = document.getElementById('reportDate').value;
+            // Columns as requested
+            const headers = [
+                'ลำดับ',
+                'เลขที่ใบเสร็จ',
+                'วันที่บริจาค',
+                'จำนวนเงิน',
+                'รายการทรัพย์สิน',
+                'มูลค่าทรัพท์สิน',
+                'เลขประจำตัวผู้เสียภาษีอากร',
+                'คำนำหน้าตามบัตรประชาชน',
+                'ชื่อ',
+                'นามสกุล',
+                'บ้านเลขที่',
+                'หมู่บ้าน/อาคาร', // Blank
+                'หมู่ที่',         // Blank
+                'ซอย',           // Blank
+                'ถนน',           // Blank
+                'ตำบล',
+                'อำเภอ',
+                'จังหวัด',
+                'รหัสไฟรษณีย์',
+                'เบอร์โทรศัพท์',
+                'อาชีพ',         // Blank
+                'วันเกิด'        // Blank
+            ];
+
+            const rows = donations.map((d, i) => [
+                i + 1,
+                d.receipt_no || '',
+                d.issued_at ? d.issued_at.split(' ')[0] : (d.transaction_date || d.created_at || '').split(' ')[0], // Date Only YYYY-MM-DD
+                d.amount || 0,
+                d.project_name || '', // รายการทรัพย์สิน (เอาชื่อโครงการ)
+                d.amount || 0,        // มูลค่า (เท่ากับยอดเงิน)
+                d.tax_id || '',
+                d.title || '',
+                d.first_name || '',
+                d.last_name || '',
+                d.address_line || '', // บ้านเลขที่ (ใช้ที่อยู่รวมไปก่อน)
+                '', // หมู่บ้าน
+                '', // หมู่ที่
+                '', // ซอย
+                '', // ถนน
+                d.district || '',
+                d.amphure || '',
+                d.province || '',
+                d.zip_code || '',
+                d.phone || '',
+                '', // อาชีพ
+                ''  // วันเกิด
+            ]);
+
+            const csvContent = '\uFEFF' + [headers, ...rows].map(row => {
+                // Escape quotes and wrap in quotes if contains comma
+                return row.map(cell => {
+                    const str = String(cell);
+                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }
+                    return str;
+                }).join(',');
+            }).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `รายงาน_CVS_CMU_${date}.csv`;
+            link.click();
+
+            showSuccess('ส่งออกไฟล์ CVS-CMU สำเร็จ');
         }
     </script>
 
