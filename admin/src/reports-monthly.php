@@ -43,6 +43,9 @@
                                 <iconify-icon icon="iconamoon:calendar-2-duotone"></iconify-icon>
                             </span>
                             <select id="reportMonth" class="form-select" style="max-width: 120px;">
+                                <option value="10">ตุลาคม</option>
+                                <option value="11">พฤศจิกายน</option>
+                                <option value="12">ธันวาคม</option>
                                 <option value="1">มกราคม</option>
                                 <option value="2">กุมภาพันธ์</option>
                                 <option value="3">มีนาคม</option>
@@ -52,9 +55,6 @@
                                 <option value="7">กรกฎาคม</option>
                                 <option value="8">สิงหาคม</option>
                                 <option value="9">กันยายน</option>
-                                <option value="10">ตุลาคม</option>
-                                <option value="11">พฤศจิกายน</option>
-                                <option value="12">ธันวาคม</option>
                             </select>
                             <select id="reportYear" class="form-select" style="max-width: 100px;"></select>
                             <button class="btn btn-primary" onclick="loadReport()">
@@ -228,6 +228,9 @@
         let donations = [];
         let dailyChart, projectPieChart;
 
+        // Get fiscal year type from settings
+        const fiscalYearType = localStorage.getItem('fiscalYearType') || 'thai';
+
         document.addEventListener('DOMContentLoaded', function () {
             initYearSelector();
             initCharts();
@@ -236,17 +239,32 @@
 
         function initYearSelector() {
             const select = document.getElementById('reportYear');
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth() + 1;
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 1-12
 
-            for (let y = currentYear; y >= currentYear - 5; y--) {
+            // Calculate default year based on fiscal type
+            let defaultYear;
+            if (fiscalYearType === 'thai') {
+                defaultYear = currentMonth >= 10 ? currentYear + 1 : currentYear;
+            } else {
+                defaultYear = currentYear;
+            }
+
+            for (let y = defaultYear; y >= 2023; y--) {
                 const option = document.createElement('option');
                 option.value = y;
                 option.textContent = y + 543; // Buddhist year
                 select.appendChild(option);
             }
 
+            // Set current month
             document.getElementById('reportMonth').value = currentMonth;
+
+            // Set correct year (for Thai fiscal, if month is Oct-Dec, year should be fiscalYear)
+            if (fiscalYearType === 'thai' && currentMonth >= 10) {
+                document.getElementById('reportYear').value = defaultYear;
+            }
         }
 
         function initCharts() {
@@ -399,10 +417,10 @@
 
             const headers = ['วันที่', 'Ref', 'ผู้บริจาค', 'โครงการ', 'จำนวนเงิน', 'สถานะ'];
             const rows = donations.map(d => [
-                formatThaiDateShort(d.transaction_date || d.created_at),
-                d.billPaymentRef1 || d.ref || '',
-                d.donor_name || d.name || '',
-                d.project_name || d.project_number || '',
+                formatThaiDateShort(d.issued_at),
+                d.ref1 || '',
+                d.donor_name || '',
+                d.project_name || '',
                 d.amount || 0,
                 d.status === 'CONFIRMED' ? 'ยืนยันแล้ว' : 'รอยืนยัน'
             ]);
@@ -457,7 +475,7 @@
             const rows = donations.map((d, i) => [
                 i + 1,
                 d.receipt_no || '',
-                d.issued_at ? d.issued_at.split(' ')[0] : (d.transaction_date || d.created_at || '').split(' ')[0],
+                d.issued_at ? d.issued_at.split(' ')[0] : '',
                 d.amount || 0,
                 d.project_name || '',
                 d.amount || 0,

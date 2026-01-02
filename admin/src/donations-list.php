@@ -99,33 +99,57 @@
                         <h4 class="card-title mb-0">รายการบริจาค</h4>
                     </div>
                     <div class="card-body">
-                        <!-- Filters -->
-                        <div class="row mb-3">
+                        <!-- Filters Row 1 -->
+                        <div class="row mb-2">
                             <div class="col-md-3">
                                 <input type="text" id="searchInput" class="form-control"
                                     placeholder="ค้นหาชื่อ, เลขบัตร...">
+                            </div>
+                            <div class="col-md-2">
+                                <select id="fiscalYearFilter" class="form-select">
+                                    <!-- Will be populated by JS -->
+                                </select>
                             </div>
                             <div class="col-md-2">
                                 <select id="statusFilter" class="form-select">
                                     <option value="">ทุกสถานะ</option>
                                     <option value="CONFIRMED">ยืนยันแล้ว</option>
                                     <option value="PENDING">รอยืนยัน</option>
+                                    <option value="cancelled">ยกเลิก</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <select id="projectFilter" class="form-select">
                                     <option value="">ทุกโครงการ</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="date" id="dateFrom" class="form-control" placeholder="จากวันที่">
+                                <button class="btn btn-primary w-100" onclick="loadDonations()">
+                                    <iconify-icon icon="iconamoon:search-duotone" class="me-1"></iconify-icon>
+                                    ค้นหา
+                                </button>
                             </div>
-                            <div class="col-md-2">
-                                <input type="date" id="dateTo" class="form-control" placeholder="ถึงวันที่">
+                        </div>
+                        <!-- Filters Row 2 - Date Range -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><iconify-icon
+                                            icon="iconamoon:calendar-2-duotone"></iconify-icon></span>
+                                    <input type="date" id="dateFrom" class="form-control" placeholder="จากวันที่">
+                                </div>
                             </div>
-                            <div class="col-md-1">
-                                <button class="btn btn-outline-primary w-100" onclick="loadDonations()">
-                                    <iconify-icon icon="iconamoon:search-duotone"></iconify-icon>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><iconify-icon
+                                            icon="iconamoon:calendar-2-duotone"></iconify-icon></span>
+                                    <input type="date" id="dateTo" class="form-control" placeholder="ถึงวันที่">
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                                    <iconify-icon icon="iconamoon:close-duotone" class="me-1"></iconify-icon>
+                                    ล้างตัวกรอง
                                 </button>
                             </div>
                         </div>
@@ -136,11 +160,11 @@
                                 <thead class="bg-light">
                                     <tr>
                                         <th style="width: 50px;">ลำดับ</th>
-                                        <th>ผู้บริจาค</th>
-                                        <th>โครงการ</th>
-                                        <th class="text-end">จำนวนเงิน</th>
-                                        <th>วันที่</th>
-                                        <th class="text-center">จัดการ</th>
+                                        <th style="width: 180px;">ผู้บริจาค</th>
+                                        <th style="width: 200px;">โครงการ</th>
+                                        <th class="text-end" style="width: 100px;">จำนวนเงิน</th>
+                                        <th style="width: 100px;">วันที่</th>
+                                        <th class="text-center" style="width: 150px;">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody id="donationsTable">
@@ -179,10 +203,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
-                    <a href="#" id="viewReceiptBtn" class="btn btn-primary" target="_blank">
+                    <button type="button" id="viewReceiptBtn" class="btn btn-primary" onclick="openAdminPdf()">
                         <iconify-icon icon="iconamoon:invoice-duotone" class="me-1"></iconify-icon>
                         ดูใบเสร็จ
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -249,7 +273,11 @@
         let currentPage = 1;
         const perPage = 20;
 
+        // Get fiscal year type from settings
+        const fiscalYearType = localStorage.getItem('fiscalYearType') || 'thai';
+
         document.addEventListener('DOMContentLoaded', function () {
+            initFiscalYearFilter();
             loadProjects();
             loadDonations();
 
@@ -257,10 +285,69 @@
             document.getElementById('searchInput').addEventListener('input', debounce(loadDonations, 500));
             document.getElementById('statusFilter').addEventListener('change', loadDonations);
             document.getElementById('projectFilter').addEventListener('change', loadDonations);
+            document.getElementById('fiscalYearFilter').addEventListener('change', onFiscalYearChange);
 
             // Form submit handler
             document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
         });
+
+        function initFiscalYearFilter() {
+            const select = document.getElementById('fiscalYearFilter');
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+
+            // Calculate current fiscal year
+            let defaultYear;
+            if (fiscalYearType === 'thai') {
+                defaultYear = currentMonth >= 10 ? currentYear + 1 : currentYear;
+            } else {
+                defaultYear = currentYear;
+            }
+
+            // Add "All Years" option
+            const allOption = document.createElement('option');
+            allOption.value = '';
+            allOption.textContent = 'ทุกปีงบประมาณ';
+            select.appendChild(allOption);
+
+            // Add year options
+            for (let y = defaultYear; y >= 2023; y--) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.textContent = `ปี ${y + 543}`;
+                if (y === defaultYear) option.selected = true;
+                select.appendChild(option);
+            }
+        }
+
+        function onFiscalYearChange() {
+            const year = document.getElementById('fiscalYearFilter').value;
+            if (year) {
+                // Auto-fill date range based on fiscal year
+                if (fiscalYearType === 'thai') {
+                    document.getElementById('dateFrom').value = `${year - 1}-10-01`;
+                    document.getElementById('dateTo').value = `${year}-09-30`;
+                } else {
+                    document.getElementById('dateFrom').value = `${year}-01-01`;
+                    document.getElementById('dateTo').value = `${year}-12-31`;
+                }
+            } else {
+                document.getElementById('dateFrom').value = '';
+                document.getElementById('dateTo').value = '';
+            }
+            loadDonations();
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('projectFilter').value = '';
+            document.getElementById('fiscalYearFilter').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            loadDonations();
+        }
 
         async function loadProjects() {
             try {
@@ -271,7 +358,7 @@
                 projects.forEach(p => {
                     const option = document.createElement('option');
                     option.value = p.project_number;
-                    option.textContent = p.project_name;
+                    option.textContent = truncateText(p.project_name, 40);
                     select.appendChild(option);
                 });
             } catch (error) {
@@ -351,9 +438,13 @@
                     ${escapeHtml(item.donor_name || item.name || 'ไม่ระบุชื่อ')}
                 </div>
             </td>
-            <td>${escapeHtml(item.project_name || item.project_number || '-')}</td>
-            <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
-            <td>${formatThaiDateShort(item.transaction_date || item.created_at)}</td>
+            <td style="max-width: 180px;">
+                <div class="text-truncate" title="${escapeHtml(item.project_name || item.project_number || '-')}">
+                    ${truncateText(item.project_name || item.project_number || '-', 25)}
+                </div>
+            </td>
+            <td class="text-end fw-semibold text-primary text-nowrap">${formatCurrency(item.amount || 0)}</td>
+            <td class="text-nowrap">${formatThaiDateShort(item.transaction_date || item.created_at)}</td>
             <td class="text-center">
                 <div class="d-flex justify-content-center gap-1">
                     <button class="btn btn-sm btn-soft-primary" onclick="viewDetail('${item.billPaymentRef1 || item.id}')" title="ดูรายละเอียด">
@@ -362,6 +453,11 @@
                     <button class="btn btn-sm btn-soft-info" onclick="editDonation('${item.id}')" title="แก้ไข">
                         <iconify-icon icon="iconamoon:edit-duotone"></iconify-icon>
                     </button>
+                    ${item.status === 'CONFIRMED' || item.status_donat === 'completed' ? `
+                    <button class="btn btn-sm btn-soft-warning" onclick="voidReceipt('${item.id}')" title="ยกเลิกใบเสร็จ">
+                        <iconify-icon icon="iconamoon:sign-times-circle-duotone"></iconify-icon>
+                    </button>
+                    ` : ''}
                     <button class="btn btn-sm btn-soft-danger" onclick="deleteDonation('${item.id}')" title="ลบ">
                         <iconify-icon icon="iconamoon:trash-duotone"></iconify-icon>
                     </button>
@@ -382,13 +478,16 @@
                 const response = await apiGet('/donations/' + ref);
                 const d = response.data;
 
+                // Use status_donat for correct status display
+                const statusToShow = d.status_donat || d.status || 'pending';
+
                 content.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
                     <h6 class="text-muted mb-3">ข้อมูลผู้บริจาค</h6>
                     <table class="table table-sm">
                         <tr><td class="text-muted" width="120">ชื่อ</td><td class="fw-medium">${escapeHtml(d.donor_name || d.name)}</td></tr>
-                        <tr><td class="text-muted">เลขบัตรประชาชน</td><td>${maskIdCard(d.id_card)}</td></tr>
+                        <tr><td class="text-muted">เลขบัตรประชาชน</td><td class="font-monospace">${formatIdCard(d.id_card)}</td></tr>
                         <tr><td class="text-muted">อีเมล</td><td>${d.email || '-'}</td></tr>
                         <tr><td class="text-muted">โทรศัพท์</td><td>${d.phone || '-'}</td></tr>
                     </table>
@@ -396,36 +495,94 @@
                 <div class="col-md-6">
                     <h6 class="text-muted mb-3">ข้อมูลการบริจาค</h6>
                     <table class="table table-sm">
-                        <tr><td class="text-muted" width="120">Ref</td><td class="font-monospace">${d.billPaymentRef1 || d.ref}</td></tr>
+                        <tr><td class="text-muted" width="120">Ref</td><td class="font-monospace">${d.billPaymentRef1 || d.ref || '-'}</td></tr>
                         <tr><td class="text-muted">จำนวนเงิน</td><td class="fw-semibold text-primary fs-18">${formatCurrency(d.amount)}</td></tr>
                         <tr><td class="text-muted">โครงการ</td><td>${escapeHtml(d.project_name || d.project_number)}</td></tr>
                         <tr><td class="text-muted">วันที่</td><td>${formatThaiDate(d.transaction_date || d.created_at)}</td></tr>
-                        <tr><td class="text-muted">สถานะ</td><td>${getStatusBadge(d.status)}</td></tr>
+                        <tr><td class="text-muted">สถานะ</td><td>${getStatusBadge(statusToShow)}</td></tr>
                     </table>
                 </div>
             </div>
         `;
 
-                // Update receipt button
-                document.getElementById('viewReceiptBtn').href = '../api/v1/receipts/' + (d.billPaymentRef1 || d.id) + '/pdf';
+                // Store donation ID for opening PDF
+                document.getElementById('viewReceiptBtn').dataset.donationId = d.id;
 
             } catch (error) {
                 content.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
             }
         }
 
-        function getStatusBadge(status) {
-            const badges = {
-                'CONFIRMED': '<span class="badge badge-soft-success">ยืนยันแล้ว</span>',
-                'PENDING': '<span class="badge badge-soft-warning">รอยืนยัน</span>',
-                'CANCELLED': '<span class="badge badge-soft-danger">ยกเลิก</span>'
-            };
-            return badges[status] || badges['PENDING'];
+        let currentDonationId = null;
+
+        async function openAdminPdf() {
+            const donationId = document.getElementById('viewReceiptBtn').dataset.donationId;
+            if (!donationId) {
+                showError('ไม่พบข้อมูล donation');
+                return;
+            }
+
+            try {
+                // First get receipt by donation_id
+                const receiptRes = await apiGet(`/receipts?donation_id=${donationId}`);
+                const receipts = receiptRes.data || [];
+
+                if (receipts.length === 0) {
+                    showError('ไม่พบใบเสร็จสำหรับรายการบริจาคนี้');
+                    return;
+                }
+
+                const receiptId = receipts[0].id;
+
+                // Get admin PDF URL
+                const pdfRes = await apiGet(`/receipts/${receiptId}/admin_pdf`);
+
+                if (pdfRes.success && pdfRes.data?.pdf_url) {
+                    // Try to open first
+                    const pdfWindow = window.open(pdfRes.data.pdf_url, '_blank');
+
+                    // Check if blocked
+                    if (!pdfWindow || pdfWindow.closed || typeof pdfWindow.closed == 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'เปิดใบเสร็จ',
+                            text: 'Browser ปิดกั้นการเปิดหน้าต่างใหม่ กรุณากดปุ่มด้านล่างเพื่อเปิดใบเสร็จ',
+                            confirmButtonText: 'เปิดดูใบเสร็จ',
+                            confirmButtonColor: '#00a651',
+                            showCancelButton: true,
+                            cancelButtonText: 'ปิด'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.open(pdfRes.data.pdf_url, '_blank');
+                            }
+                        });
+                    }
+                } else {
+                    showError(pdfRes.error?.message || 'ไม่สามารถเปิดใบเสร็จได้');
+                }
+            } catch (error) {
+                showError('ไม่สามารถเปิดใบเสร็จได้: ' + error.message);
+            }
         }
 
-        function maskIdCard(id) {
-            if (!id || id.length < 13) return id || '-';
-            return id.substring(0, 3) + '-****-*****-' + id.substring(10);
+        function getStatusBadge(status) {
+            const statusLower = (status || '').toLowerCase();
+            const badges = {
+                'confirmed': '<span class="badge badge-soft-success">ยืนยันแล้ว</span>',
+                'completed': '<span class="badge badge-soft-success">ยืนยันแล้ว</span>',
+                'pending': '<span class="badge badge-soft-warning">รอยืนยัน</span>',
+                'cancelled': '<span class="badge badge-soft-danger">ยกเลิก</span>'
+            };
+            return badges[statusLower] || badges['pending'];
+        }
+
+        function formatIdCard(id) {
+            if (!id) return '-';
+            // Format: x-xxxx-xxxxx-xx-x
+            if (id.length === 13) {
+                return `${id.substring(0, 1)}-${id.substring(1, 5)}-${id.substring(5, 10)}-${id.substring(10, 12)}-${id.substring(12)}`;
+            }
+            return id;
         }
 
         function escapeHtml(str) {
@@ -433,6 +590,12 @@
             const div = document.createElement('div');
             div.textContent = str;
             return div.innerHTML;
+        }
+
+        function truncateText(str, maxLength = 30) {
+            if (!str) return '';
+            if (str.length <= maxLength) return escapeHtml(str);
+            return escapeHtml(str.substring(0, maxLength)) + '...';
         }
 
         async function deleteDonation(id) {
@@ -445,6 +608,51 @@
                 loadDonations();
             } catch (error) {
                 showError(error.message);
+            }
+        }
+
+        async function voidReceipt(donationId) {
+            const result = await Swal.fire({
+                title: 'ยกเลิกใบเสร็จ',
+                html: `
+                    <p class="text-muted">กรุณาระบุเหตุผลในการยกเลิกใบเสร็จ</p>
+                    <textarea id="voidReason" class="form-control" rows="3" placeholder="เหตุผล..."></textarea>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'ยืนยันยกเลิก',
+                cancelButtonText: 'ไม่ยกเลิก',
+                preConfirm: () => {
+                    const reason = document.getElementById('voidReason').value;
+                    if (!reason) {
+                        Swal.showValidationMessage('กรุณาระบุเหตุผล');
+                        return false;
+                    }
+                    return reason;
+                }
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                // First, find the receipt ID from donation ID
+                const receiptResponse = await apiGet(`/receipts?donation_id=${donationId}`);
+                const receipts = receiptResponse.data || [];
+
+                if (receipts.length === 0) {
+                    showError('ไม่พบใบเสร็จสำหรับรายการบริจาคนี้');
+                    return;
+                }
+
+                const receiptId = receipts[0].id;
+
+                // Call void API (POST to cancel endpoint)
+                await apiPost(`/receipts/${receiptId}/cancel`, { reason: result.value });
+                showSuccess('ยกเลิกใบเสร็จสำเร็จ');
+                loadDonations();
+            } catch (error) {
+                showError('ไม่สามารถยกเลิกใบเสร็จได้: ' + error.message);
             }
         }
 

@@ -22,7 +22,7 @@ $off_y = floatval($_GET['offset_y'] ?? 0);
 $transform_offset = "translate({$off_x}cm, {$off_y}cm)";
 
 // Allowed tables whitelist
-$allowed_tables = ['edonation_receipt_2566', 'edonation_receipt_2567', 'edonation_receipt_2568'];
+$allowed_tables = ['edonation_receipts'];
 
 $data = [];
 $errors = [];
@@ -62,14 +62,15 @@ if (empty($selected_tables) || !is_array($selected_tables)) {
             continue;
 
         try {
-            // Check checks for address columns or donation_id to be smart
-            // But first, simple fetch
-            $sql = "SELECT * FROM `$table`";
-
-            // Basic amount filter if column exists (we assume 'amount' exists)
-            // To be safe, we fetch all and filter in PHP to avoid 'column not found' error crashing the query immediately
-            // But performance-wise, filtering in SQL is better. 
-            // Let's try select * first.
+            if ($table === 'edonation_receipts') {
+                $sql = "SELECT r.*, du.first_name, du.last_name, du.id_card,
+                               du.address_line, du.province, du.amphure, du.district, du.zip_code,
+                               du.phone, du.need_receipt
+                        FROM edonation_receipts r
+                        LEFT JOIN edonation_donat_user du ON r.donation_id = du.id";
+            } else {
+                $sql = "SELECT * FROM `$table`";
+            }
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute();

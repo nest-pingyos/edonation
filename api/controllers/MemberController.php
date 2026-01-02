@@ -11,6 +11,7 @@
 
 class MemberController
 {
+    const VERSION = '2.0';
     private PDO $pdo;
 
     public function __construct()
@@ -342,58 +343,6 @@ class MemberController
             $sources[] = 'donat_user';
         }
 
-        // ค้นหาจากตารางใบเสร็จรายปี (legacy data)
-        $legacyTables = ['edonation_receipt_2566', 'edonation_receipt_2567'];
-
-        foreach ($legacyTables as $table) {
-            $legacySql = "SELECT 
-                            payerAccountName as name,
-                            billPaymentRef2 as id_card,
-                            phone,
-                            email,
-                            COUNT(*) as receipt_count,
-                            SUM(amount) as total_amount,
-                            MAX(receiptDate) as last_donation_date
-                          FROM {$table} 
-                          WHERE billPaymentRef2 = :id_card AND status_payment = 'confirm'
-                          GROUP BY payerAccountName, billPaymentRef2, phone, email";
-
-            try {
-                $stmt = $this->pdo->prepare($legacySql);
-                $stmt->execute([':id_card' => $cleanIdCard]);
-                $legacyResult = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if ($legacyResult) {
-                    if (!$memberData) {
-                        $memberData = [
-                            'name' => trim($legacyResult['name']),
-                            'id_card' => $this->formatIdCard($cleanIdCard),
-                            'id_card_raw' => $cleanIdCard,
-                            'phone' => $legacyResult['phone'],
-                            'email' => $legacyResult['email'],
-                            'transaction_count' => (int) $legacyResult['receipt_count'],
-                            'total_amount' => floatval($legacyResult['total_amount']),
-                            'last_donation_date' => $legacyResult['last_donation_date']
-                        ];
-                    } else {
-                        // Merge data
-                        if (empty($memberData['phone']) && !empty($legacyResult['phone'])) {
-                            $memberData['phone'] = $legacyResult['phone'];
-                        }
-                        if (empty($memberData['email']) && !empty($legacyResult['email'])) {
-                            $memberData['email'] = $legacyResult['email'];
-                        }
-                        $memberData['transaction_count'] += (int) $legacyResult['receipt_count'];
-                        $memberData['total_amount'] += floatval($legacyResult['total_amount']);
-                    }
-                    $sources[] = $table;
-                }
-            } catch (PDOException $e) {
-                // Table might not exist, continue
-                error_log("Legacy table error: " . $e->getMessage());
-            }
-        }
-
         if (!$memberData) {
             return Response::notFound('ไม่พบข้อมูลสมาชิก กรุณาตรวจสอบเลขบัตรประชาชน');
         }
@@ -452,52 +401,6 @@ class MemberController
                 'donation_date' => $d['donation_date'],
                 'bank_code' => $d['bank_code']
             ];
-        }
-
-        // 2. ดึงจากตารางใบเสร็จรายปี (เพิ่ม fiscal year)
-        $legacyTables = [
-            'edonation_receipt_2566' => '2566',
-            'edonation_receipt_2567' => '2567'
-        ];
-
-        foreach ($legacyTables as $table => $year) {
-            $legacySql = "SELECT 
-                            'legacy' as source,
-                            id,
-                            receipt_no,
-                            amount,
-                            payerAccountName as payer_name,
-                            project_name,
-                            project_number,
-                            receiptDate as donation_date,
-                            payby as payment_method,
-                            fiscal_year
-                          FROM {$table}
-                          WHERE billPaymentRef2 = :id_card AND status_payment = 'confirm'
-                          ORDER BY id DESC";
-
-            try {
-                $stmt = $this->pdo->prepare($legacySql);
-                $stmt->execute([':id_card' => $cleanIdCard]);
-                $legacyDonations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($legacyDonations as $d) {
-                    $donations[] = [
-                        'id' => 'legacy_' . $year . '_' . $d['id'],
-                        'source' => $table,
-                        'fiscal_year' => $d['fiscal_year'],
-                        'amount' => floatval($d['amount']),
-                        'payer_name' => $d['payer_name'],
-                        'project_name' => $d['project_name'],
-                        'project_number' => $d['project_number'],
-                        'receipt_no' => $d['receipt_no'],
-                        'donation_date' => $d['donation_date'],
-                        'payment_method' => $d['payment_method']
-                    ];
-                }
-            } catch (PDOException $e) {
-                error_log("Legacy table error: " . $e->getMessage());
-            }
         }
 
         // Sort by date descending
@@ -562,53 +465,6 @@ class MemberController
             ];
         }
 
-        // 2. ดึงจากตารางใบเสร็จรายปี
-        $legacyTables = [
-            'edonation_receipt_2566' => '2566',
-            'edonation_receipt_2567' => '2567'
-        ];
-
-        foreach ($legacyTables as $table => $year) {
-            $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-            $legacySql = "SELECT 
-                            id,
-                            receipt_no,
-                            payerAccountName as payer_name,
-                            amount,
-                            project_name,
-                            project_number,
-                            fiscal_year,
-                            receiptDate as issued_at,
-                            url as pdf_url
-                          FROM {$table}
-                          WHERE billPaymentRef2 = :id_card AND status_payment = 'confirm'
-                          ORDER BY id DESC";
-
-            try {
-                $stmt = $this->pdo->prepare($legacySql);
-                $stmt->execute([':id_card' => $cleanIdCard]);
-                $legacyReceipts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($legacyReceipts as $r) {
-                    $receipts[] = [
-                        'id' => $r['id'],
-                        'source' => $table,
-                        'receipt_no' => $r['receipt_no'],
-                        'payer_name' => $r['payer_name'],
-                        'amount' => floatval($r['amount']),
-                        'project_name' => $r['project_name'],
-                        'project_number' => $r['project_number'],
-                        'fiscal_year' => $r['fiscal_year'],
-                        'issued_at' => $r['issued_at'],
-                        'pdf_url' => $r['pdf_url'],
-                        'can_download' => !empty($r['pdf_url'])
-                    ];
-                }
-            } catch (PDOException $e) {
-                error_log("Legacy table error: " . $e->getMessage());
-            }
-        }
-
         // Sort by issued_at descending
         usort($receipts, function ($a, $b) {
             return strtotime($b['issued_at'] ?? '1970-01-01') - strtotime($a['issued_at'] ?? '1970-01-01');
@@ -664,38 +520,6 @@ class MemberController
                 'project' => $d['project_name'] ?? 'ไม่ระบุ',
                 'project_number' => $d['project_number'] ?? ''
             ];
-        }
-
-        // 2. ดึงจากตารางใบเสร็จรายปี
-        $legacyTables = ['edonation_receipt_2566', 'edonation_receipt_2567'];
-
-        foreach ($legacyTables as $table) {
-            $legacySql = "SELECT 
-                            amount,
-                            receiptDate as donation_date,
-                            project_name,
-                            project_number,
-                            fiscal_year
-                          FROM {$table}
-                          WHERE billPaymentRef2 = :id_card AND status_payment = 'confirm'";
-
-            try {
-                $stmt = $this->pdo->prepare($legacySql);
-                $stmt->execute([':id_card' => $cleanIdCard]);
-                $legacyDonations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($legacyDonations as $d) {
-                    $allDonations[] = [
-                        'amount' => floatval($d['amount']),
-                        'date' => $d['donation_date'],
-                        'fiscal_year' => $d['fiscal_year'] ?? '2566',
-                        'project' => $d['project_name'] ?? 'ไม่ระบุ',
-                        'project_number' => $d['project_number'] ?? ''
-                    ];
-                }
-            } catch (PDOException $e) {
-                error_log("Legacy table error: " . $e->getMessage());
-            }
         }
 
         if (empty($allDonations)) {

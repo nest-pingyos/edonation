@@ -123,228 +123,273 @@
                                     <option value="cancelled">ยกเลิก</option>
                                 </select>
                             </div>
+                            <div class="col-md-3">
+                                <select id="projectFilter" class="form-select">
+                                    <option value="">ทุกโครงการ</option>
+                                </select>
+                            </div>
                             <div class="col-md-2">
                                 <select id="yearFilter" class="form-select">
                                     <option value="">ทุกปี</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="date" id="dateFrom" class="form-control" placeholder="จากวันที่">
-                            </div>
-                            <div class="col-md-2">
-                                <input type="date" id="dateTo" class="form-control" placeholder="ถึงวันที่">
-                            </div>
-                            <div class="col-md-1">
                                 <button class="btn btn-primary w-100" onclick="loadReceipts()">
-                                    <iconify-icon icon="iconamoon:search-duotone"></iconify-icon>
+                                    <iconify-icon icon="iconamoon:search-duotone" class="me-1"></iconify-icon>
+                                    ค้นหา
                                 </button>
                             </div>
                         </div>
+                        <div class="row mb-3 g-2">
+                            <div class="col-md-3">
+                                <input type="date" id="dateFrom" class="form-control" placeholder="จากวันที่">
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" id="dateTo" class="form-control" placeholder="ถึงวันที่">
+                            </div>
 
-                        <!-- Table -->
-                        <div class="table-responsive">
-                            <table class="table table-hover table-nowrap align-middle">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th style="width: 130px;">เลขที่ใบเสร็จ</th>
-                                        <th>ผู้บริจาค</th>
-                                        <th>โครงการ</th>
-                                        <th class="text-end" style="width: 120px;">จำนวนเงิน</th>
-                                        <th style="width: 120px;">วันที่ออก</th>
-                                        <th style="width: 100px;">สถานะ</th>
-                                        <th style="width: 150px;" class="text-center">จัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="receiptsTable">
-                                    <tr>
-                                        <td colspan="7" class="text-center py-4">
-                                            <div class="spinner-border text-primary"></div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                            <!-- Table -->
+                            <div class="table-responsive">
+                                <table class="table table-hover table-nowrap align-middle">
+                                    <thead class="bg-light">
+                                        <tr>
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th style="width: 130px;">เลขที่ใบเสร็จ</th>
+                                            <th>ผู้บริจาค</th>
+                                            <th>โครงการ</th>
+                                            <th class="text-end" style="width: 120px;">จำนวนเงิน</th>
+                                            <th style="width: 120px;">วันที่ออก</th>
+                                            <th style="width: 150px;" class="text-center">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="receiptsTable">
+                                        <tr>
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">
+                                                <div class="spinner-border text-primary"></div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
 
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div id="pagination-info" class="text-muted small"></div>
-                            <nav id="pagination"></nav>
+                            <!-- Pagination -->
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div id="pagination-info" class="text-muted small"></div>
+                                <nav id="pagination"></nav>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <?php include 'partials/footer.php'; ?>
             </div>
-
-            <?php include 'partials/footer.php'; ?>
         </div>
-    </div>
 
-    <!-- Detail Modal -->
-    <div class="modal fade" id="detailModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">รายละเอียดใบเสร็จ</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="detailContent">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary"></div>
+        <!-- Detail Modal -->
+        <div class="modal fade" id="detailModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">รายละเอียดใบเสร็จ</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="detailContent">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+                        <button type="button" class="btn btn-outline-danger" id="cancelReceiptBtn"
+                            onclick="cancelReceipt()">
+                            <iconify-icon icon="iconamoon:close-circle-1-duotone" class="me-1"></iconify-icon>
+                            ยกเลิกใบเสร็จ
+                        </button>
+                        <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
+                            <iconify-icon icon="iconamoon:file-download-duotone" class="me-1"></iconify-icon>
+                            ดาวน์โหลด PDF
+                        </a>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
-                    <button type="button" class="btn btn-outline-danger" id="cancelReceiptBtn"
-                        onclick="cancelReceipt()">
-                        <iconify-icon icon="iconamoon:close-circle-1-duotone" class="me-1"></iconify-icon>
-                        ยกเลิกใบเสร็จ
-                    </button>
-                    <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
-                        <iconify-icon icon="iconamoon:file-download-duotone" class="me-1"></iconify-icon>
-                        ดาวน์โหลด PDF
-                    </a>
-                </div>
             </div>
         </div>
-    </div>
 
-    <?php include 'partials/vendor-scripts.php'; ?>
-    <script src="assets/js/api-helper.js"></script>
+        <?php include 'partials/vendor-scripts.php'; ?>
+        <script src="assets/js/api-helper.js"></script>
 
-    <script>
-        let receipts = [];
-        let currentPage = 1;
-        let currentReceipt = null;
-        const perPage = 20;
+        <script>
+            let receipts = [];
+            let currentPage = 1;
+            let currentReceipt = null;
+            const perPage = 20;
 
-        document.addEventListener('DOMContentLoaded', function () {
-            // Populate year filter
-            const yearSelect = document.getElementById('yearFilter');
-            const currentYear = new Date().getFullYear() + 543; // BE Year
-            for (let y = currentYear; y >= currentYear - 5; y--) {
-                const option = document.createElement('option');
-                option.value = y;
-                option.textContent = y;
-                yearSelect.appendChild(option);
+            document.addEventListener('DOMContentLoaded', function () {
+                // Populate year filter
+                const yearSelect = document.getElementById('yearFilter');
+                const currentYear = new Date().getFullYear() + 543; // BE Year
+                for (let y = currentYear; y >= currentYear - 5; y--) {
+                    const option = document.createElement('option');
+                    option.value = y;
+                    option.textContent = y;
+                    yearSelect.appendChild(option);
+                }
+
+                loadProjects(); // Load projects first
+                loadReceipts();
+
+                // Filter handlers
+                document.getElementById('searchInput').addEventListener('input', debounce(loadReceipts, 500));
+                document.getElementById('statusFilter').addEventListener('change', loadReceipts);
+                document.getElementById('yearFilter').addEventListener('change', loadReceipts);
+                document.getElementById('projectFilter').addEventListener('change', loadReceipts); // Add listener
+            });
+
+            async function loadProjects() {
+                try {
+                    const response = await apiGet('/projects');
+                    const projects = response.data || [];
+                    const select = document.getElementById('projectFilter');
+
+                    projects.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.project_number; // Use project_number as value
+                        // If project has no number, fallback to ID? Usually project_number is key.
+                        option.textContent = truncateText(p.project_name, 40);
+                        select.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Failed to load projects:', error);
+                }
             }
 
-            loadReceipts();
-
-            // Filter handlers
-            document.getElementById('searchInput').addEventListener('input', debounce(loadReceipts, 500));
-            document.getElementById('statusFilter').addEventListener('change', loadReceipts);
-            document.getElementById('yearFilter').addEventListener('change', loadReceipts);
-        });
-
-        async function loadReceipts() {
-            showTableLoading('receiptsTable', 7);
-
-            try {
-                const params = new URLSearchParams();
-                params.append('page', currentPage);
-                params.append('limit', perPage);
-
-                const search = document.getElementById('searchInput').value;
-                if (search) params.append('search', search);
-
-                const status = document.getElementById('statusFilter').value;
-                if (status) params.append('status', status);
-
-                const year = document.getElementById('yearFilter').value;
-                if (year) params.append('year', year);
-
-                const dateFrom = document.getElementById('dateFrom').value;
-                if (dateFrom) params.append('from', dateFrom);
-
-                const dateTo = document.getElementById('dateTo').value;
-                if (dateTo) params.append('to', dateTo);
-
-                const response = await apiGet('/receipts?' + params.toString());
-                receipts = response.data || [];
-
-                // Update stats
-                const stats = response.meta || {};
-                document.getElementById('total-receipts').textContent = formatNumber(stats.total || receipts.length);
-                document.getElementById('issued-count').textContent = formatNumber(stats.issued || receipts.filter(r => r.status !== 'cancelled').length);
-                document.getElementById('cancelled-count').textContent = formatNumber(stats.cancelled || receipts.filter(r => r.status === 'cancelled').length);
-
-                // Calculate total amount
-                const totalAmount = receipts.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
-                document.getElementById('total-amount').textContent = formatNumber(stats.total_amount || totalAmount);
-
-                renderTable(receipts);
-
-                // Update pagination info
-                const total = stats.total || receipts.length;
-                const from = (currentPage - 1) * perPage + 1;
-                const to = Math.min(currentPage * perPage, total);
-                document.getElementById('pagination-info').textContent = `แสดง ${from}-${to} จาก ${total} รายการ`;
-
-            } catch (error) {
-                showTableError('receiptsTable', 7, error.message);
-                showError(error.message);
-            }
-        }
-
-        function renderTable(data) {
-            const tbody = document.getElementById('receiptsTable');
-
-            if (!data || data.length === 0) {
-                showTableEmpty('receiptsTable', 7, 'ไม่พบใบเสร็จ');
-                return;
+            function truncateText(text, length) {
+                if (!text) return '';
+                if (text.length <= length) return text;
+                return text.substring(0, length) + '...';
             }
 
-            tbody.innerHTML = data.map(item => `
+            async function loadReceipts() {
+                showTableLoading('receiptsTable', 7);
+
+                try {
+                    const params = new URLSearchParams();
+                    params.append('page', currentPage);
+                    params.append('limit', perPage);
+
+                    const search = document.getElementById('searchInput').value;
+                    if (search) params.append('search', search);
+
+                    const status = document.getElementById('statusFilter').value;
+                    if (status) params.append('status', status);
+
+                    const year = document.getElementById('yearFilter').value;
+                    if (year) params.append('year', year);
+
+                    const project = document.getElementById('projectFilter').value; // Add project param
+                    if (project) params.append('project', project);
+
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    if (dateFrom) params.append('from', dateFrom);
+
+                    const dateTo = document.getElementById('dateTo').value;
+                    if (dateTo) params.append('to', dateTo);
+
+                    const response = await apiGet('/receipts?' + params.toString());
+                    receipts = response.data || [];
+
+                    // Update stats
+                    const stats = response.meta || {};
+                    document.getElementById('total-receipts').textContent = formatNumber(stats.total || receipts.length);
+                    document.getElementById('issued-count').textContent = formatNumber(stats.issued || receipts.filter(r => r.status !== 'cancelled').length);
+                    document.getElementById('cancelled-count').textContent = formatNumber(stats.cancelled || receipts.filter(r => r.status === 'cancelled').length);
+
+                    // Calculate total amount
+                    const totalAmount = receipts.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+                    document.getElementById('total-amount').textContent = formatNumber(stats.total_amount || totalAmount);
+
+                    renderTable(receipts);
+
+                    // Update pagination info
+                    const total = stats.total || receipts.length;
+                    const from = (currentPage - 1) * perPage + 1;
+                    const to = Math.min(currentPage * perPage, total);
+                    document.getElementById('pagination-info').textContent = `แสดง ${from}-${to} จาก ${total} รายการ`;
+
+                } catch (error) {
+                    showTableError('receiptsTable', 7, error.message);
+                    showError(error.message);
+                }
+            }
+
+            function renderTable(data) {
+                const tbody = document.getElementById('receiptsTable');
+
+                if (!data || data.length === 0) {
+                    showTableEmpty('receiptsTable', 7, 'ไม่พบใบเสร็จ');
+                    return;
+                }
+
+                tbody.innerHTML = data.map((item, index) => `
         <tr>
+            <td>${(currentPage - 1) * perPage + index + 1}</td>
             <td>
                 <span class="badge bg-light text-dark font-monospace">${escapeHtml(item.receipt_no || item.id)}</span>
             </td>
-            <td>
-                <div class="fw-medium">${escapeHtml(item.payer_name || 'ไม่ระบุชื่อ')}</div>
-                ${item.billPaymentRef2 ? `<small class="text-muted">${maskIdCard(item.billPaymentRef2)}</small>` : ''}
+            <td style="max-width: 200px;">
+                <div class="fw-medium text-truncate" title="${escapeHtml(item.payer_name || 'ไม่ระบุชื่อ')}">
+                    ${escapeHtml(item.payer_name || 'ไม่ระบุชื่อ')}
+                </div>
             </td>
-            <td>${escapeHtml(item.project_name || '-')}</td>
+            <td style="max-width: 180px;">
+                <div class="text-truncate" title="${escapeHtml(item.project_name || '-')}">
+                    ${escapeHtml(item.project_name || '-')}
+                </div>
+            </td>
             <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
             <td>${formatThaiDateShort(item.issued_at || item.created_at)}</td>
-            <td>${getReceiptStatusBadge(item.status_donat || 'issued')}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-soft-primary me-1" onclick="viewDetail('${item.id}')" title="ดูรายละเอียด">
-                    <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
-                </button>
-                <a href="../web/pdf/receipt.php?id=${item.id}" target="_blank" class="btn btn-sm btn-soft-success me-1" title="ดาวน์โหลด PDF">
-                    <iconify-icon icon="iconamoon:file-download-duotone"></iconify-icon>
-                </a>
-                ${item.status !== 'cancelled' ? `
-                <button class="btn btn-sm btn-soft-warning" onclick="resendReceipt('${item.id}')" title="ส่งอีเมลใหม่">
-                    <iconify-icon icon="iconamoon:send-duotone"></iconify-icon>
-                </button>
-                ` : ''}
+                <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-sm btn-soft-primary" onclick="viewDetail('${item.id}')" title="ดูรายละเอียด">
+                        <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
+                    </button>
+                    <a href="../web/pdf/receipt.php?id=${item.id}" target="_blank" class="btn btn-sm btn-soft-success" title="ดาวน์โหลด PDF">
+                        <iconify-icon icon="iconamoon:file-download-duotone"></iconify-icon>
+                    </a>
+                    ${item.status !== 'cancelled' ? `
+                    <button class="btn btn-sm btn-soft-warning" onclick="resendReceipt('${item.id}')" title="ส่งอีเมลใหม่">
+                        <iconify-icon icon="iconamoon:send-duotone"></iconify-icon>
+                    </button>
+                    ` : ''}
+                </div>
             </td>
         </tr>
     `).join('');
-        }
+            }
 
-        function getReceiptStatusBadge(status) {
-            const badges = {
-                'issued': '<span class="badge badge-soft-success">ออกแล้ว</span>',
-                'pending': '<span class="badge badge-soft-warning">รอออก</span>',
-                'cancelled': '<span class="badge badge-soft-danger">ยกเลิก</span>'
-            };
-            return badges[status] || badges['issued'];
-        }
+            function getReceiptStatusBadge(status) {
+                const badges = {
+                    'issued': '<span class="badge badge-soft-success">ออกแล้ว</span>',
+                    'pending': '<span class="badge badge-soft-warning">รอออก</span>',
+                    'cancelled': '<span class="badge badge-soft-danger">ยกเลิก</span>'
+                };
+                return badges[status] || badges['issued'];
+            }
 
-        async function viewDetail(id) {
-            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-            modal.show();
+            async function viewDetail(id) {
+                const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+                modal.show();
 
-            const content = document.getElementById('detailContent');
-            content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+                const content = document.getElementById('detailContent');
+                content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
 
-            try {
-                const response = await apiGet('/receipts/' + id);
-                const r = response.data;
-                currentReceipt = r;
+                try {
+                    const response = await apiGet('/receipts/' + id);
+                    const r = response.data;
+                    currentReceipt = r;
 
-                content.innerHTML = `
+                    content.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
                     <h6 class="text-muted mb-3">ข้อมูลใบเสร็จ</h6>
@@ -375,68 +420,68 @@
             ` : ''}
         `;
 
-                // Update buttons
-                document.getElementById('downloadPdfBtn').href = '../web/pdf/receipt.php?id=' + r.id;
-                document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
+                    // Update buttons
+                    document.getElementById('downloadPdfBtn').href = '../web/pdf/receipt.php?id=' + r.id;
+                    document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
 
-            } catch (error) {
-                content.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
+                } catch (error) {
+                    content.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
+                }
             }
-        }
 
-        async function cancelReceipt() {
-            if (!currentReceipt) return;
+            async function cancelReceipt() {
+                if (!currentReceipt) return;
 
-            const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${currentReceipt.receipt_number} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
-            if (!result.isConfirmed) return;
+                const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${currentReceipt.receipt_number} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
+                if (!result.isConfirmed) return;
 
-            try {
-                await apiPost('/receipts/' + currentReceipt.id + '/cancel');
-                showSuccess('ยกเลิกใบเสร็จสำเร็จ');
-                bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+                try {
+                    await apiPost('/receipts/' + currentReceipt.id + '/cancel');
+                    showSuccess('ยกเลิกใบเสร็จสำเร็จ');
+                    bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+                    loadReceipts();
+                } catch (error) {
+                    showError(error.message);
+                }
+            }
+
+            async function resendReceipt(id) {
+                const result = await confirmAction('ส่งใบเสร็จทางอีเมล?', 'ระบบจะส่งใบเสร็จไปยังอีเมลของผู้บริจาคอีกครั้ง', 'ส่งอีเมล');
+                if (!result.isConfirmed) return;
+
+                try {
+                    await apiPost('/receipts/' + id + '/resend');
+                    showSuccess('ส่งใบเสร็จทางอีเมลสำเร็จ');
+                } catch (error) {
+                    showError(error.message);
+                }
+            }
+
+            function exportExcel() {
+                // Build query string for export
+                const params = new URLSearchParams();
+                params.append('export', 'excel');
+
+                const status = document.getElementById('statusFilter').value;
+                if (status) params.append('status', status);
+
+                const year = document.getElementById('yearFilter').value;
+                if (year) params.append('year', year);
+
+                const dateFrom = document.getElementById('dateFrom').value;
+                if (dateFrom) params.append('from', dateFrom);
+
+                const dateTo = document.getElementById('dateTo').value;
+                if (dateTo) params.append('to', dateTo);
+
+                window.open('../api/v1/receipts/export?' + params.toString(), '_blank');
+            }
+
+            function goToPage(page) {
+                currentPage = page;
                 loadReceipts();
-            } catch (error) {
-                showError(error.message);
             }
-        }
-
-        async function resendReceipt(id) {
-            const result = await confirmAction('ส่งใบเสร็จทางอีเมล?', 'ระบบจะส่งใบเสร็จไปยังอีเมลของผู้บริจาคอีกครั้ง', 'ส่งอีเมล');
-            if (!result.isConfirmed) return;
-
-            try {
-                await apiPost('/receipts/' + id + '/resend');
-                showSuccess('ส่งใบเสร็จทางอีเมลสำเร็จ');
-            } catch (error) {
-                showError(error.message);
-            }
-        }
-
-        function exportExcel() {
-            // Build query string for export
-            const params = new URLSearchParams();
-            params.append('export', 'excel');
-
-            const status = document.getElementById('statusFilter').value;
-            if (status) params.append('status', status);
-
-            const year = document.getElementById('yearFilter').value;
-            if (year) params.append('year', year);
-
-            const dateFrom = document.getElementById('dateFrom').value;
-            if (dateFrom) params.append('from', dateFrom);
-
-            const dateTo = document.getElementById('dateTo').value;
-            if (dateTo) params.append('to', dateTo);
-
-            window.open('../api/v1/receipts/export?' + params.toString(), '_blank');
-        }
-
-        function goToPage(page) {
-            currentPage = page;
-            loadReceipts();
-        }
-    </script>
+        </script>
 
 </body>
 

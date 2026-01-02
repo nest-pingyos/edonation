@@ -6,6 +6,8 @@
 
 // Load environment configuration
 require_once dirname(__DIR__) . '/config/env.php';
+// Load database connection
+require_once dirname(__DIR__) . '/config/database.php';
 
 require('TCPDF/tcpdf.php');
 ob_start();
@@ -282,7 +284,7 @@ function fetchReceiptData($receiptId)
 }
 
 /**
- * ตรวจสอบ access token
+ * ตรวจสอบ access token จาก database
  */
 function validateAccessToken($receiptId, $token)
 {
@@ -290,22 +292,29 @@ function validateAccessToken($receiptId, $token)
         return false;
     }
 
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    global $con;
 
-    $storedToken = $_SESSION['pdf_access_tokens'][$receiptId] ?? null;
+    // ตรวจสอบ token จาก database
+    $stmt = $con->prepare("
+        SELECT id, receipt_id, token, expires_at, used 
+        FROM edonation_pdf_access_tokens 
+        WHERE receipt_id = ? AND token = ?
+    ");
+    $stmt->bind_param("is", $receiptId, $token);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $tokenData = $result->fetch_assoc();
 
-    if (!$storedToken) {
+    if (!$tokenData) {
         return false;
     }
 
-    if ($storedToken['token'] !== $token) {
-        return false;
-    }
-
-    if ($storedToken['expire_at'] < time()) {
-        unset($_SESSION['pdf_access_tokens'][$receiptId]);
+    // ตรวจสอบว่าหมดอายุหรือยัง
+    if (strtotime($tokenData['expires_at']) < time()) {
+        // ลบ token ที่หมดอายุ
+        $deleteStmt = $con->prepare("DELETE FROM edonation_pdf_access_tokens WHERE id = ?");
+        $deleteStmt->bind_param("i", $tokenData['id']);
+        $deleteStmt->execute();
         return false;
     }
 
@@ -357,30 +366,34 @@ if (!validateAccessToken($id, $token)) {
 $receiptData = fetchReceiptData($id);
 
 if (!$receiptData) {
-    // Fallback: ใช้ SQL query ถ้า API ไม่ทำงาน
-    include('../config/connect_pdf.php');
-
-    $table = isset($_GET['table']) ? $_GET['table'] : 'donat_user';
-    $valid_tables = ['donat', 'donat_user', 'receipt_2568', 'receipt_2567', 'receipt_2566'];
-
-    if (!in_array($table, $valid_tables)) {
-        die("ตารางไม่ถูกต้อง");
-    }
-
-    $stmt = $con->prepare("SELECT T1.id, T1.billPaymentRef2, T1.payerAccountName, T1.billPaymentRef1, 
-                                  T1.amount, T1.address, T1.province, T1.amphure, T1.district, T1.zip_code, 
-                                  T1.project_name, T1.project_number, T1.receiptDate, T1.fiscal_year, 
-                                  T1.receipt_no, T1.payby 
-                           FROM {$table} T1 WHERE T1.id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows == 0) {
-        die("ไม่พบข้อมูลใบเสร็จ");
-    }
-
-    $receiptData = $result->fetch_assoc();
+    // Show error page if API fails
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+    echo '<!DOCTYPE html>
+    <html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ไม่พบข้อมูล</title>
+        <style>
+            body { font-family: "Sarabun", sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+            .error-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+            .error-icon { font-size: 60px; margin-bottom: 20px; color: #dc3545; }
+            h1 { color: #333; margin: 0 0 10px 0; }
+            p { color: #666; margin: 0 0 20px 0; }
+            a { display: inline-block; padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px; }
+            a:hover { background: #5a6268; }
+        </style>
+    </head>
+    <body>
+        <div class="error-box">
+            <div class="error-icon">⚠️</div>
+            <h1>ไม่พบข้อมูลใบเสร็จ</h1>
+            <p>ไม่สามารถดึงข้อมูลใบเสร็จได้ กรุณาลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบ</p>
+            <a href="' . $basePath . '/receipts/">กลับไปหน้าค้นหา</a>
+        </div>
+    </body>
+    </html>';
+    exit;
 }
 
 // Map field names (API อาจใช้ชื่อ field ต่างจาก SQL)

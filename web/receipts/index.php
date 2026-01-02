@@ -469,7 +469,27 @@
                         const pdfResult = await pdfResponse.json();
 
                         if (pdfResult.success && pdfResult.data?.pdf_url) {
-                            window.open(pdfResult.data.pdf_url, '_blank');
+                            // พยายามเปิด Popup ก่อน
+                            const pdfWindow = window.open(pdfResult.data.pdf_url, '_blank');
+
+                            // ตรวจสอบว่าโดน Block หรือไม่
+                            if (!pdfWindow || pdfWindow.closed || typeof pdfWindow.closed == 'undefined') {
+                                // ถ้าโดน Block ให้แสดงปุ่มให้ user กดเปิดเอง
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'ยืนยันตัวตนสำเร็จ',
+                                    text: 'Browser ปิดกั้นการเปิดหน้าต่างใหม่ กรุณากดปุ่มด้านล่างเพื่อเปิดใบเสร็จ',
+                                    confirmButtonText: 'เปิดดูใบเสร็จ',
+                                    confirmButtonColor: '#00a651',
+                                    showCancelButton: true,
+                                    cancelButtonText: 'ปิด',
+                                    reverseButtons: true
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.open(pdfResult.data.pdf_url, '_blank');
+                                    }
+                                });
+                            }
                         } else {
                             Swal.fire({
                                 icon: 'error',

@@ -230,10 +230,20 @@
     <script>
         let donations = [];
         let monthlyChart, projectPieChart;
+
+        // Get fiscal year type from settings
+        const fiscalYearType = localStorage.getItem('fiscalYearType') || 'thai';
+
+        // Month names for display (standard order)
         const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
             'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
         const monthNamesFull = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
             'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+        // Chart month names based on fiscal year type
+        const fiscalMonthNames = fiscalYearType === 'thai'
+            ? ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.']
+            : ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
         document.addEventListener('DOMContentLoaded', function () {
             initYearSelector();
@@ -243,9 +253,19 @@
 
         function initYearSelector() {
             const select = document.getElementById('reportYear');
-            const currentYear = new Date().getFullYear();
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth(); // 0-11
 
-            for (let y = currentYear; y >= currentYear - 5; y--) {
+            // Calculate default year based on fiscal type
+            let defaultYear;
+            if (fiscalYearType === 'thai') {
+                defaultYear = currentMonth >= 9 ? currentYear + 1 : currentYear;
+            } else {
+                defaultYear = currentYear;
+            }
+
+            for (let y = defaultYear; y >= 2023; y--) {
                 const option = document.createElement('option');
                 option.value = y;
                 option.textContent = y + 543; // Buddhist year
@@ -269,7 +289,7 @@
                     data: new Array(12).fill(0)
                 }],
                 xaxis: {
-                    categories: monthNames
+                    categories: fiscalMonthNames
                 },
                 colors: ['#1c84ee', '#e2e8f0'],
                 plotOptions: {
@@ -424,13 +444,13 @@
 
             const headers = ['เดือน', 'วันที่', 'Ref', 'ผู้บริจาค', 'โครงการ', 'จำนวนเงิน', 'สถานะ'];
             const rows = donations.map(d => {
-                const date = new Date(d.transaction_date || d.created_at);
+                const date = new Date(d.issued_at);
                 return [
                     monthNamesFull[date.getMonth()],
-                    formatThaiDateShort(d.transaction_date || d.created_at),
-                    d.billPaymentRef1 || d.ref || '',
-                    d.donor_name || d.name || '',
-                    d.project_name || d.project_number || '',
+                    formatThaiDateShort(d.issued_at),
+                    d.ref1 || '',
+                    d.donor_name || '',
+                    d.project_name || '',
                     d.amount || 0,
                     d.status === 'CONFIRMED' ? 'ยืนยันแล้ว' : 'รอยืนยัน'
                 ];
@@ -483,7 +503,7 @@
             const rows = donations.map((d, i) => [
                 i + 1,
                 d.receipt_no || '',
-                d.issued_at ? d.issued_at.split(' ')[0] : (d.transaction_date || d.created_at || '').split(' ')[0],
+                d.issued_at ? d.issued_at.split(' ')[0] : '',
                 d.amount || 0,
                 d.project_name || '',
                 d.amount || 0,

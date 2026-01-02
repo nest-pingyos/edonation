@@ -27,12 +27,13 @@
                 <div class="row justify-content-center">
                     <div class="col-lg-8">
                         <form id="printAddressForm" action="print-preview-address.php" method="GET" target="_blank">
-                            
+
                             <!-- Card 1: ข้อมูลและเงื่อนไข -->
                             <div class="card mb-3">
                                 <div class="card-header bg-soft-primary py-3 d-flex align-items-center">
                                     <h5 class="card-title mb-0 text-primary">
-                                        <iconify-icon icon="line-md:clipboard-list-twotone" class="me-2 fs-20"></iconify-icon>
+                                        <iconify-icon icon="line-md:clipboard-list-twotone"
+                                            class="me-2 fs-20"></iconify-icon>
                                         กำหนดเงื่อนไขการพิมพ์
                                     </h5>
                                 </div>
@@ -42,13 +43,15 @@
                                         <label class="form-label fw-semibold">รูปแบบรายงาน</label>
                                         <div class="d-flex gap-4">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="report_mode" id="modeAddress" value="address" checked>
+                                                <input class="form-check-input" type="radio" name="report_mode"
+                                                    id="modeAddress" value="address" checked>
                                                 <label class="form-check-label text-dark fw-medium" for="modeAddress">
                                                     ที่อยู่สำหรับจ่าหน้า (Labels)
                                                 </label>
                                             </div>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="report_mode" id="modeSummary" value="summary">
+                                                <input class="form-check-input" type="radio" name="report_mode"
+                                                    id="modeSummary" value="summary">
                                                 <label class="form-check-label text-dark fw-medium" for="modeSummary">
                                                     ใบสรุปรายชื่อการส่ง (Summary List)
                                                 </label>
@@ -58,19 +61,13 @@
 
                                     <!-- 1. เลือกแหล่งข้อมูล -->
                                     <div class="mb-4">
-                                        <label class="form-label fw-semibold">เลือกข้อมูลปี (ตาราง)</label>
+                                        <label class="form-label fw-semibold">เลือกข้อมูล (ตาราง)</label>
                                         <div class="d-flex flex-wrap gap-3">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="tables[]" value="edonation_receipt_2566" id="table2566">
-                                                <label class="form-check-label" for="table2566">ปี 2566</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="tables[]" value="edonation_receipt_2567" id="table2567">
-                                                <label class="form-check-label" for="table2567">ปี 2567</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="tables[]" value="edonation_receipt_2568" id="table2568" checked>
-                                                <label class="form-check-label" for="table2568">ปี 2568</label>
+                                                <input class="form-check-input" type="checkbox" name="tables[]"
+                                                    value="edonation_receipts" id="tableReceipts" checked>
+                                                <label class="form-check-label" for="tableReceipts">รายการใบเสร็จทั้งหมด
+                                                    (edonation_receipts)</label>
                                             </div>
                                         </div>
                                     </div>
@@ -80,14 +77,17 @@
                                             <label class="form-label fw-semibold">ยอดบริจาคขั้นต่ำ (บาท)</label>
                                             <div class="input-group">
                                                 <span class="input-group-text bg-light">฿</span>
-                                                <input type="number" class="form-control" name="min_amount" placeholder="เช่น 1000" min="0">
+                                                <input type="number" class="form-control" name="min_amount"
+                                                    placeholder="เช่น 1000" min="0">
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold">เงื่อนไขที่อยู่</label>
                                             <div class="form-check mt-2">
-                                                <input class="form-check-input" type="checkbox" name="has_address" id="hasAddress" value="1" checked>
-                                                <label class="form-check-label" for="hasAddress">เฉพาะผู้ที่มีข้อมูลที่อยู่</label>
+                                                <input class="form-check-input" type="checkbox" name="has_address"
+                                                    id="hasAddress" value="1" checked>
+                                                <label class="form-check-label"
+                                                    for="hasAddress">เฉพาะผู้ที่มีข้อมูลที่อยู่</label>
                                             </div>
                                         </div>
                                     </div>
@@ -102,24 +102,28 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-4">
-                                            <label class="form-label fw-semibold text-muted small">เลือกขนาดกระดาษ</label>
+                                            <label
+                                                class="form-label fw-semibold text-muted small">เลือกขนาดกระดาษ</label>
                                             <div class="d-flex flex-wrap gap-3">
                                                 <div class="form-check card-radio">
-                                                    <input class="form-check-input" type="radio" name="paper_size" id="sizeA4" value="A4" checked>
+                                                    <input class="form-check-input" type="radio" name="paper_size"
+                                                        id="sizeA4" value="A4" checked>
                                                     <label class="form-check-label" for="sizeA4">
                                                         <span class="fs-14 fw-bold d-block">A4</span>
                                                         <span class="text-muted small">List View</span>
                                                     </label>
                                                 </div>
                                                 <div class="form-check card-radio">
-                                                    <input class="form-check-input" type="radio" name="paper_size" id="sizeA5" value="A5">
+                                                    <input class="form-check-input" type="radio" name="paper_size"
+                                                        id="sizeA5" value="A5">
                                                     <label class="form-check-label" for="sizeA5">
                                                         <span class="fs-14 fw-bold d-block">A5</span>
                                                         <span class="text-muted small">Card View</span>
                                                     </label>
                                                 </div>
                                                 <div class="form-check card-radio">
-                                                    <input class="form-check-input" type="radio" name="paper_size" id="sizeCustom" value="custom">
+                                                    <input class="form-check-input" type="radio" name="paper_size"
+                                                        id="sizeCustom" value="custom">
                                                     <label class="form-check-label" for="sizeCustom">
                                                         <span class="fs-14 fw-bold d-block">กำหนดเอง</span>
                                                         <span class="text-muted small">Custom CM</span>
@@ -130,26 +134,33 @@
                                             <div id="customSizeInputs" class="mt-3 row g-2 mb-4" style="display: none;">
                                                 <div class="col-6">
                                                     <label class="form-label small">กว้าง (cm)</label>
-                                                    <input type="number" class="form-control" name="custom_width" id="customWidth" value="10" step="0.1">
+                                                    <input type="number" class="form-control" name="custom_width"
+                                                        id="customWidth" value="10" step="0.1">
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label small">สูง (cm)</label>
-                                                    <input type="number" class="form-control" name="custom_height" id="customHeight" value="15" step="0.1">
+                                                    <input type="number" class="form-control" name="custom_height"
+                                                        id="customHeight" value="15" step="0.1">
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div class="row g-4">
                                             <div class="col-md-6">
-                                                <label class="form-label fw-semibold text-muted small">วางแนวกระดาษ</label>
+                                                <label
+                                                    class="form-label fw-semibold text-muted small">วางแนวกระดาษ</label>
                                                 <div class="d-flex gap-3">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="orientation" id="orientPortrait" value="portrait" checked>
-                                                        <label class="form-check-label" for="orientPortrait">แนวตั้ง</label>
+                                                        <input class="form-check-input" type="radio" name="orientation"
+                                                            id="orientPortrait" value="portrait" checked>
+                                                        <label class="form-check-label"
+                                                            for="orientPortrait">แนวตั้ง</label>
                                                     </div>
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="orientation" id="orientLandscape" value="landscape">
-                                                        <label class="form-check-label" for="orientLandscape">แนวนอน</label>
+                                                        <input class="form-check-input" type="radio" name="orientation"
+                                                            id="orientLandscape" value="landscape">
+                                                        <label class="form-check-label"
+                                                            for="orientLandscape">แนวนอน</label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -166,11 +177,13 @@
                                         <div class="row g-3">
                                             <div class="col-6">
                                                 <label class="form-label small">ขยับซ้าย-ขวา (cm)</label>
-                                                <input type="number" class="form-control" name="offset_x" id="offsetX" value="0" step="0.1">
+                                                <input type="number" class="form-control" name="offset_x" id="offsetX"
+                                                    value="0" step="0.1">
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label small">ขยับขึ้น-ลง (cm)</label>
-                                                <input type="number" class="form-control" name="offset_y" id="offsetY" value="0" step="0.1">
+                                                <input type="number" class="form-control" name="offset_y" id="offsetY"
+                                                    value="0" step="0.1">
                                             </div>
                                         </div>
                                     </div>
@@ -181,13 +194,20 @@
                             <div class="card mb-4 bg-light border-dashed">
                                 <div class="card-body text-center p-4">
                                     <h6 class="text-muted mb-3">ตัวอย่างรูปแบบการจัดวาง</h6>
-                                    <div class="d-flex justify-content-center align-items-center mb-3" style="min-height: 320px;">
-                                        <div id="preview-paper" class="bg-white shadow d-flex align-items-center justify-content-center position-relative" style="transition: all 0.3s; border: 1px solid #ddd;">
-                                            <div id="preview-content" class="text-center p-2" style="border: 1px dashed #0d6efd; background: rgba(13, 110, 253, 0.05); width: 85%; transition: all 0.2s;">
-                                                <div class="fw-bold mb-1" style="font-size: 14px; color: #000;">คุณใจดี มีสุข (ทดสอบ)</div>
-                                                <div class="text-muted" style="font-size: 11px;">123 ถ.สุขุมวิท แขวงคลองเตย ...</div>
+                                    <div class="d-flex justify-content-center align-items-center mb-3"
+                                        style="min-height: 320px;">
+                                        <div id="preview-paper"
+                                            class="bg-white shadow d-flex align-items-center justify-content-center position-relative"
+                                            style="transition: all 0.3s; border: 1px solid #ddd;">
+                                            <div id="preview-content" class="text-center p-2"
+                                                style="border: 1px dashed #0d6efd; background: rgba(13, 110, 253, 0.05); width: 85%; transition: all 0.2s;">
+                                                <div class="fw-bold mb-1" style="font-size: 14px; color: #000;">คุณใจดี
+                                                    มีสุข (ทดสอบ)</div>
+                                                <div class="text-muted" style="font-size: 11px;">123 ถ.สุขุมวิท
+                                                    แขวงคลองเตย ...</div>
                                             </div>
-                                            <div class="position-absolute bottom-0 end-0 m-2 badge bg-dark opacity-75" id="preview-dim">A4</div>
+                                            <div class="position-absolute bottom-0 end-0 m-2 badge bg-dark opacity-75"
+                                                id="preview-dim">A4</div>
                                         </div>
                                     </div>
                                     <div class="text-muted small">ตัวอย่างสัดส่วนพื้นหลังเทียบกับพื้นที่พิมพ์จริง</div>

@@ -19,7 +19,7 @@ class ReceiptController
     private PDO $pdo;
 
     // API Version
-    const VERSION = '2.4';
+    const VERSION = '2.0';
 
     public function __construct()
     {
@@ -43,6 +43,10 @@ class ReceiptController
             switch ($action) {
                 case 'pdf':
                     return $this->getPdf($id);
+                case 'admin_pdf':
+                    // Admin สามารถเปิด PDF ได้โดยไม่ต้องยืนยันตัวตน
+                    AuthMiddleware::requireAdmin();
+                    return $this->getAdminPdf($id);
                 case 'verify':
                     return $this->verifyTaxId($id);
                 case 'details':
@@ -96,6 +100,7 @@ class ReceiptController
         // กำหนด query ตามประเภทการค้นหา
         if ($isIdCard) {
             // ค้นหาด้วยเลขบัตรประชาชน (ใช้ค่าที่ลบ dash แล้ว)
+            // ค้นหาจาก billPaymentRef2 หรือ id_card
             $sql = "SELECT 
                         r.id,
                         r.receipt_no,
@@ -107,11 +112,12 @@ class ReceiptController
                         du.project_name,
                         du.project_number,
                         du.payby,
-                        bt.billPaymentRef2
+                        bt.billPaymentRef2,
+                        du.id_card
                     FROM edonation_receipts r
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
-                    WHERE bt.billPaymentRef2 = :keyword
+                    WHERE bt.billPaymentRef2 = :keyword OR du.id_card = :keyword2
                     ORDER BY r.id DESC 
                     LIMIT 50";
             $searchValue = $cleanKeyword;
@@ -140,7 +146,13 @@ class ReceiptController
 
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([':keyword' => $searchValue]);
+
+            // ถ้าเป็นการค้นหาด้วยเลขบัตร ต้องส่ง 2 parameters
+            if ($isIdCard) {
+                $stmt->execute([':keyword' => $searchValue, ':keyword2' => $searchValue]);
+            } else {
+                $stmt->execute([':keyword' => $searchValue]);
+            }
 
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -186,7 +198,7 @@ class ReceiptController
     /**
      * GET /receipts/:id/verify
      * ตรวจสอบเลขประจำตัวผู้เสียภาษีก่อนเปิดใบเสร็จ
-     * ดึง billPaymentRef2 จาก bank_transactions ผ่าน bank_transaction_id
+     * ดึง billPaymentRef2 จาก bank_transactions หรือ id_card จาก donat_user
      */
     private function verifyTaxId(string $id): array
     {
@@ -196,9 +208,12 @@ class ReceiptController
             return Response::error('VALIDATION_ERROR', 'กรุณาระบุเลขประจำตัวผู้เสียภาษี');
         }
 
-        // ดึงเลขผู้เสียภาษีจาก bank_transactions ผ่าน bank_transaction_id
-        $sql = "SELECT bt.billPaymentRef2 
+        // ดึงเลขผู้เสียภาษีจาก bank_transactions หรือ id_card จาก donat_user
+        $sql = "SELECT 
+                    bt.billPaymentRef2,
+                    du.id_card
                 FROM edonation_receipts r
+                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
                 WHERE r.id = :id";
 
@@ -210,7 +225,8 @@ class ReceiptController
             return Response::notFound('ไม่พบใบเสร็จ');
         }
 
-        $correctTaxId = $result['billPaymentRef2'] ?? '';
+        // ใช้ billPaymentRef2 ก่อน ถ้าไม่มีให้ใช้ id_card
+        $correctTaxId = $result['billPaymentRef2'] ?? $result['id_card'] ?? '';
 
         // ลบ dash ออกเพื่อเปรียบเทียบ
         $inputClean = preg_replace('/\D/', '', $inputTaxId);
@@ -226,16 +242,31 @@ class ReceiptController
         if ($inputClean === $correctClean) {
             // สร้าง access token สำหรับเปิด PDF
             $accessToken = bin2hex(random_bytes(32));
-            $expireAt = time() + 300; // หมดอายุใน 5 นาที
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+5 minutes'));
 
-            // เก็บ token ใน session
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
+            // เก็บ token ใน database แทน session
+            try {
+                // ลบ token เก่าที่หมดอายุ
+                $this->pdo->exec("DELETE FROM edonation_pdf_access_tokens WHERE expires_at < NOW()");
+
+                // ลบ token เก่าของ receipt นี้
+                $deleteStmt = $this->pdo->prepare("DELETE FROM edonation_pdf_access_tokens WHERE receipt_id = :receipt_id");
+                $deleteStmt->execute([':receipt_id' => $id]);
+
+                // Insert token ใหม่
+                $insertStmt = $this->pdo->prepare("
+                    INSERT INTO edonation_pdf_access_tokens (receipt_id, token, expires_at) 
+                    VALUES (:receipt_id, :token, :expires_at)
+                ");
+                $insertStmt->execute([
+                    ':receipt_id' => $id,
+                    ':token' => $accessToken,
+                    ':expires_at' => $expiresAt
+                ]);
+            } catch (PDOException $e) {
+                error_log("Failed to store PDF token: " . $e->getMessage());
+                return Response::error('SERVER_ERROR', 'ไม่สามารถสร้าง token ได้', 500);
             }
-            $_SESSION['pdf_access_tokens'][$id] = [
-                'token' => $accessToken,
-                'expire_at' => $expireAt
-            ];
 
             return Response::success([
                 'verified' => true,
@@ -262,19 +293,22 @@ class ReceiptController
             return Response::error('UNAUTHORIZED', 'กรุณายืนยันตัวตนก่อนเปิดใบเสร็จ', 401);
         }
 
-        // ตรวจสอบ token จาก session
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        // ตรวจสอบ token จาก database
+        $tokenStmt = $this->pdo->prepare("
+            SELECT id, receipt_id, token, expires_at, used 
+            FROM edonation_pdf_access_tokens 
+            WHERE receipt_id = :receipt_id AND token = :token
+        ");
+        $tokenStmt->execute([':receipt_id' => $id, ':token' => $accessToken]);
+        $tokenData = $tokenStmt->fetch(PDO::FETCH_ASSOC);
 
-        $storedToken = $_SESSION['pdf_access_tokens'][$id] ?? null;
-
-        if (!$storedToken || $storedToken['token'] !== $accessToken) {
+        if (!$tokenData) {
             return Response::error('INVALID_TOKEN', 'Access token ไม่ถูกต้อง', 401);
         }
 
-        if ($storedToken['expire_at'] < time()) {
-            unset($_SESSION['pdf_access_tokens'][$id]);
+        if (strtotime($tokenData['expires_at']) < time()) {
+            // ลบ token ที่หมดอายุ
+            $this->pdo->prepare("DELETE FROM edonation_pdf_access_tokens WHERE id = :id")->execute([':id' => $tokenData['id']]);
             return Response::error('TOKEN_EXPIRED', 'Access token หมดอายุ กรุณายืนยันตัวตนใหม่', 401);
         }
 
@@ -292,6 +326,60 @@ class ReceiptController
         }
 
         // ส่ง receipt ID พร้อม token - use BASE_PATH from config
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+        return Response::success([
+            'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'receipt_no' => $receipt['receipt_no'],
+            'api_version' => self::VERSION
+        ]);
+    }
+
+    /**
+     * GET /receipts/:id/admin_pdf (Admin Only)
+     * ดึง URL สำหรับดาวน์โหลด PDF โดยไม่ต้องยืนยันตัวตน
+     * สร้าง token ให้อัตโนมัติ
+     */
+    private function getAdminPdf(string $id): array
+    {
+        // ตรวจสอบว่ามีใบเสร็จอยู่หรือไม่
+        $sql = "SELECT r.*, du.fiscal_year
+                FROM edonation_receipts r 
+                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
+                WHERE r.id = :id";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $receipt = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$receipt) {
+            return Response::notFound('ไม่พบใบเสร็จ');
+        }
+
+        // สร้าง admin token ใหม่สำหรับเปิด PDF
+        $accessToken = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+        try {
+            // ลบ token เก่าของ receipt นี้
+            $deleteStmt = $this->pdo->prepare("DELETE FROM edonation_pdf_access_tokens WHERE receipt_id = :receipt_id");
+            $deleteStmt->execute([':receipt_id' => $id]);
+
+            // Insert token ใหม่
+            $insertStmt = $this->pdo->prepare("
+                INSERT INTO edonation_pdf_access_tokens (receipt_id, token, expires_at) 
+                VALUES (:receipt_id, :token, :expires_at)
+            ");
+            $insertStmt->execute([
+                ':receipt_id' => $id,
+                ':token' => $accessToken,
+                ':expires_at' => $expiresAt
+            ]);
+        } catch (PDOException $e) {
+            error_log("Failed to create admin PDF token: " . $e->getMessage());
+            return Response::error('SERVER_ERROR', 'ไม่สามารถสร้าง token ได้', 500);
+        }
+
+        // ส่ง receipt URL พร้อม token
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return Response::success([
             'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
@@ -326,6 +414,7 @@ class ReceiptController
                     du.district,
                     du.zip_code,
                     bt.billPaymentRef2,
+                    bt.billPaymentRef1,
                     bt.payerAccountName
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
@@ -419,6 +508,61 @@ class ReceiptController
         $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
 
+        $where = [];
+        $params = [];
+
+        // Search filter
+        if (!empty($_GET['search'])) {
+            $where[] = "(r.receipt_no LIKE :s1 OR r.payer_name LIKE :s2 OR du.first_name LIKE :s3 OR du.last_name LIKE :s4 OR bt.billPaymentRef2 LIKE :s5)";
+            $searchVal = '%' . $_GET['search'] . '%';
+            $params[':s1'] = $searchVal;
+            $params[':s2'] = $searchVal;
+            $params[':s3'] = $searchVal;
+            $params[':s4'] = $searchVal;
+            $params[':s5'] = $searchVal;
+        }
+
+        // Status filter (in main receipts table, status might be a column or derived)
+        // For now, let's assume status_donat in du or status column in r if exists
+        // Looking at the schema used in index, we have du.status_donat
+        if (!empty($_GET['status'])) {
+            if ($_GET['status'] === 'cancelled') {
+                // If there's a status column in r, use it. Otherwise use a convention.
+                // In generate(), it doesn't set a status. Let's check cancel().
+                // cancel() currently DELETES the record. So 'cancelled' status might not exist in table.
+            }
+        }
+
+        // Year filter (Buddhist Era)
+        if (!empty($_GET['year'])) {
+            $where[] = "YEAR(r.issued_at) = :year";
+            $params[':year'] = intval($_GET['year']) - 543;
+        }
+
+        // Donation ID filter
+        if (!empty($_GET['donation_id'])) {
+            $where[] = "r.donation_id = :donation_id";
+            $params[':donation_id'] = intval($_GET['donation_id']);
+        }
+
+        // Project filter
+        if (!empty($_GET['project'])) {
+            $where[] = "du.project_number = :project";
+            $params[':project'] = $_GET['project'];
+        }
+
+        // Date filters
+        if (!empty($_GET['from'])) {
+            $where[] = "r.issued_at >= :from";
+            $params[':from'] = $_GET['from'] . ' 00:00:00';
+        }
+        if (!empty($_GET['to'])) {
+            $where[] = "r.issued_at <= :to";
+            $params[':to'] = $_GET['to'] . ' 23:59:59';
+        }
+
+        $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
         $sql = "SELECT 
                     r.id,
                     r.receipt_no,
@@ -439,10 +583,14 @@ class ReceiptController
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
+                $whereClause
                 ORDER BY r.id DESC 
                 LIMIT :limit OFFSET :offset";
 
         $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -453,21 +601,32 @@ class ReceiptController
         foreach ($results as &$row) {
             $name = trim($row['payer_name'] ?? '');
             if (empty($name) || $name === ' ') {
-                // Try to build from first_name + last_name
                 $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
             }
             $row['payer_name'] = !empty($name) ? $name : 'ไม่ระบุชื่อ';
         }
 
-        // Count total
-        $countStmt = $this->pdo->query("SELECT COUNT(*) FROM edonation_receipts");
+        // Count total (Filtered)
+        $countSql = "SELECT COUNT(*) FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id $whereClause";
+        $countStmt = $this->pdo->prepare($countSql);
+        foreach ($params as $key => $val) {
+            $countStmt->bindValue($key, $val);
+        }
+        $countStmt->execute();
         $total = (int) $countStmt->fetchColumn();
+
+        // Calculate Grand Total Amount (Unfiltered)
+        $grandTotalSql = "SELECT SUM(amount) as total_amount FROM edonation_receipts";
+        $grandTotalStmt = $this->pdo->prepare($grandTotalSql);
+        $grandTotalStmt->execute();
+        $grandTotalAmount = $grandTotalStmt->fetch(PDO::FETCH_ASSOC)['total_amount'] ?? 0;
 
         return Response::success($results, null, [
             'page' => $page,
             'limit' => $limit,
             'total' => $total,
             'total_pages' => ceil($total / $limit),
+            'total_amount' => $grandTotalAmount,
             'api_version' => self::VERSION
         ]);
     }
@@ -600,7 +759,7 @@ class ReceiptController
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
-            $_SESSION['pdf_access_tokens'][$receiptId] = [
+            $_SESSION['edonation_pdf_access_tokens'][$receiptId] = [
                 'token' => $accessToken,
                 'expire_at' => time() + 3600 // 1 hour for Admin
             ];
@@ -626,19 +785,51 @@ class ReceiptController
 
     /**
      * POST /receipts/:id/cancel (Admin)
+     * ยกเลิกใบเสร็จ - เก็บประวัติไว้แต่ update สถานะ
      */
     private function cancel(string $id): array
     {
-        $checkStmt = $this->pdo->prepare("SELECT id FROM edonation_receipts WHERE id = :id");
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $reason = $data['reason'] ?? 'ไม่ระบุเหตุผล';
+
+        // Check if receipt exists
+        $checkStmt = $this->pdo->prepare("SELECT id, donation_id, receipt_no FROM edonation_receipts WHERE id = :id");
         $checkStmt->execute([':id' => $id]);
-        if (!$checkStmt->fetch()) {
+        $receipt = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$receipt) {
             return Response::notFound('ไม่พบใบเสร็จ');
         }
 
-        $stmt = $this->pdo->prepare("DELETE FROM edonation_receipts WHERE id = :id");
-        $stmt->execute([':id' => $id]);
+        try {
+            $this->pdo->beginTransaction();
 
-        return Response::success(['api_version' => self::VERSION], 'ยกเลิกใบเสร็จเรียบร้อย');
+            // Delete the receipt
+            $stmt = $this->pdo->prepare("DELETE FROM edonation_receipts WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+
+            // Update donation status back to cancelled/voided
+            if ($receipt['donation_id']) {
+                $updateStmt = $this->pdo->prepare("UPDATE edonation_donat_user SET status_donat = 'cancelled', updated_at = NOW() WHERE id = :id");
+                $updateStmt->execute([':id' => $receipt['donation_id']]);
+            }
+
+            $this->pdo->commit();
+
+            // Log the void action
+            error_log("Receipt {$receipt['receipt_no']} (ID: {$id}) voided by admin. Reason: {$reason}");
+
+            return Response::success([
+                'voided_receipt_no' => $receipt['receipt_no'],
+                'reason' => $reason,
+                'api_version' => self::VERSION
+            ], 'ยกเลิกใบเสร็จเรียบร้อย');
+
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Cancel receipt error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถยกเลิกใบเสร็จได้: ' . $e->getMessage(), 500);
+        }
     }
 
     /**

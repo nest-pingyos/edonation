@@ -25,7 +25,26 @@
                 $subTitle = "ภาพรวม";
                 include 'partials/page-title.php'; ?>
 
-                <!-- Stats Cards -->
+                <!-- Year Filter & Stats Row -->
+                <div class="row align-items-center mb-4">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">เลือกปีงบประมาณ</span>
+                            <select class="form-select" id="dashboardYear" onchange="loadDashboardData()">
+                                <?php
+                                $curMonth = intval(date('n'));
+                                $curFiscalYear = $curMonth >= 10 ? intval(date('Y')) + 1 : intval(date('Y'));
+                                for ($y = $curFiscalYear; $y >= 2023; $y--) {
+                                    $thaiYear = $y + 543;
+                                    $selected = ($y == $curFiscalYear) ? 'selected' : '';
+                                    echo "<option value='$y' $selected>ปี $thaiYear</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-md-6 col-xl-3">
                         <div class="card">
@@ -53,8 +72,8 @@
                                             class="avatar-title text-white fs-32"></iconify-icon>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <h3 class="mb-0 text-white" id="stat-amount">-</h3>
-                                        <p class="mb-0 opacity-75">ยอดบริจาควันนี้ (บาท)</p>
+                                        <h3 class="mb-0 text-white" id="stat-amount-year">-</h3>
+                                        <p class="mb-0 opacity-75">ยอดบริจาคปีที่เลือก (บาท)</p>
                                     </div>
                                 </div>
                             </div>
@@ -66,12 +85,12 @@
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-md bg-soft-success rounded">
-                                        <iconify-icon icon="iconamoon:folder-duotone"
+                                        <iconify-icon icon="iconamoon:profile-circle-duotone"
                                             class="avatar-title text-success fs-32"></iconify-icon>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <h3 class="mb-0" id="stat-projects">-</h3>
-                                        <p class="text-muted mb-0">โครงการทั้งหมด</p>
+                                        <h3 class="mb-0" id="stat-donors">-</h3>
+                                        <p class="text-muted mb-0">ผู้บริจาคทั้งหมด (คน)</p>
                                     </div>
                                 </div>
                             </div>
@@ -83,12 +102,12 @@
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-md bg-soft-info rounded">
-                                        <iconify-icon icon="iconamoon:profile-circle-duotone"
+                                        <iconify-icon icon="iconamoon:lightning-2-duotone"
                                             class="avatar-title text-info fs-32"></iconify-icon>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <h3 class="mb-0" id="stat-donors">-</h3>
-                                        <p class="text-muted mb-0">ผู้บริจาคทั้งหมด</p>
+                                        <h3 class="mb-0" id="stat-total-all">-</h3>
+                                        <p class="text-muted mb-0">ยอดบริจาครวมทุกปี</p>
                                     </div>
                                 </div>
                             </div>
@@ -102,10 +121,7 @@
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h4 class="card-title mb-0">ยอดบริจาครายเดือน</h4>
-                                <select class="form-select form-select-sm w-auto" id="chartYear">
-                                    <option value="2024">2567</option>
-                                    <option value="2023">2566</option>
-                                </select>
+                                <span id="monthlyChartYearBadge" class="badge bg-soft-primary text-primary px-2"></span>
                             </div>
                             <div class="card-body">
                                 <div id="monthlyChart" style="height: 300px;"></div>
@@ -125,7 +141,7 @@
                     </div>
                 </div>
 
-                <!-- Recent Donations & Quick Actions -->
+                <!-- Recent Donations & Quick Actions & Payments -->
                 <div class="row">
                     <div class="col-xl-8">
                         <div class="card">
@@ -159,6 +175,17 @@
                     </div>
 
                     <div class="col-xl-4">
+                        <!-- Payment Method Distribution -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="card-title mb-0">ช่องทางการชำระเงิน</h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="paymentChart" style="height: 250px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions Menu -->
                         <div class="card">
                             <div class="card-header">
                                 <h4 class="card-title mb-0">เมนูด่วน</h4>
@@ -166,48 +193,37 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-6">
-                                        <a href="donations-list.php"
-                                            class="d-block p-3 border rounded text-center text-decoration-none">
-                                            <iconify-icon icon="iconamoon:heart-duotone"
+                                        <a href="receipts-generate.php"
+                                            class="d-block p-3 border rounded text-center text-decoration-none bg-light-hover">
+                                            <iconify-icon icon="iconamoon:invoice-duotone"
                                                 class="fs-32 text-primary"></iconify-icon>
-                                            <div class="mt-2 text-dark">การบริจาค</div>
+                                            <div class="mt-2 text-dark small fw-medium">ออกใบเสร็จ</div>
                                         </a>
                                     </div>
                                     <div class="col-6">
                                         <a href="projects-list.php"
-                                            class="d-block p-3 border rounded text-center text-decoration-none">
+                                            class="d-block p-3 border rounded text-center text-decoration-none bg-light-hover">
                                             <iconify-icon icon="iconamoon:folder-duotone"
                                                 class="fs-32 text-success"></iconify-icon>
-                                            <div class="mt-2 text-dark">โครงการ</div>
-                                        </a>
-                                    </div>
-                                    <div class="col-6">
-                                        <a href="news-list.php"
-                                            class="d-block p-3 border rounded text-center text-decoration-none">
-                                            <iconify-icon icon="iconamoon:news-duotone"
-                                                class="fs-32 text-info"></iconify-icon>
-                                            <div class="mt-2 text-dark">ข่าวสาร</div>
+                                            <div class="mt-2 text-dark small fw-medium">โครงการ</div>
                                         </a>
                                     </div>
                                     <div class="col-6">
                                         <a href="members-search.php"
-                                            class="d-block p-3 border rounded text-center text-decoration-none">
+                                            class="d-block p-3 border rounded text-center text-decoration-none bg-light-hover">
                                             <iconify-icon icon="iconamoon:search-duotone"
                                                 class="fs-32 text-warning"></iconify-icon>
-                                            <div class="mt-2 text-dark">ค้นหาสมาชิก</div>
+                                            <div class="mt-2 text-dark small fw-medium">ค้นหาสมาชิก</div>
                                         </a>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h4 class="card-title mb-0">โครงการยอดนิยม</h4>
-                            </div>
-                            <div class="card-body" id="topProjects">
-                                <div class="text-center py-3">
-                                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                                    <div class="col-6">
+                                        <a href="reports-daily.php"
+                                            class="d-block p-3 border rounded text-center text-decoration-none bg-light-hover">
+                                            <iconify-icon icon="iconamoon:3d-duotone"
+                                                class="fs-32 text-info"></iconify-icon>
+                                            <div class="mt-2 text-dark small fw-medium">รายงาน</div>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -224,118 +240,134 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.44.2/dist/apexcharts.min.js"></script>
 
     <script>
-        let monthlyChart, projectChart;
+        let monthlyChart, projectChart, paymentChart;
+
+        // Get fiscal year type from settings
+        const fiscalYearType = localStorage.getItem('fiscalYearType') || 'thai';
+
+        // Month names based on fiscal year type
+        const monthNamesThai = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
+        const monthNamesCalendar = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const monthNames = fiscalYearType === 'thai' ? monthNamesThai : monthNamesCalendar;
 
         document.addEventListener('DOMContentLoaded', function () {
-            loadDashboardData();
             initCharts();
+            loadDashboardData();
         });
 
         async function loadDashboardData() {
             try {
-                // Load donations
-                const donationsRes = await apiGet('/donations?limit=10');
-                const donations = donationsRes.data || [];
+                const year = document.getElementById('dashboardYear').value;
+                document.getElementById('monthlyChartYearBadge').textContent = 'ปี ' + (parseInt(year) + 543);
+                // 1. Fetch Summary & Analytics Data with Year Filter and Fiscal Type
+                const summaryRes = await apiGet(`/reports/summary?year=${year}&fiscal_type=${fiscalYearType}`);
+                const summary = summaryRes.data || {};
 
-                // Load projects
-                const projectsRes = await apiGet('/projects');
-                const projects = projectsRes.data || [];
+                // Update Stats (Original UI IDs)
+                document.getElementById('stat-donations').textContent = formatNumber(summary.today?.count || 0);
+                document.getElementById('stat-amount-year').textContent = formatNumber(summary.selected_year?.total || 0);
+                document.getElementById('stat-donors').textContent = formatNumber(summary.all_time?.members || 0);
+                document.getElementById('stat-total-all').textContent = '฿' + formatNumber(summary.all_time?.total || 0);
 
-                // Update stats
-                document.getElementById('stat-donations').textContent = donations.length;
-                document.getElementById('stat-amount').textContent = formatNumber(donations.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0));
-                document.getElementById('stat-projects').textContent = projects.length;
-                document.getElementById('stat-donors').textContent = '-';
+                // Update Charts with real data
+                if (summary.charts) {
+                    // Update Monthly Area Chart
+                    monthlyChart.updateSeries([{
+                        name: 'ยอดบริจาค',
+                        data: summary.charts.monthly || new Array(12).fill(0)
+                    }]);
 
-                // Render recent donations
-                renderRecentDonations(donations.slice(0, 5));
+                    // Update Projects Donut Chart
+                    const projects = summary.charts.projects || [];
+                    if (projects.length > 0) {
+                        projectChart.updateOptions({
+                            labels: projects.map(p => p.project_name.substring(0, 20) + (p.project_name.length > 20 ? '...' : ''))
+                        });
+                        projectChart.updateSeries(projects.map(p => parseFloat(p.total)));
+                    }
 
-                // Render top projects
-                renderTopProjects(projects.slice(0, 5));
+                    // Update Payments Chart
+                    const payments = summary.charts.payments || [];
+                    if (payments.length > 0) {
+                        paymentChart.updateSeries(payments.map(p => parseFloat(p.total)));
+                        paymentChart.updateOptions({
+                            labels: payments.map(p => p.payby || 'ไม่ระบุ')
+                        });
+                    }
+                }
+
+                // 2. Fetch Recent Donations
+                const donationsRes = await apiGet('/donations?limit=5');
+                renderRecentDonations(donationsRes.data || []);
 
             } catch (error) {
                 console.error('Dashboard error:', error);
+                showError('ไม่สามารถดึงข้อมูลแดชบอร์ดได้');
             }
         }
 
         function initCharts() {
-            // Monthly Chart
-            if (typeof ApexCharts !== 'undefined') {
-                monthlyChart = new ApexCharts(document.getElementById('monthlyChart'), {
-                    chart: { type: 'area', height: 300, toolbar: { show: false } },
-                    series: [{
-                        name: 'ยอดบริจาค',
-                        data: [52000, 48000, 61000, 45000, 53000, 72000, 68000, 59000, 81000, 76000, 89000, 95000]
-                    }],
-                    xaxis: {
-                        categories: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-                    },
-                    colors: ['#1c84ee'],
-                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
-                    stroke: { curve: 'smooth', width: 2 },
-                    dataLabels: { enabled: false },
-                    tooltip: {
-                        y: { formatter: function (val) { return '฿' + formatNumber(val); } }
-                    }
-                });
-                monthlyChart.render();
+            // Monthly Area Chart
+            monthlyChart = new ApexCharts(document.querySelector("#monthlyChart"), {
+                chart: { type: 'area', height: 300, toolbar: { show: false } },
+                series: [{ name: 'ยอดบริจาค', data: new Array(12).fill(0) }],
+                xaxis: { categories: monthNames },
+                colors: ['#1c84ee'],
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+                stroke: { curve: 'smooth', width: 2 },
+                dataLabels: { enabled: false },
+                tooltip: { y: { formatter: val => '฿' + formatNumber(val) } }
+            });
+            monthlyChart.render();
 
-                // Project Chart
-                projectChart = new ApexCharts(document.getElementById('projectChart'), {
-                    chart: { type: 'donut', height: 300 },
-                    series: [42, 28, 18, 12],
-                    labels: ['ทุนการศึกษา', 'อาคารเรียน', 'อุปกรณ์การแพทย์', 'อื่นๆ'],
-                    colors: ['#1c84ee', '#22c55e', '#f9b931', '#4ecac2'],
-                    legend: { position: 'bottom' },
-                    dataLabels: { enabled: true, formatter: function (val) { return val.toFixed(0) + '%'; } }
-                });
-                projectChart.render();
-            }
+            // Project Donut Chart
+            projectChart = new ApexCharts(document.querySelector("#projectChart"), {
+                chart: { type: 'donut', height: 300 },
+                series: [],
+                labels: [],
+                colors: ['#1c84ee', '#22c55e', '#f9b931', '#4ecac2', '#ef5f5f'],
+                legend: { position: 'bottom' },
+                dataLabels: { enabled: true, formatter: val => val.toFixed(0) + '%' }
+            });
+            projectChart.render();
+
+            // Payment Polar Area Chart
+            paymentChart = new ApexCharts(document.querySelector("#paymentChart"), {
+                chart: { type: 'polarArea', height: 250 },
+                series: [],
+                labels: [],
+                colors: ['#1c84ee', '#f9b931', '#22c55e', '#4ecac2'],
+                legend: { position: 'bottom' },
+                stroke: { colors: ['#fff'] },
+                fill: { opacity: 0.8 },
+                yaxis: { show: false }
+            });
+            paymentChart.render();
         }
 
         function renderRecentDonations(donations) {
             const tbody = document.getElementById('recentDonations');
-
             if (!donations || donations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">ไม่มีข้อมูล</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">ไม่มีข้อมูลล่าสุด</td></tr>';
                 return;
             }
 
             tbody.innerHTML = donations.map(d => `
-        <tr>
-            <td>
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-soft-primary rounded-circle me-2">
-                        <span class="avatar-title text-primary">${(d.donor_name || d.name || 'N')[0].toUpperCase()}</span>
-                    </div>
-                    <span>${escapeHtml(d.donor_name || d.name || 'ไม่ระบุชื่อ')}</span>
-                </div>
-            </td>
-            <td>${escapeHtml(d.project_name || d.project_number || '-')}</td>
-            <td class="text-end fw-semibold text-primary">${formatCurrency(d.amount)}</td>
-            <td>${formatTimeAgo(d.transaction_date || d.created_at)}</td>
-            <td>${getStatusBadge(d.status)}</td>
-        </tr>
-    `).join('');
-        }
-
-        function renderTopProjects(projects) {
-            const container = document.getElementById('topProjects');
-
-            if (!projects || projects.length === 0) {
-                container.innerHTML = '<div class="text-center py-3 text-muted">ไม่มีข้อมูล</div>';
-                return;
-            }
-
-            container.innerHTML = projects.map((p, i) => `
-        <div class="d-flex align-items-center mb-3">
-            <span class="badge bg-soft-primary text-primary rounded-circle me-2" style="width: 28px; height: 28px; line-height: 28px;">${i + 1}</span>
-            <div class="flex-grow-1">
-                <div class="fw-medium">${escapeHtml(p.project_name)}</div>
-                <small class="text-muted">${p.project_number}</small>
-            </div>
-        </div>
-    `).join('');
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-soft-primary rounded-circle me-2 d-flex align-items-center justify-content-center">
+                                <span class="text-primary fw-bold">${(d.donor_name || 'N')[0]}</span>
+                            </div>
+                            <span>${escapeHtml(d.donor_name || 'ไม่ระบุชื่อ')}</span>
+                        </div>
+                    </td>
+                    <td><div class="text-truncate" style="max-width: 200px;">${escapeHtml(d.project_name || '-')}</div></td>
+                    <td class="text-end fw-semibold text-primary">฿${formatNumber(d.amount)}</td>
+                    <td>${formatTimeAgo(d.created_at)}</td>
+                    <td>${getStatusBadge(d.status)}</td>
+                </tr>
+            `).join('');
         }
 
         function getStatusBadge(status) {
@@ -348,11 +380,9 @@
             const date = new Date(dateStr);
             const now = new Date();
             const diff = Math.floor((now - date) / 1000);
-
             if (diff < 60) return 'เมื่อสักครู่';
-            if (diff < 3600) return Math.floor(diff / 60) + ' นาทีที่แล้ว';
-            if (diff < 86400) return Math.floor(diff / 3600) + ' ชั่วโมงที่แล้ว';
-
+            if (diff < 3600) return Math.floor(diff / 60) + ' น.ที่แล้ว';
+            if (diff < 86400) return Math.floor(diff / 3600) + ' ชม.ที่แล้ว';
             return formatThaiDateShort(dateStr);
         }
 
@@ -363,6 +393,12 @@
             return div.innerHTML;
         }
     </script>
+
+    <style>
+        .bg-light-hover:hover {
+            background-color: #f8f9fa !important;
+        }
+    </style>
 
 </body>
 

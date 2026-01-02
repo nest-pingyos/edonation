@@ -13,6 +13,7 @@
 
 class DonationController
 {
+    const VERSION = '2.0';
     private PDO $pdo;
 
     public function __construct()
@@ -607,12 +608,13 @@ class DonationController
             $total = (int) $countStmt->fetch()['total'];
 
             // Get summary stats
+            // Get summary stats
+            // totalAmount = ยอดรวมจากใบเสร็จที่ออกจริง
             $statsSql = "SELECT 
-                            COUNT(*) as total,
-                            SUM(CASE WHEN status_donat = 'completed' THEN 1 ELSE 0 END) as confirmed,
-                            SUM(CASE WHEN status_donat = 'pending' THEN 1 ELSE 0 END) as pending,
-                            SUM(amount) as totalAmount
-                         FROM edonation_donat_user";
+                            (SELECT COUNT(*) FROM edonation_donat_user) as total,
+                            (SELECT COUNT(*) FROM edonation_donat_user WHERE status_donat = 'completed') as confirmed,
+                            (SELECT COUNT(*) FROM edonation_donat_user WHERE status_donat = 'pending') as pending,
+                            (SELECT SUM(amount) FROM edonation_receipts) as totalAmount";
             $statsStmt = $this->pdo->prepare($statsSql);
             $statsStmt->execute();
             $stats = $statsStmt->fetch();

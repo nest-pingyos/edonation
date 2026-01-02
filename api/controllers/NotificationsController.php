@@ -11,6 +11,7 @@
 
 class NotificationsController
 {
+    const VERSION = '2.0';
     private PDO $pdo;
 
     public function __construct()

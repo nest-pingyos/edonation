@@ -18,7 +18,7 @@ class ReportController
 {
     private PDO $pdo;
 
-    const VERSION = '1.0';
+    const VERSION = '2.0';
 
     public function __construct()
     {
@@ -133,24 +133,31 @@ class ReportController
 
     /**
      * GET /reports/monthly?month=12&year=2024
+     * Note: year parameter is Fiscal Year (ปีงบประมาณ)
+     * Fiscal Year = Oct(Y-1) - Sep(Y)
      */
     private function monthlyReport(): array
     {
         $month = intval($_GET['month'] ?? date('n'));
-        $year = intval($_GET['year'] ?? date('Y'));
+        $fiscalYear = intval($_GET['year'] ?? (date('n') >= 10 ? date('Y') + 1 : date('Y')));
 
         // Validate
         if ($month < 1 || $month > 12) {
             return Response::error('VALIDATION_ERROR', 'เดือนไม่ถูกต้อง');
         }
-        if ($year < 2020 || $year > 2100) {
+        if ($fiscalYear < 2020 || $fiscalYear > 2100) {
             return Response::error('VALIDATION_ERROR', 'ปีไม่ถูกต้อง');
         }
 
+        // Calculate actual calendar year based on fiscal year
+        // For months Oct-Dec (10-12), actual year = fiscalYear - 1
+        // For months Jan-Sep (1-9), actual year = fiscalYear
+        $actualYear = ($month >= 10) ? $fiscalYear - 1 : $fiscalYear;
+
         try {
-            $startDate = sprintf('%04d-%02d-01', $year, $month);
+            $startDate = sprintf('%04d-%02d-01', $actualYear, $month);
             $lastDay = date('t', strtotime($startDate));
-            $endDate = sprintf('%04d-%02d-%02d', $year, $month, $lastDay);
+            $endDate = sprintf('%04d-%02d-%02d', $actualYear, $month, $lastDay);
 
             // Main query
             $sql = "SELECT 
@@ -218,7 +225,7 @@ class ReportController
 
             return Response::success([
                 'month' => $month,
-                'year' => $year,
+                'year' => $fiscalYear,
                 'receipts' => $formatted,
                 'stats' => array_merge($stats, [
                     'best_day' => $bestDay,
@@ -242,15 +249,24 @@ class ReportController
      */
     private function yearlyReport(): array
     {
-        $year = intval($_GET['year'] ?? date('Y'));
-        $prevYear = $year - 1;
+        // current fiscal year: if month >= 10, fiscal year = current_year + 1
+        $currentFiscalYear = intval(date('n')) >= 10 ? intval(date('Y')) + 1 : intval(date('Y'));
+        $year = intval($_GET['year'] ?? $currentFiscalYear);
 
         if ($year < 2020 || $year > 2100) {
             return Response::error('VALIDATION_ERROR', 'ปีไม่ถูกต้อง');
         }
 
         try {
-            // Current year
+            // Fiscal Year Range: Oct (Y-1) to Sep (Y)
+            $startDate = ($year - 1) . "-10-01";
+            $endDate = $year . "-09-30";
+
+            // Previous Fiscal Year Range for comparison
+            $prevStartDate = ($year - 2) . "-10-01";
+            $prevEndDate = ($year - 1) . "-09-30";
+
+            // Current year query
             $sql = "SELECT 
                         r.id,
                         r.receipt_no,
@@ -277,37 +293,44 @@ class ReportController
                     FROM edonation_receipts r
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
-                    WHERE YEAR(r.issued_at) = :year
+                    WHERE r.issued_at BETWEEN :start AND :end
                     ORDER BY r.issued_at DESC";
 
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([':year' => $year]);
+            $stmt->execute([':start' => $startDate, ':end' => $endDate]);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Previous year for comparison
-            $prevSql = "SELECT SUM(amount) as total FROM edonation_receipts WHERE YEAR(issued_at) = :year";
+            // Previous year total for comparison
+            $prevSql = "SELECT SUM(amount) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end";
             $prevStmt = $this->pdo->prepare($prevSql);
-            $prevStmt->execute([':year' => $prevYear]);
+            $prevStmt->execute([':start' => $prevStartDate, ':end' => $prevEndDate]);
             $prevTotal = floatval($prevStmt->fetchColumn() ?: 0);
 
             // Stats
             $stats = $this->calculateStats($results);
 
-            // Group by month for chart
-            $monthlyData = array_fill(1, 12, 0);
+            // Group by month for chart (Oct - Sep order)
+            $fiscalMonths = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            $monthlyData = [];
+            foreach ($fiscalMonths as $m)
+                $monthlyData[$m] = 0;
+
             foreach ($results as $row) {
                 $month = (int) date('n', strtotime($row['issued_at']));
                 $monthlyData[$month] += floatval($row['amount']);
             }
 
             // Previous year monthly data
-            $prevMonthlyData = array_fill(1, 12, 0);
+            $prevMonthlyData = [];
+            foreach ($fiscalMonths as $m)
+                $prevMonthlyData[$m] = 0;
+
             $prevMonthSql = "SELECT MONTH(issued_at) as month, SUM(amount) as total 
                              FROM edonation_receipts 
-                             WHERE YEAR(issued_at) = :year 
+                             WHERE issued_at BETWEEN :start AND :end 
                              GROUP BY MONTH(issued_at)";
             $prevMonthStmt = $this->pdo->prepare($prevMonthSql);
-            $prevMonthStmt->execute([':year' => $prevYear]);
+            $prevMonthStmt->execute([':start' => $prevStartDate, ':end' => $prevEndDate]);
             while ($row = $prevMonthStmt->fetch(PDO::FETCH_ASSOC)) {
                 $prevMonthlyData[(int) $row['month']] = floatval($row['total']);
             }
@@ -363,43 +386,78 @@ class ReportController
     private function summary(): array
     {
         try {
+            // Fiscal type: 'thai' (Oct-Sep) or 'calendar' (Jan-Dec)
+            $fiscalType = $_GET['fiscal_type'] ?? 'thai';
+
+            // Calculate current fiscal year based on type
+            if ($fiscalType === 'calendar') {
+                $currentFiscalYear = intval(date('Y'));
+            } else {
+                $currentFiscalYear = intval(date('n')) >= 10 ? intval(date('Y')) + 1 : intval(date('Y'));
+            }
+
+            $year = intval($_GET['year'] ?? $currentFiscalYear);
             $today = date('Y-m-d');
-            $thisMonth = date('Y-m');
-            $thisYear = date('Y');
+
+            // Calculate date range based on fiscal type
+            if ($fiscalType === 'calendar') {
+                // Calendar Year: Jan 1 - Dec 31
+                $startDate = $year . "-01-01";
+                $endDate = $year . "-12-31";
+                $fiscalMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            } else {
+                // Thai Fiscal Year: Oct 1 (Y-1) - Sep 30 (Y)
+                $startDate = ($year - 1) . "-10-01";
+                $endDate = $year . "-09-30";
+                $fiscalMonths = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            }
+
+            // Summary Stats for the selected fiscal year
+            $yearStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end");
+            $yearStmt->execute([':start' => $startDate, ':end' => $endDate]);
+            $yearStats = $yearStmt->fetch(PDO::FETCH_ASSOC);
 
             // Today's stats
             $todayStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE DATE(issued_at) = :date");
             $todayStmt->execute([':date' => $today]);
             $todayStats = $todayStmt->fetch(PDO::FETCH_ASSOC);
 
-            // This month's stats
-            $monthStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE DATE_FORMAT(issued_at, '%Y-%m') = :month");
-            $monthStmt->execute([':month' => $thisMonth]);
-            $monthStats = $monthStmt->fetch(PDO::FETCH_ASSOC);
-
-            // This year's stats
-            $yearStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE YEAR(issued_at) = :year");
-            $yearStmt->execute([':year' => $thisYear]);
-            $yearStats = $yearStmt->fetch(PDO::FETCH_ASSOC);
-
             // All time stats
             $allStmt = $this->pdo->query("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts");
             $allStats = $allStmt->fetch(PDO::FETCH_ASSOC);
 
-            // Unique donors (Members) count
-            $memberStmt = $this->pdo->query("SELECT COUNT(DISTINCT id_card) FROM edonation_donat_user WHERE status_donat = 'completed' AND id_card IS NOT NULL AND id_card != ''");
+            // Unique donors count (All time)
+            $memberStmt = $this->pdo->query("SELECT COUNT(DISTINCT id_card) FROM edonation_donat_user WHERE (status_donat = 'completed' OR status_donat = 'CONFIRMED') AND id_card IS NOT NULL AND id_card != ''");
             $memberCount = (int) $memberStmt->fetchColumn();
+
+            // Monthly data for selected fiscal year
+            $monthlyData = [];
+            foreach ($fiscalMonths as $m)
+                $monthlyData[$m] = 0;
+
+            $monthlyStmt = $this->pdo->prepare("SELECT MONTH(issued_at) as month, SUM(amount) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end GROUP BY MONTH(issued_at)");
+            $monthlyStmt->execute([':start' => $startDate, ':end' => $endDate]);
+            while ($row = $monthlyStmt->fetch()) {
+                $monthlyData[(int) $row['month']] = floatval($row['total']);
+            }
+
+            // Project distribution (Top 5) for selected fiscal year
+            $projectStmt = $this->pdo->prepare("SELECT du.project_name, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end GROUP BY du.project_name ORDER BY total DESC LIMIT 5");
+            $projectStmt->execute([':start' => $startDate, ':end' => $endDate]);
+            $projects = $projectStmt->fetchAll();
+
+            // Payment method distribution for selected fiscal year
+            $payStmt = $this->pdo->prepare("SELECT du.payby, COUNT(*) as count, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end GROUP BY du.payby");
+            $payStmt->execute([':start' => $startDate, ':end' => $endDate]);
+            $payments = $payStmt->fetchAll();
 
             return Response::success([
                 'today' => [
                     'count' => (int) $todayStats['count'],
                     'total' => floatval($todayStats['total'])
                 ],
-                'this_month' => [
-                    'count' => (int) $monthStats['count'],
-                    'total' => floatval($monthStats['total'])
-                ],
-                'this_year' => [
+                'selected_year' => [
+                    'year' => $year,
                     'count' => (int) $yearStats['count'],
                     'total' => floatval($yearStats['total'])
                 ],
@@ -407,6 +465,11 @@ class ReportController
                     'count' => (int) $allStats['count'],
                     'total' => floatval($allStats['total']),
                     'members' => $memberCount
+                ],
+                'charts' => [
+                    'monthly' => array_values($monthlyData),
+                    'projects' => $projects,
+                    'payments' => $payments
                 ]
             ], null, [
                 'api_version' => self::VERSION,

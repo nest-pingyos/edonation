@@ -9,17 +9,22 @@
  * GET    /auth/me          - ข้อมูลผู้ใช้ปัจจุบัน
  */
 
-class AuthController {
+class AuthController
+{
+    const VERSION = '2.0';
     private PDO $pdo;
-    
-    public function __construct() {
+
+    public function __construct()
+    {
         $this->pdo = Database::getInstance();
     }
-    
-    public function handle(string $method, ?string $id, ?string $action): array {
+
+    public function handle(string $method, ?string $id, ?string $action): array
+    {
         $endpoint = $id;
-        if ($id === 'oauth' && $action) $endpoint = "oauth/{$action}";
-        
+        if ($id === 'oauth' && $action)
+            $endpoint = "oauth/{$action}";
+
         switch ($endpoint) {
             case 'login':
                 return $this->login();
@@ -33,20 +38,22 @@ class AuthController {
                 return Response::error('NOT_FOUND', 'Endpoint not found', 404);
         }
     }
-    
+
     // POST /auth/login
-    private function login(): array {
+    private function login(): array
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             return Response::error('METHOD_NOT_ALLOWED', 'Use POST method', 405);
         }
-        
+
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
-        
+
         $v = new Validator($data);
         $v->required('username')->required('password');
-        
-        if (!$v->passes()) return Response::validation($v->errors());
-        
+
+        if (!$v->passes())
+            return Response::validation($v->errors());
+
         // Dev account for testing (remove in production!)
         if ($data['username'] === 'admin' && $data['password'] === 'admin123') {
             $token = AuthMiddleware::generateToken([
@@ -55,7 +62,7 @@ class AuthController {
                 'email' => 'admin@dev.local',
                 'role' => 'admin'
             ]);
-            
+
             return Response::success([
                 'access_token' => $token,
                 'token_type' => 'Bearer',
@@ -68,7 +75,7 @@ class AuthController {
                 ]
             ]);
         }
-        
+
         // Find user from database
         try {
             $stmt = $this->pdo->prepare(
@@ -76,11 +83,11 @@ class AuthController {
             );
             $stmt->execute([':email' => $data['username']]);
             $user = $stmt->fetch();
-            
+
             if (!$user || !password_verify($data['password'], $user['password'])) {
                 return Response::error('INVALID_CREDENTIALS', 'อีเมลหรือรหัสผ่านไม่ถูกต้อง', 401);
             }
-            
+
             // Generate token
             $token = AuthMiddleware::generateToken([
                 'id' => $user['id'],
@@ -88,7 +95,7 @@ class AuthController {
                 'email' => $user['email'],
                 'role' => $user['role']
             ]);
-            
+
             return Response::success([
                 'access_token' => $token,
                 'token_type' => 'Bearer',
@@ -105,34 +112,37 @@ class AuthController {
             return Response::error('INVALID_CREDENTIALS', 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (Dev: admin/admin123)', 401);
         }
     }
-    
+
     // POST /auth/oauth/cmu
-    private function oauthCmu(): array {
+    private function oauthCmu(): array
+    {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             return Response::error('METHOD_NOT_ALLOWED', 'Use POST method', 405);
         }
-        
+
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
-        
+
         if (empty($data['code'])) {
             return Response::error('VALIDATION_ERROR', 'กรุณาระบุ authorization code');
         }
-        
+
         // TODO: Implement CMU OAuth exchange
         // For now, return placeholder
         return Response::error('NOT_IMPLEMENTED', 'CMU OAuth ยังไม่พร้อมใช้งาน');
     }
-    
+
     // POST /auth/logout
-    private function logout(): array {
+    private function logout(): array
+    {
         // JWT is stateless, client should discard token
         return Response::success(null, 'ออกจากระบบเรียบร้อย');
     }
-    
+
     // GET /auth/me
-    private function me(): array {
+    private function me(): array
+    {
         $user = AuthMiddleware::requireAuth();
-        
+
         return Response::success([
             'id' => $user['sub'],
             'name' => $user['name'],

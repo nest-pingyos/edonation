@@ -296,10 +296,10 @@
             tbody.innerHTML = data.map((item, idx) => `
                 <tr>
                     <td>${idx + 1}</td>
-                    <td>${formatTime(item.transaction_date || item.created_at)}</td>
-                    <td><span class="badge bg-light text-dark font-monospace">${item.billPaymentRef1 || item.ref || '-'}</span></td>
+                    <td>${formatTime(item.issued_at)}</td>
+                    <td><span class="badge bg-light text-dark font-monospace">${item.ref1 || '-'}</span></td>
                     <td>
-                        <div class="fw-medium">${escapeHtml(item.donor_name || item.name || 'ไม่ระบุชื่อ')}</div>
+                        <div class="fw-medium">${escapeHtml(item.donor_name || 'ไม่ระบุชื่อ')}</div>
                     </td>
                     <td>${escapeHtml(item.project_name || item.project_number || '-')}</td>
                     <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
@@ -333,10 +333,10 @@
             const headers = ['ลำดับ', 'เวลา', 'Ref', 'ผู้บริจาค', 'โครงการ', 'จำนวนเงิน', 'สถานะ'];
             const rows = donations.map((d, i) => [
                 i + 1,
-                formatTime(d.transaction_date || d.created_at),
-                d.billPaymentRef1 || d.ref || '',
-                d.donor_name || d.name || '',
-                d.project_name || d.project_number || '',
+                formatTime(d.issued_at),
+                d.ref1 || '',
+                d.donor_name || '',
+                d.project_name || '',
                 d.amount || 0,
                 d.status === 'CONFIRMED' ? 'ยืนยันแล้ว' : 'รอยืนยัน'
             ]);
@@ -387,7 +387,7 @@
             const rows = donations.map((d, i) => [
                 i + 1,
                 d.receipt_no || '',
-                d.issued_at ? d.issued_at.split(' ')[0] : (d.transaction_date || d.created_at || '').split(' ')[0], // Date Only YYYY-MM-DD
+                d.issued_at ? d.issued_at.split(' ')[0] : '', // Date Only YYYY-MM-DD
                 d.amount || 0,
                 d.project_name || '', // รายการทรัพย์สิน (เอาชื่อโครงการ)
                 d.amount || 0,        // มูลค่า (เท่ากับยอดเงิน)
