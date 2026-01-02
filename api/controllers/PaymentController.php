@@ -245,8 +245,8 @@ class PaymentController
                 $count = (int) $countStmt->fetchColumn() + 1;
                 $receiptNo = $prefix . str_pad($count, 4, '0', STR_PAD_LEFT);
 
-                // ดึงชื่อผู้บริจาคจาก donat_user
-                $getDonorName = $this->pdo->prepare("SELECT first_name, last_name FROM edonation_donat_user WHERE id = :id");
+                // ดึงชื่อผู้บริจาคและเลขบัตรจาก donat_user
+                $getDonorName = $this->pdo->prepare("SELECT first_name, last_name, id_card FROM edonation_donat_user WHERE id = :id");
                 $getDonorName->execute([':id' => $donation['id']]);
                 $donor = $getDonorName->fetch();
                 $payerName = trim(($donor['first_name'] ?? '') . ' ' . ($donor['last_name'] ?? ''));
@@ -256,10 +256,27 @@ class PaymentController
                     $payerName = $payerAccountName ?: $payerName ?: 'ไม่ระบุชื่อ';
                 }
 
+                // Manage id_members
+                $idCardForReceipt = $donor['id_card'] ?? $billPaymentRef2;
+                $idCardClean = preg_replace('/\D/', '', $idCardForReceipt);
+
+                $checkMember = $this->pdo->prepare("SELECT id_members FROM edonation_receipts WHERE id_card = :id LIMIT 1");
+                $checkMember->execute([':id' => $idCardClean]);
+                $member = $checkMember->fetch();
+
+                if ($member && !empty($member['id_members'])) {
+                    $idMembers = $member['id_members'];
+                } else {
+                    $idMembers = '';
+                    for ($i = 0; $i < 10; $i++) {
+                        $idMembers .= rand(0, 9);
+                    }
+                }
+
                 // Insert receipt พร้อม bank_transaction_id
                 $insertReceipt = $this->pdo->prepare("
-                    INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at)
-                    VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW())
+                    INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at, id_card, id_members)
+                    VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW(), :id_card, :id_members)
                 ");
 
                 $insertReceipt->execute([
@@ -267,7 +284,9 @@ class PaymentController
                     ':bank_transaction_id' => $bankTransactionId, // อ้างอิง bank_transactions.id
                     ':receipt_no' => $receiptNo,
                     ':payer_name' => $payerName,
-                    ':amount' => $amountValue
+                    ':amount' => $amountValue,
+                    ':id_card' => $idCardClean,
+                    ':id_members' => $idMembers
                 ]);
 
                 error_log("Receipt created automatically - ReceiptNo: $receiptNo, DonationId: " . $donation['id'] . ", BankTxnId: $bankTransactionId");

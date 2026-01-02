@@ -401,6 +401,8 @@ class ReceiptController
                     r.amount,
                     r.issued_at AS receipt_date,
                     r.donation_id,
+                    r.id_card,
+                    r.id_members,
                     du.project_name,
                     du.project_number,
                     du.payby AS pay_by,
@@ -442,13 +444,15 @@ class ReceiptController
             'project_number' => $receipt['project_number'] ?? '',
             'pay_by' => $receipt['pay_by'] ?? 'QR PromptPay',
             'fiscal_year' => $receipt['fiscal_year'] ?? (date('Y') + 543),
-            'address' => $address, // ยังคงส่ง full address ไปเผื่อใช้
+            'address' => $address,
             'address_line' => $receipt['address_line'] ?? '',
             'province' => $receipt['province'] ?? '',
             'amphure' => $receipt['amphure'] ?? '',
             'district' => $receipt['district'] ?? '',
             'zip_code' => $receipt['zip_code'] ?? '',
             'billPaymentRef2' => $receipt['billPaymentRef2'] ?? '',
+            'id_card' => $receipt['id_card'] ?? '',
+            'id_members' => $receipt['id_members'] ?? '',
             'api_version' => self::VERSION
         ]);
     }
@@ -467,6 +471,8 @@ class ReceiptController
                     r.issued_at,
                     r.donation_id,
                     r.bank_transaction_id,
+                    r.id_card,
+                    r.id_members,
                     du.project_name,
                     du.project_number,
                     du.payby,
@@ -575,6 +581,8 @@ class ReceiptController
                     r.issued_at,
                     r.bank_transaction_id,
                     r.donation_id,
+                    r.id_card,
+                    r.id_members,
                     du.project_name,
                     du.first_name,
                     du.last_name,
@@ -730,10 +738,26 @@ class ReceiptController
             }
             $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
 
+            // Manage id_members
+            $idCardClean = preg_replace('/\D/', '', $data['id_card']);
+            $checkMember = $this->pdo->prepare("SELECT id_members FROM edonation_receipts WHERE id_card = :id LIMIT 1");
+            $checkMember->execute([':id' => $idCardClean]);
+            $member = $checkMember->fetch();
+
+            if ($member && !empty($member['id_members'])) {
+                $idMembers = $member['id_members'];
+            } else {
+                // Generate 10-digit random number
+                $idMembers = '';
+                for ($i = 0; $i < 10; $i++) {
+                    $idMembers .= rand(0, 9);
+                }
+            }
+
             // Create receipt record
             $receiptStmt = $this->pdo->prepare("
-                INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at)
-                VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW())
+                INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at, id_card, id_members)
+                VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW(), :id_card, :id_members)
             ");
 
             $receiptStmt->execute([
@@ -741,7 +765,9 @@ class ReceiptController
                 ':bank_transaction_id' => $data['bank_transaction_id'] ?? null,
                 ':receipt_no' => $receiptNo,
                 ':payer_name' => $payerName,
-                ':amount' => $data['amount']
+                ':amount' => $data['amount'],
+                ':id_card' => $idCardClean,
+                ':id_members' => $idMembers
             ]);
 
             $receiptId = $this->pdo->lastInsertId();

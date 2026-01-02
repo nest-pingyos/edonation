@@ -284,17 +284,33 @@ class DonationController
             }
             $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
 
+            // Manage id_members for receipt
+            $checkMember = $this->pdo->prepare("SELECT id_members FROM edonation_receipts WHERE id_card = :id LIMIT 1");
+            $checkMember->execute([':id' => $idCard]);
+            $member = $checkMember->fetch();
+
+            if ($member && !empty($member['id_members'])) {
+                $idMembers = $member['id_members'];
+            } else {
+                $idMembers = '';
+                for ($i = 0; $i < 10; $i++) {
+                    $idMembers .= rand(0, 9);
+                }
+            }
+
             // Insert receipt
             $receiptStmt = $this->pdo->prepare("
-                INSERT INTO edonation_receipts (donation_id, receipt_no, payer_name, amount, issued_at)
-                VALUES (:donation_id, :receipt_no, :payer_name, :amount, NOW())
+                INSERT INTO edonation_receipts (donation_id, receipt_no, payer_name, amount, issued_at, id_card, id_members)
+                VALUES (:donation_id, :receipt_no, :payer_name, :amount, NOW(), :id_card, :id_members)
             ");
 
             $receiptStmt->execute([
                 ':donation_id' => $donationId,
                 ':receipt_no' => $receiptNo,
                 ':payer_name' => $payerName,
-                ':amount' => $data['amount']
+                ':amount' => $data['amount'],
+                ':id_card' => $idCard,
+                ':id_members' => $idMembers
             ]);
 
             $receiptId = $this->pdo->lastInsertId();
@@ -372,7 +388,7 @@ class DonationController
     {
         try {
             // First get the donation record with user details
-            $donationStmt = $this->pdo->prepare("SELECT id, billPaymentRef1, status_donat, need_receipt, first_name, last_name, amount FROM edonation_donat_user WHERE id = :id");
+            $donationStmt = $this->pdo->prepare("SELECT id, billPaymentRef1, status_donat, need_receipt, first_name, last_name, amount, id_card FROM edonation_donat_user WHERE id = :id");
             $donationStmt->execute([':id' => $id]);
             $donation = $donationStmt->fetch();
 
@@ -456,12 +472,29 @@ class DonationController
                             $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
 
                             // 3. Insert Receipt
-                            $insReceipt = $this->pdo->prepare("INSERT INTO edonation_receipts (donation_id, receipt_no, payer_name, amount, issued_at) VALUES (:did, :rno, :pname, :amt, NOW())");
+                            // Manage id_members
+                            $idCardClean = preg_replace('/\D/', '', $donation['id_card']);
+                            $checkMember = $this->pdo->prepare("SELECT id_members FROM edonation_receipts WHERE id_card = :id LIMIT 1");
+                            $checkMember->execute([':id' => $idCardClean]);
+                            $member = $checkMember->fetch();
+
+                            if ($member && !empty($member['id_members'])) {
+                                $idMembers = $member['id_members'];
+                            } else {
+                                $idMembers = '';
+                                for ($i = 0; $i < 10; $i++) {
+                                    $idMembers .= rand(0, 9);
+                                }
+                            }
+
+                            $insReceipt = $this->pdo->prepare("INSERT INTO edonation_receipts (donation_id, receipt_no, payer_name, amount, issued_at, id_card, id_members) VALUES (:did, :rno, :pname, :amt, NOW(), :ic, :im)");
                             $insReceipt->execute([
                                 ':did' => $donation['id'],
                                 ':rno' => $receiptNo,
                                 ':pname' => $finalPayerName,
-                                ':amt' => $donation['amount']
+                                ':amt' => $donation['amount'],
+                                ':ic' => $idCardClean,
+                                ':im' => $idMembers
                             ]);
 
                             $receipt = [
