@@ -1,0 +1,139 @@
+/**
+ * Receipt Search Page Styles
+ * Styles for public receipt search page
+ */
+
+/* ===== Contact Panel ===== */
+.contact-panel {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.08);
+    padding: 30px;
+}
+
+.contact-panel__title {
+    color: #1b3a5f;
+    font-weight: 600;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #1b3a5f;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+/* ===== Results Header ===== */
+.results-header {
+    padding: 15px 20px;
+    background: #fff;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.08);
+}
+
+.results-header h5 {
+    color: #1b3a5f;
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.bg-primary {
+    background: #00a651 !important;
+}
+
+/* ===== Result Item Card ===== */
+.result-item {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.08);
+}
+
+.result-item__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.result-item__receipt-no {
+    font-size: 16px;
+    color: #00a651;
+    font-weight: 600;
+}
+
+.result-item__amount {
+    text-align: right;
+}
+
+.result-item__amount-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #00a651;
+}
+
+.result-item__amount-label {
+    font-size: 12px;
+    color: #888;
+}
+
+.result-item__details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.result-item__detail {
+    font-size: 14px;
+    color: #666;
+}
+
+.result-item__detail-label {
+    font-weight: 600;
+    color: #1b3a5f;
+    margin-right: 8px;
+}
+
+.result-item__footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid #f1f1f1;
+}
+
+/* ===== Open Receipt Button ===== */
+.btn__open-receipt {
+    background: #1b3a5f;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn__open-receipt:hover {
+    background: #2c5282;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .result-item__header {
+        flex-direction: column;
+    }
+
+    .result-item__amount {
+        text-align: left;
+        margin-top: 12px;
+    }
+}

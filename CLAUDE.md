@@ -1,288 +1,257 @@
-# CLAUDE.md - eDonation Project
+# CLAUDE.md
 
-เอกสารนี้เป็นคู่มือสำหรับ AI Assistants ในการทำงานกับโปรเจ็ค eDonation
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Structure
+## Project Overview
 
-```
-edonation/
-├── .env                    # Main environment config (shared)
-├── .env.example            # Template for developers
-├── .env.production         # Production template
-├── .gitignore              # Git ignore rules
-├── README.md               # Project documentation
-│
-├── web/                    # Frontend Website (PHP + jQuery)
-│   ├── home/               # หน้าแรก
-│   ├── donat/              # ระบบบริจาค
-│   ├── list/               # ค้นหาใบเสร็จ
-│   ├── office/             # Admin Dashboard (Legacy)
-│   ├── receipts/           # PDF Generation (TCPDF)
-│   ├── config/             
-│   │   ├── env.php         # Environment loader
-│   │   ├── database.php    # DB connection
-│   │   └── head.php        # HTML head template
-│   └── assets/             # CSS, JS, Images
-│
-├── api/                    # REST API (Pure PHP)
-│   ├── controllers/        # Request Handlers (11 controllers)
-│   │   ├── AuthController.php
-│   │   ├── BenefitsController.php
-│   │   ├── DonationController.php
-│   │   ├── MemberController.php
-│   │   ├── NewsController.php
-│   │   ├── NotificationsController.php
-│   │   ├── PaymentController.php
-│   │   ├── ProjectController.php
-│   │   ├── ReceiptController.php
-│   │   └── SignatureController.php
-│   ├── config/             
-│   │   ├── bootstrap.php   # App bootstrap
-│   │   ├── env.php         # Environment loader
-│   │   ├── database.php    # DB connection
-│   │   └── scb.php         # SCB config
-│   ├── docs/               # API Manager (Interactive Docs)
-│   ├── helpers/            # Response & Validator
-│   ├── middleware/         # Auth Middleware
-│   └── services/           # Wrappers for shared services
-│
-├── shared/                 # ✨ Shared code (web & api)
-│   └── services/
-│       └── SCBPaymentService.php
-│
-├── admin/                  # Admin UI
-│   ├── src/                # PHP source files
-│   │   ├── assets/         # CSS, JS, Images
-│   │   ├── config/         # Configuration
-│   │   ├── partials/       # Template partials
-│   │   └── services/       # Backend services
-│   └── README.md
-│
-└── .agent/workflows/       # Development workflows
-    ├── setup-dev.md
-    ├── deploy-production.md
-    └── create-admin-ui.md
+e-Donation NurseCMU is a Thai language donation management system built with PHP, MySQL, and vanilla JavaScript. It supports online donations via PromptPay QR codes, receipt generation, and administrative dashboards. The system integrates with Microsoft Entra ID (Azure AD) for authentication.
+
+## Development Environment
+
+This project runs on XAMPP:
+- **Database**: MySQL/MariaDB (database name: `edonation`)
+- **Web Server**: Apache via XAMPP
+- **PHP Version**: Compatible with PDO
+- **Root Directory**: `C:\xampp\htdocs\appdev\edonation`
+
+To access the application locally, navigate to `http://localhost/appdev/edonation/` in your browser, which redirects to `/home/`.
+
+## Key Architecture
+
+### Directory Structure
+
+- **`config/`** - Database connection (`connect.php`, `connect_pdf.php`) and shared components (header, footer, session management)
+- **`home/`** - Public-facing homepage displaying donation projects
+- **`donat/`** - Donation workflow (form submission, QR code generation, payment verification)
+- **`office/`** - Administrative dashboard with authentication (requires Microsoft Entra ID login)
+- **`list/`** - Donation records search and receipt PDF generation (uses TCPDF)
+- **`member/`** - Member rewards/points system (cart, orders, redemption)
+- **`service/`** - Service-related pages
+- **`contact/`** - Contact page
+- **`recieve.php`** - Webhook endpoint for PromptPay payment confirmations (JSON API)
+
+### Database Connection
+
+All database connections use PDO with UTF-8 charset. The central connection file is `config/connect.php`:
+```php
+$pdo = new PDO("mysql:host=localhost;dbname=edonation;charset=utf8", "root", "");
 ```
 
-## Independence of Modules
+### Key Database Tables
 
-**✅ web, api, admin แยกกันสมบูรณ์ - เชื่อมต่อผ่าน HTTP API เท่านั้น**
+- **`donat`** / **`donat_user`** - Stores donation records with fields like `billPaymentRef1`, `amount`, `project_number`, `fiscal_year`, `receipt_no`, `status_payment`, `payerAccountName`
+- **`project`** - Project information including `project_number`, `project_name`, `project_name_web`, `project_description`, `img_file`
+- **`json_confirm`** - Stores payment confirmation data from PromptPay webhook
+- **`user_permissions`** - Administrative user access control (linked to `cmu_account` from Azure AD)
 
-| Module | Location | Depends On | Description |
-|--------|----------|------------|-------------|
-| `web` | `/web/` | `.env`, `shared/` | Frontend website (PHP) |
-| `api` | `/api/` | `.env` | REST API (Pure PHP, ไม่ต้องใช้ shared) |
-| `admin` | `/admin/` | **API via HTTP** | Admin Dashboard |
-| `shared` | `/shared/` | `.env` | Utilities (AutoProvince, SCB) |
+### Donation Flow
 
-### การเชื่อมต่อระหว่าง Modules
+1. **User selects project** (`home/index.php`) and clicks "บริจาค" (Donate)
+2. **Donation form** (`donat/index.php`) captures donor info (type, email, phone, amount, project)
+3. **Form submission** (`donat/donat_db.php`):
+   - Validates input and inserts record into `donat_user` table
+   - Generates `billPaymentRef1` = fiscal_year + project_number + padded ID (15 digits total)
+   - Creates unique `transactionId` with `uniqid('TXN_')`
+   - Sets `status_payment = 'activation'` and `status_donat = 'online'`
+   - Redirects to QR generator with URL parameters (billPaymentRef1, id, amount, transactionId, phone, created_at)
+4. **QR Code generation** (`donat/qrgenerator.php`):
+   - Retrieves donation record by ID from `donat_user`
+   - Generates PromptPay QR code with embedded amount and `billPaymentRef1`
+   - Uses `phpqrcode/qrlib.php` library and custom CRC16 checksum (via `lib-crc16.inc.php`)
+   - Creates PNG file in `donat/qrcodepayment/` directory
+   - Uses GD Library to generate downloadable image with Thai text overlay (NotoSansThai font)
+   - Displays QR code with bank icons and warning about tax deduction requirements
+   - Auto-starts polling via JavaScript to check payment status
+5. **Payment verification** (`donat/data_check.php`):
+   - Frontend polls every 5 seconds (max 100 loops = ~8 minutes)
+   - Checks if `json_confirm` table has matching `billPaymentRef1`, `amount`, and `created_at` date
+   - When match found: copies data from `donat_user` to `donat` table
+   - Generates receipt number format: `E{padded_id}` (e.g., E0001)
+   - Updates with `payerAccountName`, `billPaymentRef2`, and PDF URL
+   - Triggers LINE and email notifications (non-blocking)
+   - Returns JSON success response to frontend
+6. **Webhook endpoint** (`recieve.php`):
+   - Receives POST requests with payment confirmation JSON from PromptPay gateway
+   - Validates 17 required fields (payeeProxyId, amount, transactionId, billPaymentRef1, etc.)
+   - Validates amount is numeric and > 0
+   - Inserts into `json_confirm` table using PDO transaction
+   - Returns JSON response with resCode ("00" = success)
 
-```
-┌─────────────┐     HTTP/HTTPS      ┌─────────────┐
-│   Web/Admin │ ◄────────────────► │    API      │
-│ (Same Domain)│     JSON REST      │(Same/Other) │
-└─────────────┘                     └─────────────┘
-      │                                   │
-      ▼                                   ▼
-   ┌──────┐                          ┌──────┐
-   │ .env │                          │ .env │
-   └──────┘                          └──────┘
-```
+### Authentication (Office Section)
 
-## Domain Configuration
+The `office/` directory uses Microsoft Entra ID (Azure AD) authentication:
+- **Session management**: `office/partials/session.php`
+- **Login page**: `office/auth-login.php`
+- **Permission check**: Real-time validation against `user_permissions` table using `cmu_account` (CMU email)
+- **User data**: Retrieved from `$_SESSION['login_info']` containing Azure AD profile
+- **Access control**: `requireAuth()` function checks login status and permissions, redirects to login if unauthorized
+- **Permission lookup**: Searches multiple account format variations (lowercase, with/without @cmu.ac.th) with `status = 'active'`
+- **User display**: Prioritizes displayName → English name → Thai name → email username → CMU account for display
+- **Profile images**: Checks multiple Azure AD fields (profileImageUrl, picture, photo) before falling back to default avatar
 
-### ⚙️ รองรับ 2 รูปแบบ:
+### PDF Generation
 
-**1. Same Domain (Default)**
-```
-Web:   https://app.nurse.cmu.ac.th/edonation
-Admin: https://app.nurse.cmu.ac.th/edonation/admin
-API:   https://app.nurse.cmu.ac.th/edonation/api
-```
+Receipt PDFs use TCPDF library (located in `list/TCPDF/`):
+- **`list/pdf_receipt_maker.php`** - Generate official receipts
+- **`list/pdf_receipt_cancel.php`** - Generate cancellation receipts
+- **`list/pdf_maker.php`** - Alternative PDF format
+- **Font support**: Thai language support via NotoSansThai fonts in `donat/font/`
 
-**2. Separate API Domain**
-```
-Web:   https://app.nurse.cmu.ac.th/edonation
-Admin: https://app.nurse.cmu.ac.th/edonation/admin
-API:   https://api.nurse.cmu.ac.th/api  (แยก domain)
-```
+### Dashboard (Office)
 
-### Environment Variables
+The dashboard has evolved with two distinct implementations:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `APP_DOMAIN` | Domain สำหรับ Web/Admin | `https://app.nurse.cmu.ac.th` |
-| `API_DOMAIN` | Domain สำหรับ API | Same as APP_DOMAIN หรือแยก |
-| `BASE_PATH` | Path หลัง domain | `/edonation` |
-| `API_BASE_PATH` | Path ของ API | `/edonation/api` |
-| `CORS_ALLOWED_ORIGINS` | Domain ที่อนุญาต CORS | `https://app.nurse.cmu.ac.th` |
+#### Current Dashboard (`office/index.php`)
+- **Filter system**: Year (พ.ศ.), month, date range via URL parameters
+- **Statistics cards**: Total donations, donor count, monthly stats, average donation
+- **Goal tracking**: 10M THB annual target with dynamic targets (yearly/monthly/date range)
+- **Project breakdown**: Per-project donation amounts with colored progress bars
+- **Top 10 donors**: Table with ranking icons and full donation details
+- **Data flow**: PHP directly queries database with WHERE clause filtering based on URL parameters
+- **Year conversion**: Converts Buddhist Era (BE) to Gregorian (CE) for database queries (BE - 543)
 
-## URLs
+#### Enhanced Dashboard (`office/index-improved.php`)
+- **Comparison mode**: Side-by-side year comparison with toggle button
+- **AJAX-based**: Uses `dashboard-api.php` to fetch JSON data dynamically
+- **Chart.js visualizations**: Monthly trend line chart, donut chart, comparison bar charts
+- **Real-time updates**: No page reload needed when switching years or modes
+- **Primary/Compare selectors**: Button-based year selection interface
+- **Loading states**: Shows loading overlay during data fetch
 
+## Common Commands
 
-| Environment | Web | API | Admin |
-|-------------|-----|-----|-------|
-| **Production** | https://app.nurse.cmu.ac.th/edonation | https://app.nurse.cmu.ac.th/edonation/api | https://app.nurse.cmu.ac.th/edonation/admin |
-| **Development** | http://localhost/appdev/edonation | http://localhost/appdev/edonation/api | http://localhost/appdev/edonation/admin |
+### Starting the Development Server
+Since this uses XAMPP, ensure XAMPP is running with Apache and MySQL services started. No build commands are needed.
 
-## Environment Configuration
+### Accessing the Application
+- **Public site**: `http://localhost/appdev/edonation/home/`
+- **Admin dashboard**: `http://localhost/appdev/edonation/office/` (requires authentication)
+- **Donation search**: `http://localhost/appdev/edonation/list/`
 
-ไฟล์ `.env` ที่ root level ถูกโหลดโดย:
-- `web/config/env.php`
-- `api/config/env.php`
-
-```env
-# Key settings
-APP_ENV=development|production
-APP_URL=https://app.nurse.cmu.ac.th/edonation
-BASE_PATH=/edonation  # Production
-# BASE_PATH=/appdev/edonation  # Development
-```
-
-## API Endpoints (v1) - Complete List
-
-### Projects - โครงการบริจาค
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/v1/projects` | รายการโครงการ | - |
-| GET | `/api/v1/projects/:id` | รายละเอียดโครงการ | - |
-| POST | `/api/v1/projects` | สร้างโครงการ | Admin |
-| PUT | `/api/v1/projects/:id` | แก้ไขโครงการ | Admin |
-
-### Donations - การบริจาค
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/v1/donations` | สร้างการบริจาค | - |
-| GET | `/api/v1/donations/:id/qr` | QR Code | - |
-| GET | `/api/v1/donations/:id/status` | สถานะการชำระ | - |
-| GET | `/api/v1/donations` | รายการทั้งหมด | Admin |
-| GET | `/api/v1/donations/:id` | รายละเอียด | Admin |
-| PUT | `/api/v1/donations/:id` | แก้ไข | Admin |
-
-### Receipts - ใบเสร็จ
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/v1/receipts/search` | ค้นหาใบเสร็จ | - |
-| GET | `/api/v1/receipts/:id/verify` | ยืนยัน Tax ID | - |
-| GET | `/api/v1/receipts/:id/pdf` | ดาวน์โหลด PDF | Token |
-| GET | `/api/v1/receipts/:id/details` | รายละเอียดสำหรับ PDF | - |
-| GET | `/api/v1/receipts/:id` | ดูใบเสร็จ | - |
-| GET | `/api/v1/receipts` | รายการทั้งหมด | Admin |
-| POST | `/api/v1/receipts/generate` | ออกใบเสร็จ manual | Admin |
-| POST | `/api/v1/receipts/:id/cancel` | ยกเลิกใบเสร็จ | Admin |
-| POST | `/api/v1/receipts/:id/resend` | ส่งใบเสร็จซ้ำ | Admin |
-
-### Members - สมาชิก
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/v1/members/lookup` | ค้นหาสมาชิก | - |
-| GET | `/api/v1/members/:id_card` | ข้อมูลสมาชิก | - |
-| GET | `/api/v1/members/:id_card/donations` | รายการบริจาค | - |
-| GET | `/api/v1/members/:id_card/receipts` | รายการใบเสร็จ | - |
-| GET | `/api/v1/members/:id_card/summary` | สรุปยอด | - |
-
-### Auth - ยืนยันตัวตน
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/v1/auth/login` | เข้าสู่ระบบ | - |
-| POST | `/api/v1/auth/oauth/cmu` | CMU OAuth | - |
-| POST | `/api/v1/auth/logout` | ออกจากระบบ | - |
-| GET | `/api/v1/auth/me` | ข้อมูลผู้ใช้ปัจจุบัน | Bearer |
-
-### Payments - การชำระเงิน
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/v1/payments/callback` | PromptPay callback | - |
-
-### Benefits - ระดับผู้มีอุปการคุณ
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/v1/benefits` | รายการระดับ | - |
-| GET | `/api/v1/benefits/:id` | รายละเอียด | - |
-| POST | `/api/v1/benefits` | เพิ่มระดับ | Admin |
-| PUT | `/api/v1/benefits/:id` | แก้ไขระดับ | Admin |
-| DELETE | `/api/v1/benefits/:id` | ลบระดับ | Admin |
-
-### News - ข่าวสาร
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/v1/news` | รายการข่าว | - |
-| GET | `/api/v1/news/:id` | รายละเอียด | - |
-| POST | `/api/v1/news` | เพิ่มข่าว | Admin |
-| PUT | `/api/v1/news/:id` | แก้ไขข่าว | Admin |
-| DELETE | `/api/v1/news/:id` | ลบข่าว | Admin |
-| POST | `/api/v1/news/upload` | อัพโหลดรูป | Admin |
-
-### Signatures - ลายเซ็น
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/v1/signatures` | รายการทั้งหมด | - |
-| GET | `/api/v1/signatures/:year` | ตามปีงบประมาณ | - |
-| POST | `/api/v1/signatures` | เพิ่มลายเซ็น | Admin |
-| PUT | `/api/v1/signatures/:year` | แก้ไข | Admin |
-| DELETE | `/api/v1/signatures/:year` | ลบ | Admin |
-
-### Notifications - การแจ้งเตือน
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/v1/notifications/send` | ส่งแจ้งเตือนทั่วไป | Admin |
-| POST | `/api/v1/notifications/email` | ส่งอีเมล | Admin |
-| POST | `/api/v1/notifications/line` | ส่ง LINE | Admin |
-
-## JavaScript API Configuration
-
-ใน web pages, ใช้ meta tags:
-```html
-<meta name="base-path" content="/edonation">
-<meta name="api-base" content="/edonation/api/v1">
-```
-
-JavaScript:
-```javascript
-// จาก config.js
-const API_BASE = window.API_BASE || document.querySelector('meta[name="api-base"]').content;
-fetch(API_BASE + '/projects');
-```
-
-## Key Patterns
-
-1. **Environment Loading**: ทุก module โหลด `.env` จาก root
-2. **Shared Services**: SCBPaymentService อยู่ใน `shared/`
-3. **Fiscal Year**: Buddhist Era (BE = CE + 543)
-4. **Authentication**: Azure AD for office/, JWT for API
-5. **Response Format**: 
-   ```json
-   {
-     "success": true|false,
-     "data": {...},
-     "message": "...",
-     "meta": {...}
-   }
-   ```
-
-## Workflows
-
-- `/setup-dev` - ตั้งค่า local development
-- `/deploy-production` - เตรียม deploy ขึ้น production
-- `/create-admin-ui` - สร้าง Admin Dashboard ใหม่
-
-## Development
-
+### Database Access
+Use phpMyAdmin or MySQL CLI:
 ```bash
-# Start XAMPP (Apache + MySQL)
-# Access: http://localhost/appdev/edonation/
-
-# Install dependencies
-cd web && composer install
-
-# API Docs
-http://localhost/appdev/edonation/api/docs/
+mysql -u root -p
+use edonation;
 ```
 
-## Important Notes
+## Important Implementation Details
 
-- Production `BASE_PATH`: `/edonation`
-- Development `BASE_PATH`: `/appdev/edonation`
-- All file paths must be absolute
-- Thai UTF-8 encoding throughout
-- PHP 8.0+ required for typed properties
+### PromptPay QR Code Format
+The system generates QR codes following Thai PromptPay standard (`donat/qrgenerator.php`):
+- Payee PromptPay ID: `099400258783792`
+- Amount: Padded to 10 digits with 2 decimal places (e.g., "0000100.00")
+- Reference: `billPaymentRef1` (15 characters: fiscal_year + project_number + padded_id)
+- QR code structure: `000201` + `010212` + `30{...}` + `5303764` + `54{amount}` + `5802TH` + `62100706SCB001` + `6304` + CRC16
+- CRC16 checksum appended via `lib-crc16.inc.php`
+- PNG files saved to `donat/qrcodepayment/` directory with MD5-based filename
+- GD Library creates downloadable image with Thai text overlay using NotoSansThai-Regular.ttf font
+
+### Fiscal Year and Receipt Numbering
+- `fiscal_year` stored as Buddhist Era (e.g., "2568" for 2025 CE)
+- Receipt format: `{fiscal_year}-{receipt_no}` (e.g., "2568-E0001")
+- `billPaymentRef1` format: `{fiscal_year}{project_number}{padded_id}` (15 digits total)
+- Receipt number generation (`donat/data_check.php`): `E{str_pad($lastId, 4, '0', STR_PAD_LEFT)}`
+- PDF URL format: `https://app.nurse.cmu.ac.th/edonation/list/pdf_maker.php?id={id}&table=donat`
+
+### Date Handling
+- **Database**: Stores dates in `YYYY-MM-DD` format (Gregorian/CE)
+- **Display**: Converts to Thai Buddhist Era (BE = CE + 543) in `thai_date.php`
+- **Filter parameters**: Year filters expect Buddhist Era (พ.ศ.)
+
+### Security Considerations
+- All database queries use PDO prepared statements
+- Input sanitization with `filter_input()` and `FILTER_SANITIZE_STRING`, `FILTER_VALIDATE_EMAIL`, `FILTER_VALIDATE_FLOAT`
+- Session-based authentication with real-time permission checking
+- HTML output escaping with `htmlspecialchars()` and `ENT_QUOTES, 'UTF-8'`
+
+### Frontend Libraries
+- **jQuery 3.5.1** - DOM manipulation and AJAX
+- **SweetAlert2** - Modal alerts and confirmations
+- **Chart.js** - Dashboard visualizations (loaded via CDN in office dashboard)
+- **Slick Carousel** - Homepage sliders
+- **No build process** - All assets served directly
+
+## Code Style
+
+- **Language**: PHP 7.4+ features, procedural and some OOP (PDO)
+- **Database**: PDO with named parameters (`:param`)
+- **HTML**: Mixed PHP templates (not separated views)
+- **JavaScript**: ES6+ features (arrow functions, fetch API, template literals)
+- **Thai language**: UTF-8 encoding throughout, all user-facing text in Thai
+
+## Testing Payment Flow
+
+To test the donation workflow locally:
+1. Navigate to `home/` and select a project
+2. Fill the donation form in `donat/` with test data
+3. View generated QR code in `donat/qrgenerator.php`
+4. To simulate payment, manually insert a record into `json_confirm` table:
+   ```sql
+   INSERT INTO json_confirm (
+       billPaymentRef1, amount, payerAccountName, billPaymentRef2,
+       transactionId, transactionDateandTime, date,
+       payeeProxyId, payeeProxyType, payeeAccountNumber, payeeName,
+       payerAccountNumber, payerName, sendingBankCode, receivingBankCode,
+       currencyCode, channelCode, transactionType
+   ) VALUES (
+       '{billPaymentRef1_from_donat_user}', {amount}, 'Test User', 'REF2',
+       'TXN_test123', NOW(), CURDATE(),
+       '099400258783792', '03', '1234567890', 'Payee Name',
+       '0987654321', 'Payer Name', '014', '014',
+       '764', 'MOBILE', 'TRANSFER'
+   );
+   ```
+5. The polling script (max 100 loops × 5 seconds = ~8 minutes) will detect the payment
+6. On success: data copied to `donat` table, receipt generated, notifications sent, redirects to home
+
+## Vendor Dependencies
+
+Dependencies managed via Composer (see `composer.json` and `composer.lock`):
+- **PHPSpreadsheet** - Excel export functionality
+- **TCPDF** - PDF generation (also vendored in `list/TCPDF/` and `office/TCPDF/`)
+- **HTMLPurifier** - HTML sanitization
+- **ZipStream** - Archive generation
+
+To install dependencies:
+```bash
+composer install
+```
+
+## Email Integration
+
+The system includes PHPMailer for email notifications:
+- Located in `assets/php/PHPMailer/`
+- Used in `donat/send_email.php` for donation confirmations
+- Configuration in PHPMailer class files
+
+## LINE Notify Integration
+
+LINE notifications for donations via `donat/send_line.php` (if configured).
+
+## Key Technical Patterns
+
+### Error Handling
+- **Database errors**: Use try-catch with PDOException, display SweetAlert2 modals to user
+- **JSON APIs**: Set proper headers (`Content-Type: application/json`), use ob_clean() before output
+- **Validation**: `filter_input()` with FILTER_SANITIZE_STRING, FILTER_VALIDATE_EMAIL, FILTER_VALIDATE_FLOAT
+- **Non-blocking operations**: LINE/email notifications wrapped in try-catch to prevent workflow interruption
+
+### Data Flow Patterns
+- **Two-table donation system**: `donat_user` (temporary) → `donat` (confirmed after payment)
+- **Payment verification**: Matching requires `billPaymentRef1` + `amount` + `created_at` date match
+- **Receipt generation**: Only happens when payment confirmed, generates receipt_no and PDF URL
+- **Session data**: Azure AD profile stored in `$_SESSION['login_info']`, permission checked on every page load
+
+### File Paths
+- **Absolute paths required**: All Read/Write tools need absolute paths (e.g., `C:\xampp\htdocs\appdev\edonation\...`)
+- **Web URLs**: Production URLs point to `https://app.nurse.cmu.ac.th/edonation/`
+- **QR code storage**: `donat/qrcodepayment/` directory (ensure write permissions)
+- **Font files**: Thai fonts in `donat/font/` for QR code image generation
+
+### Important Gotchas
+- **Year conversion**: Dashboard filters use BE (Buddhist Era), database stores CE (Gregorian). Always convert: `$year - 543`
+- **Polling timeout**: QR code page polls for ~8 minutes max (100 loops × 5 seconds)
+- **CRC16 checksum**: Required for PromptPay QR codes, implemented in `lib-crc16.inc.php`
+- **Permission checking**: Real-time validation on every request, checks `user_permissions.status = 'active'`
+- **Receipt URL**: Hardcoded production URL in `data_check.php`, may need adjustment for dev/staging

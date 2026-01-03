@@ -328,7 +328,7 @@ class ReceiptController
         // ส่ง receipt ID พร้อม token - use BASE_PATH from config
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return Response::success([
-            'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
             'receipt_no' => $receipt['receipt_no'],
             'api_version' => self::VERSION
         ]);
@@ -382,7 +382,7 @@ class ReceiptController
         // ส่ง receipt URL พร้อม token
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return Response::success([
-            'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
             'receipt_no' => $receipt['receipt_no'],
             'api_version' => self::VERSION
         ]);
@@ -805,7 +805,7 @@ class ReceiptController
                 'receipt_no' => $receiptNo,
                 'payer_name' => $payerName,
                 'amount' => floatval($data['amount']),
-                'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
                 'access_token' => $accessToken,
                 'api_version' => self::VERSION
             ], 'ออกใบเสร็จสำเร็จ');

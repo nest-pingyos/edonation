@@ -28,9 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Determine which database config to use
 // Auto-detect based on calling context
 $dbConfigPaths = [
-    __DIR__ . '/../../web/config/database.php',      // From shared/autoprovince
-    __DIR__ . '/../../api/config/database.php',      // From API context
-    __DIR__ . '/../../../web/config/database.php',   // Alternative path
+    __DIR__ . '/../../config/database.php',           // From shared/autoprovince
+    __DIR__ . '/../../api/config/database.php',       // From API context
+    __DIR__ . '/../../../config/database.php',        // Alternative path
 ];
 
 $pdo = null;

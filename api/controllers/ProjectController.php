@@ -67,8 +67,8 @@ class ProjectController
             $stmt->execute();
             $results = $stmt->fetchAll();
 
-            // Add image URL - use BASE_PATH from config (assets are in web/ folder)
-            $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/web/assets/images/projects/';
+            // Add image URL - use BASE_PATH from config
+            $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/assets/images/projects/';
             foreach ($results as &$item) {
                 // Check if img_file exists (legacy) or just use default rotation based on ID
                 if (!empty($item['img_file'])) {
@@ -104,8 +104,8 @@ class ProjectController
             if (!$project)
                 return Response::notFound('ไม่พบโครงการ');
 
-            // Add image URL logic - use BASE_PATH from config (assets are in web/ folder)
-            $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/web/assets/images/projects/';
+            // Add image URL logic - use BASE_PATH from config
+            $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/assets/images/projects/';
             if (!empty($project['img_file'])) {
                 $project['image_url'] = $baseImageUrl . $project['img_file'];
             } elseif (!empty($project['image_url'])) {

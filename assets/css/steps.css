@@ -1,0 +1,139 @@
+/**
+ * Steps Page Styles
+ * Styles for how-to/steps instruction page
+ */
+
+/* ===== Steps Section ===== */
+.steps-section {
+    padding: 80px 0;
+    background: #ffffff;
+}
+
+.steps-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* ===== Step Item ===== */
+.step-item {
+    display: flex;
+    gap: 30px;
+    position: relative;
+    padding-bottom: 40px;
+}
+
+.step-item:last-child {
+    padding-bottom: 0;
+}
+
+/* ===== Step Number ===== */
+.step-number {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    background: linear-gradient(135deg, #FB974E, #FDA055);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    position: relative;
+    z-index: 2;
+}
+
+/* ===== Connector Line ===== */
+.step-item:not(:last-child) .step-number::after {
+    content: '';
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: calc(100% + 40px);
+    background: linear-gradient(to bottom, #FB974E, #e9ecef);
+    z-index: 1;
+}
+
+/* ===== Step Content ===== */
+.step-content {
+    flex: 1;
+    padding-top: 10px;
+}
+
+.step-content h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1a3a5c;
+    margin-bottom: 10px;
+}
+
+.step-content p {
+    color: #6c757d;
+    line-height: 1.7;
+    margin-bottom: 0;
+}
+
+/* ===== Info Box ===== */
+.info-box {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 60px;
+    border: none !important;
+}
+
+.info-box h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a3a5c;
+    margin-bottom: 15px;
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #6c757d;
+}
+
+.info-box li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.info-box li:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== CTA Button ===== */
+.cta-section {
+    text-align: center;
+    margin-top: 50px;
+}
+
+.cta-section .btn {
+    padding: 15px 40px;
+    font-size: 1.1rem;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 576px) {
+    .step-item {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .step-number {
+        margin: 0 auto;
+    }
+
+    .step-item:not(:last-child) .step-number::after {
+        display: none;
+    }
+
+    .step-content {
+        padding-top: 0;
+    }
+}

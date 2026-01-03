@@ -220,6 +220,13 @@
         <script src="assets/js/api-helper.js"></script>
 
         <script>
+            // Get BASE_PATH from current URL
+            const BASE_PATH = (() => {
+                const path = window.location.pathname;
+                const match = path.match(/^(.*?\/edonation)/);
+                return match ? match[1] : '/edonation';
+            })();
+
             let receipts = [];
             let currentPage = 1;
             let currentReceipt = null;
@@ -354,7 +361,7 @@
                     <button class="btn btn-sm btn-soft-primary" onclick="viewDetail('${item.id}')" title="ดูรายละเอียด">
                         <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
                     </button>
-                    <a href="../web/pdf/receipt.php?id=${item.id}" target="_blank" class="btn btn-sm btn-soft-success" title="ดาวน์โหลด PDF">
+                    <a href="${BASE_PATH}/receipts/pdf_maker.php?id=${item.id}&admin=1" target="_blank" class="btn btn-sm btn-soft-success" title="ดาวน์โหลด PDF">
                         <iconify-icon icon="iconamoon:file-download-duotone"></iconify-icon>
                     </a>
                     ${item.status !== 'cancelled' ? `
@@ -421,7 +428,7 @@
         `;
 
                     // Update buttons
-                    document.getElementById('downloadPdfBtn').href = '../web/pdf/receipt.php?id=' + r.id;
+                    document.getElementById('downloadPdfBtn').href = BASE_PATH + '/receipts/pdf_maker.php?id=' + r.id + '&admin=1';
                     document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
 
                 } catch (error) {

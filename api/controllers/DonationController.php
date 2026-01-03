@@ -340,7 +340,7 @@ class DonationController
                 'amount' => floatval($data['amount']),
                 'project_name' => $projectName,
                 'status' => 'completed',
-                'pdf_url' => "{$basePath}/web/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
                 'access_token' => $accessToken
             ], 'บันทึกข้อมูลและออกใบเสร็จสำเร็จ');
 

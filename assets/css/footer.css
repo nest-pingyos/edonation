@@ -1,0 +1,110 @@
+/**
+ * Footer Styles
+ * Modern footer styles for the website
+ */
+
+/* ===== Footer Modern ===== */
+.footer-modern {
+    background: linear-gradient(135deg, #1b3a5f 0%, #0d2137 100%);
+    color: #fff;
+}
+
+.footer-main {
+    padding: 60px 0 40px;
+}
+
+.footer-logo {
+    height: 50px;
+    margin-bottom: 15px;
+}
+
+.footer-tagline {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.footer-title {
+    color: #ff9800;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+}
+
+/* ===== Footer Links ===== */
+.footer-links-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.footer-links-grid a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.footer-links-grid a:hover {
+    color: #fff;
+}
+
+/* ===== Footer Contact ===== */
+.footer-contact p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.footer-contact i {
+    color: #ff9800;
+    width: 20px;
+    margin-right: 8px;
+}
+
+.footer-contact a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+}
+
+.footer-contact a:hover {
+    color: #fff;
+}
+
+/* ===== Language Switcher ===== */
+.footer-lang {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-lang a {
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.footer-lang a.active {
+    color: #ff9800;
+}
+
+.footer-lang span {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== Footer Bottom ===== */
+.footer-bottom {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px 0;
+    text-align: center;
+}
+
+.footer-bottom p {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    margin: 0;
+}

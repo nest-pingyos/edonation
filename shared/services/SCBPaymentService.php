@@ -28,10 +28,10 @@ class SCBPaymentService
     {
         // ถ้ายังไม่ได้โหลด SCB config
         if (!defined('SCB_API_KEY')) {
-            // พยายามโหลดจาก web config
-            $webEnv = dirname(__DIR__, 2) . '/web/config/env.php';
-            if (file_exists($webEnv)) {
-                require_once $webEnv;
+            // พยายามโหลดจาก config
+            $envFile = dirname(__DIR__, 2) . '/config/env.php';
+            if (file_exists($envFile)) {
+                require_once $envFile;
             }
         }
     }
