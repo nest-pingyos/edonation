@@ -109,6 +109,8 @@ class MemberController
             $m['id_card_formatted'] = $this->formatIdCard($m['id_card'] ?? '');
             $m['total_amount'] = floatval($m['total_amount']);
             $m['receipt_count'] = (int) $m['receipt_count'];
+            $m['is_repeat_donor'] = $m['receipt_count'] > 1;
+            $m['donor_type'] = $this->getDonorTypeFromCount($m['receipt_count']);
         }
 
         return Response::success($members, null, [
@@ -180,7 +182,10 @@ class MemberController
                     COUNT(DISTINCT r.id) as receipt_count,
                     SUM(r.amount) as total_amount,
                     MAX(r.issued_at) as last_donation_date,
-                    MAX(du.phone) as phone
+                    MAX(du.phone) as phone,
+                    MAX(du.title) as title,
+                    MAX(du.first_name) as first_name,
+                    MAX(du.last_name) as last_name
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 WHERE r.id_members IS NOT NULL AND r.id_members != ''";
@@ -219,6 +224,10 @@ class MemberController
             $m['id_card_formatted'] = $this->formatIdCard($m['id_card'] ?? '');
             $m['total_amount'] = floatval($m['total_amount']);
             $m['receipt_count'] = (int) $m['receipt_count'];
+            // ถ้าไม่มี title ให้พยายามหาจาก name
+            if (empty($m['title']) && !empty($m['name'])) {
+                $m['title'] = $this->extractTitleFromName($m['name']);
+            }
         }
 
         return Response::success($results, null, [
@@ -243,6 +252,7 @@ class MemberController
                     MIN(r.issued_at) as first_donation_date,
                     MAX(r.issued_at) as last_donation_date,
                     MAX(du.phone) as phone,
+                    MAX(du.title) as title,
                     MAX(du.first_name) as first_name,
                     MAX(du.last_name) as last_name,
                     MAX(du.receipt_address) as receipt_address,
@@ -284,11 +294,39 @@ class MemberController
         $totalAmount = floatval($member['total_amount']);
         $benefactorLevel = $this->getBenefactorLevel($totalAmount);
 
+        // นับจำนวนปีที่บริจาค (ใช้วัดความต่อเนื่อง)
+        $yearsSql = "SELECT DISTINCT YEAR(r.issued_at) as year 
+                     FROM edonation_receipts r 
+                     WHERE r.id_members = :id_members 
+                     ORDER BY year DESC";
+        $yearsStmt = $this->pdo->prepare($yearsSql);
+        $yearsStmt->execute([':id_members' => $idMembers]);
+        $donationYears = $yearsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // คำนวณความถี่การบริจาค
+        $receiptCount = (int) $member['receipt_count'];
+        $isRepeatDonor = $receiptCount > 1;
+        $donorType = 'new';
+        if ($receiptCount >= 10) {
+            $donorType = 'loyal'; // ผู้บริจาคประจำ
+        } elseif ($receiptCount >= 5) {
+            $donorType = 'regular'; // ผู้บริจาคสม่ำเสมอ
+        } elseif ($receiptCount >= 2) {
+            $donorType = 'repeat'; // ผู้บริจาคซ้ำ
+        }
+
+        // ถ้าไม่มี title ให้พยายามหาจาก name
+        $title = $member['title'];
+        if (empty($title) && !empty($member['name'])) {
+            $title = $this->extractTitleFromName($member['name']);
+        }
+
         return Response::success([
             'id_members' => $member['id_members'],
             'id_card' => $member['id_card'],
             'id_card_formatted' => $this->formatIdCard($member['id_card'] ?? ''),
             'name' => $member['name'] ?? trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? '')),
+            'title' => $title,
             'first_name' => $member['first_name'],
             'last_name' => $member['last_name'],
             'phone' => $member['phone'],
@@ -301,10 +339,18 @@ class MemberController
                 'zip_code' => $member['zip_code']
             ],
             'statistics' => [
-                'receipt_count' => (int) $member['receipt_count'],
+                'receipt_count' => $receiptCount,
                 'total_amount' => $totalAmount,
                 'first_donation_date' => $member['first_donation_date'],
-                'last_donation_date' => $member['last_donation_date']
+                'last_donation_date' => $member['last_donation_date'],
+                'donation_years' => $donationYears,
+                'years_active' => count($donationYears)
+            ],
+            'donation_frequency' => [
+                'is_repeat_donor' => $isRepeatDonor,
+                'donation_count' => $receiptCount,
+                'donor_type' => $donorType,
+                'donor_type_label' => $this->getDonorTypeLabel($donorType)
             ],
             'benefactor_level' => $benefactorLevel,
             'top_projects' => $projects,
@@ -501,6 +547,50 @@ class MemberController
                     'name' => $level['name'],
                     'min_amount' => $level['min']
                 ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ชื่อประเภทผู้บริจาคเป็นภาษาไทย
+     */
+    private function getDonorTypeLabel(string $type): string
+    {
+        $labels = [
+            'new' => 'ผู้บริจาคใหม่',
+            'repeat' => 'ผู้บริจาคซ้ำ',
+            'regular' => 'ผู้บริจาคสม่ำเสมอ',
+            'loyal' => 'ผู้บริจาคประจำ'
+        ];
+        return $labels[$type] ?? 'ผู้บริจาค';
+    }
+
+    /**
+     * กำหนดประเภทผู้บริจาคจากจำนวนครั้ง
+     */
+    private function getDonorTypeFromCount(int $count): string
+    {
+        if ($count >= 10)
+            return 'loyal';
+        if ($count >= 5)
+            return 'regular';
+        if ($count >= 2)
+            return 'repeat';
+        return 'new';
+    }
+
+    /**
+     * แยกคำนำหน้าจากชื่อเต็ม
+     */
+    private function extractTitleFromName(string $name): ?string
+    {
+        $titles = ['นาย', 'นาง', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม', 'Mr.', 'Mrs.', 'Miss', 'Ms.'];
+
+        foreach ($titles as $title) {
+            if (strpos($name, $title) === 0) {
+                return $title;
             }
         }
 

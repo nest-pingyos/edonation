@@ -166,8 +166,8 @@
                                                     <tr>
                                                         <th class="ps-3">ชื่อผู้บริจาค</th>
                                                         <th>เลขบัตรประชาชน</th>
-                                                        <th class="text-end">ยอดบริจาค</th>
-                                                        <th>วันที่</th>
+                                                        <th class="text-end">ยอดรวม</th>
+                                                        <th>จำนวนครั้ง</th>
                                                         <th class="text-center" width="80"></th>
                                                     </tr>
                                                 </thead>
@@ -231,8 +231,9 @@
                                         <div class="col-md-6" id="affiliationSpacer" style="display:none;"></div>
 
                                         <div class="col-md-6" id="titleGroup">
-                                            <label class="form-label">คำนำหน้า</label>
-                                            <select class="form-select" id="title" name="title">
+                                            <label class="form-label">คำนำหน้า <span
+                                                    class="text-danger">*</span></label>
+                                            <select class="form-select" id="title" name="title" required>
                                                 <option value="">-- เลือก --</option>
                                                 <option value="นาย">นาย</option>
                                                 <option value="นาง">นาง</option>
@@ -241,8 +242,6 @@
                                                 <option value="ด.ญ.">ด.ญ.</option>
                                                 <option value="อื่นๆ">อื่นๆ</option>
                                             </select>
-                                            <div class="form-text text-danger" style="font-size: 0.8rem;">*
-                                                คำนำหน้าต้องตามบัตรประชาชนเท่านั้น</div>
                                         </div>
 
 
@@ -259,23 +258,20 @@
 
                                         <div class="col-md-6">
                                             <label class="form-label">
-                                                เลขบัตรประชาชน / เลขผู้เสียภาษี <span class="text-danger">*</span>
+                                                เลขบัตรประชาชน / เลขผู้เสียภาษี
                                             </label>
                                             <input type="text" class="form-control" id="id_card" name="id_card"
-                                                maxlength="13" required placeholder="กรอกเลข 13 หลัก">
-                                            <div class="form-text">ใช้สำหรับลดหย่อนภาษี</div>
+                                                maxlength="13">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">เบอร์โทรศัพท์</label>
                                             <input type="tel" class="form-control" id="phone" name="phone"
-                                                maxlength="10" placeholder="0812345678">
+                                                maxlength="10">
                                         </div>
 
                                         <div class="col-md-12">
                                             <label class="form-label">อีเมล</label>
-                                            <input type="email" class="form-control" id="email" name="email"
-                                                placeholder="email@example.com">
-                                            <div class="form-text">ใช้สำหรับส่งใบเสร็จทางอีเมล</div>
+                                            <input type="email" class="form-control" id="email" name="email">
                                         </div>
                                     </div>
 
@@ -287,35 +283,30 @@
                                     </h6>
                                     <div class="row g-3">
                                         <div class="col-12">
-                                            <label class="form-label">ที่อยู่ (บ้านเลขที่ ซอย ถนน) <span
-                                                    class="text-danger">*</span></label>
+                                            <label class="form-label">ที่อยู่ (บ้านเลขที่ ซอย ถนน)</label>
                                             <input type="text" class="form-control" id="address_line"
-                                                name="address_line" placeholder="บ้านเลขที่ ซอย ถนน หมู่" required>
+                                                name="address_line">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">จังหวัด <span class="text-danger">*</span></label>
-                                            <select class="form-select" id="province" name="province" required>
+                                            <label class="form-label">จังหวัด</label>
+                                            <select class="form-select" id="province" name="province">
                                                 <option value="">-- เลือกจังหวัด --</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">อำเภอ/เขต <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="district" name="district" required disabled>
+                                            <label class="form-label">อำเภอ/เขต</label>
+                                            <select class="form-select" id="district" name="district" disabled>
                                                 <option value="">-- เลือกอำเภอ/เขต --</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">ตำบล/แขวง <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="subdistrict" name="subdistrict" required
-                                                disabled>
+                                            <label class="form-label">ตำบล/แขวง</label>
+                                            <select class="form-select" id="subdistrict" name="subdistrict" disabled>
                                                 <option value="">-- เลือกตำบล/แขวง --</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">รหัสไปรษณีย์ <span
-                                                    class="text-danger">*</span></label>
+                                            <label class="form-label">รหัสไปรษณีย์</label>
                                             <input type="text" class="form-control" id="postcode" name="postcode"
                                                 readonly>
                                         </div>
@@ -361,11 +352,9 @@
                                         <div class="col-md-6">
                                             <label class="form-label">ช่องทางการชำระเงิน</label>
                                             <select class="form-select" id="payment_method" name="payment_method">
-                                                <option value="QR PromptPay">QR PromptPay</option>
-                                                <option value="Bank Transfer">โอนเงินธนาคาร</option>
-                                                <option value="Cash">เงินสด</option>
-                                                <option value="Cheque">เช็ค</option>
-                                                <option value="Other">อื่นๆ</option>
+                                                <option value="Cash">เงินสด/Cash</option>
+                                                <option value="Prompt Pay">โอน/Prompt Pay</option>
+                                                <option value="Cheque">เช็ค/Cheque</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
@@ -435,7 +424,7 @@
                     <div class="d-flex gap-2 justify-content-center">
                         <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
                             <iconify-icon icon="iconamoon:file-download-duotone" class="me-1"></iconify-icon>
-                            ดาวน์โหลด PDF
+                            ดาวน์โหลดใบเสร็จ
                         </a>
                         <button type="button" class="btn btn-success" onclick="createAnother()">
                             <iconify-icon icon="iconamoon:sign-plus-duotone" class="me-1"></iconify-icon>
@@ -492,10 +481,11 @@
                 if (titleSpacer) titleSpacer.style.display = 'none';
 
                 titleSelect.value = 'บริษัท';
+                titleSelect.required = false;
 
                 firstNameLabel.innerHTML = 'ชื่อหน่วยงาน/องค์กร <span class="text-danger">*</span>';
-                firstNameInput.placeholder = 'ระบุชื่อหน่วยงาน/องค์กร';
-                idCardLabel.innerHTML = 'เลขประจำตัวผู้เสียภาษี (13 หลัก) <span class="text-danger">*</span>';
+                firstNameInput.required = true;
+                idCardLabel.innerHTML = 'เลขประจำตัวผู้เสียภาษี (13 หลัก)';
 
                 // Expand First Name to full width
                 firstNameCol.classList.remove('col-md-6');
@@ -513,10 +503,11 @@
                 if (titleSpacer) titleSpacer.style.display = 'block';
 
                 titleSelect.value = ''; // Reset title
+                titleSelect.required = true;
 
                 firstNameLabel.innerHTML = 'ชื่อ <span class="text-danger">*</span>';
-                firstNameInput.placeholder = '';
-                idCardLabel.innerHTML = 'เลขประจำตัวผู้เสียภาษี / เลขบัตรประชาชน <span class="text-danger">*</span>';
+                firstNameInput.required = true;
+                idCardLabel.innerHTML = 'เลขบัตรประชาชน / เลขผู้เสียภาษี';
 
                 // Reset First Name width
                 firstNameCol.classList.remove('col-md-12');
@@ -783,13 +774,13 @@
                 <tr class="search-result-row" style="cursor: pointer;" onclick="selectSearchResult(${index})">
                     <td>
                         <div class="fw-medium">${escapeHtml(item.name || 'ไม่ระบุชื่อ')}</div>
-                        ${item.project_name ? `<small class="text-muted">${escapeHtml(item.project_name)}</small>` : ''}
+                        <small class="text-muted">รหัส: ${item.id_members || '-'}</small>
                     </td>
                     <td>
                         <span class="font-monospace small">${escapeHtml(item.id_card_formatted || item.id_card || '-')}</span>
                     </td>
-                    <td class="text-primary fw-medium">${formatCurrency(item.amount || 0)}</td>
-                    <td class="text-muted small">${formatThaiDateShort(item.donation_date || '-')}</td>
+                    <td class="text-primary fw-medium">${formatCurrency(item.total_amount || 0)}</td>
+                    <td class="text-muted small">${item.receipt_count || 0} ครั้ง</td>
                     <td>
                         <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); selectSearchResult(${index})">
                             <iconify-icon icon="iconamoon:check-duotone"></iconify-icon>
@@ -828,7 +819,6 @@
                 if (titles.includes(nameParts[0])) {
                     document.getElementById('title').value = nameParts[0];
                     if (item.first_name && item.last_name) {
-                        // ถ้ามี first_name และ last_name แยกมา ให้ใช้โดยตรง
                         document.getElementById('first_name').value = item.first_name || '';
                         document.getElementById('last_name').value = item.last_name || '';
                     } else {
@@ -853,23 +843,18 @@
             if (item.phone) {
                 document.getElementById('phone').value = item.phone;
             }
+
+            // Handle address - support both string and object format from Members API
             if (item.address) {
-                // Set address to both hidden and address_line
-                document.getElementById('address').value = item.address;
-                document.getElementById('address_line').value = item.address;
-            }
-            if (item.project_number) {
-                document.getElementById('project_number').value = item.project_number;
-            }
-            if (item.amount) {
-                document.getElementById('amount').value = item.amount;
-            }
-            if (item.payment_method) {
-                document.getElementById('payment_method').value = item.payment_method;
-            }
-            if (item.donation_date) {
-                const date = item.donation_date.split(' ')[0].split('T')[0];
-                document.getElementById('donation_date').value = date;
+                if (typeof item.address === 'object') {
+                    // Members API format: { full: "...", address_line: "...", province: "...", ... }
+                    document.getElementById('address').value = item.address.full || '';
+                    document.getElementById('address_line').value = item.address.address_line || item.address.full || '';
+                } else {
+                    // Legacy string format
+                    document.getElementById('address').value = item.address;
+                    document.getElementById('address_line').value = item.address;
+                }
             }
 
             updatePreview();
@@ -976,20 +961,19 @@
             const donorType = document.querySelector('input[name="donorType"]:checked').value;
             const isJuristic = (donorType === 'juristic');
 
-            if (!isJuristic && !lastName) {
-                showWarning('กรุณากรอกนามสกุล');
-                return;
+            // บุคคลธรรมดา: บังคับ คำนำหน้า, ชื่อ, นามสกุล
+            if (!isJuristic) {
+                const title = document.getElementById('title').value;
+                if (!title) {
+                    showWarning('กรุณาเลือกคำนำหน้า');
+                    return;
+                }
+                if (!lastName) {
+                    showWarning('กรุณากรอกนามสกุล');
+                    return;
+                }
             }
-
-            if (!idCard || idCard.length !== 13) {
-                showWarning('กรุณากรอกเลขบัตรประชาชน 13 หลัก');
-                return;
-            }
-
-            if (!addressLine && !address) {
-                showWarning('กรุณากรอกที่อยู่');
-                return;
-            }
+            // นิติบุคคล: บังคับ ชื่อหน่วยงาน (first_name) - ตรวจแล้วด้านบน
 
             if (!projectNumber) {
                 showWarning('กรุณาเลือกโครงการ');
@@ -1065,7 +1049,14 @@
 
                 // Show success
                 document.getElementById('result_receipt_no').textContent = response.data.receipt_no;
-                document.getElementById('downloadPdfBtn').href = response.data.pdf_url;
+                // เพิ่ม admin=1 เพื่อข้ามการยืนยันตัวตน
+                let pdfUrl = response.data.pdf_url;
+                if (pdfUrl && pdfUrl.indexOf('?') > -1) {
+                    pdfUrl += '&admin=1';
+                } else if (pdfUrl) {
+                    pdfUrl += '?admin=1';
+                }
+                document.getElementById('downloadPdfBtn').href = pdfUrl;
 
                 new bootstrap.Modal(document.getElementById('successModal')).show();
 

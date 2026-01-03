@@ -647,20 +647,28 @@ class ReceiptController
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        // Validate required fields
-        $requiredFields = ['first_name', 'last_name', 'id_card', 'address', 'project_number', 'amount'];
+        // Validate required fields - บังคับแค่ ชื่อ, โครงการ, จำนวนเงิน
+        $requiredFields = ['first_name', 'project_number', 'amount'];
         $missing = [];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
                 $missing[] = $field;
             }
         }
+
+        // ถ้าเป็นบุคคลธรรมดา ต้องมี last_name
+        $donorType = $data['donor_type'] ?? 'person';
+        if ($donorType !== 'juristic' && empty($data['last_name'])) {
+            $missing[] = 'last_name';
+        }
+
         if (!empty($missing)) {
             return Response::error('VALIDATION_ERROR', 'กรุณากรอกข้อมูลให้ครบ: ' . implode(', ', $missing));
         }
 
-        // Validate ID card format
-        if (strlen(preg_replace('/\D/', '', $data['id_card'])) !== 13) {
+        // Validate ID card format (if provided)
+        $idCard = $data['id_card'] ?? '';
+        if (!empty($idCard) && strlen(preg_replace('/\D/', '', $idCard)) !== 13) {
             return Response::error('VALIDATION_ERROR', 'เลขบัตรประชาชนต้องมี 13 หลัก');
         }
 
@@ -673,7 +681,7 @@ class ReceiptController
             $this->pdo->beginTransaction();
 
             $donationId = $data['donation_id'] ?? null;
-            $payerName = trim(($data['title'] ?? '') . ' ' . $data['first_name'] . ' ' . $data['last_name']);
+            $payerName = trim(($data['title'] ?? '') . ' ' . $data['first_name'] . ' ' . ($data['last_name'] ?? ''));
 
             // If no donation_id, create new donation record
             if (!$donationId) {
@@ -714,9 +722,9 @@ class ReceiptController
                     ':payby' => $data['payment_method'] ?? 'เงินสด',
                     ':receipt_date' => $data['donation_date'] ?? date('Y-m-d'),
                     ':first_name' => $data['first_name'],
-                    ':last_name' => $data['last_name'],
-                    ':id_card' => preg_replace('/\D/', '', $data['id_card']),
-                    ':address' => $data['address']
+                    ':last_name' => $data['last_name'] ?? '',
+                    ':id_card' => !empty($data['id_card']) ? preg_replace('/\D/', '', $data['id_card']) : '',
+                    ':address' => $data['address'] ?? ''
                 ]);
 
                 $donationId = $this->pdo->lastInsertId();

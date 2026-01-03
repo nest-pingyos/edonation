@@ -324,13 +324,14 @@ function validateAccessToken($receiptId, $token)
 // รับค่า receipt ID และ token
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $token = isset($_GET['token']) ? $_GET['token'] : '';
+$isAdmin = isset($_GET['admin']) && $_GET['admin'] == '1';
 
 if ($id <= 0) {
     die("ไม่ได้ระบุ ID ใบเสร็จ");
 }
 
-// ตรวจสอบ access token
-if (!validateAccessToken($id, $token)) {
+// ตรวจสอบ access token (ข้ามถ้าเปิดจาก admin)
+if (!$isAdmin && !validateAccessToken($id, $token)) {
     // Use BASE_PATH from config
     $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
     // แสดงหน้า error สวยๆ

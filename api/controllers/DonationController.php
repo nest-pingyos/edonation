@@ -172,14 +172,16 @@ class DonationController
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        // Validate required fields
-        $requiredFields = ['first_name', 'id_card', 'address', 'project_number', 'amount']; // Removed last_name from required by default
+        // Validate required fields - บังคับแค่ ชื่อ, โครงการ, จำนวนเงิน
+        $requiredFields = ['first_name', 'project_number', 'amount'];
 
-        // Check for Juristic Person
+        // Check for Juristic Person via donor_type หรือ title
+        $donorType = $data['donor_type'] ?? 'person';
         $juristicTitles = ['บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
         $title = $data['title'] ?? '';
-        $isJuristic = in_array($title, $juristicTitles);
+        $isJuristic = ($donorType === 'juristic') || in_array($title, $juristicTitles);
 
+        // บุคคลธรรมดา: ต้องมี last_name
         if (!$isJuristic) {
             $requiredFields[] = 'last_name';
         }
@@ -194,9 +196,9 @@ class DonationController
             return Response::error('VALIDATION_ERROR', 'กรุณากรอกข้อมูลให้ครบ: ' . implode(', ', $missing));
         }
 
-        // Validate ID card format (13 digits)
-        $idCard = preg_replace('/\D/', '', $data['id_card']);
-        if (strlen($idCard) !== 13) {
+        // Validate ID card format (13 digits) - ถ้ามีข้อมูล
+        $idCard = !empty($data['id_card']) ? preg_replace('/\D/', '', $data['id_card']) : '';
+        if (!empty($idCard) && strlen($idCard) !== 13) {
             return Response::error('VALIDATION_ERROR', 'เลขบัตรประชาชนต้องมี 13 หลัก');
         }
 
@@ -255,10 +257,10 @@ class DonationController
                 ':receipt_date' => $data['donation_date'] ?? date('Y-m-d'),
                 ':title' => $data['title'] ?? null,
                 ':first_name' => $data['first_name'],
-                ':last_name' => $data['last_name'],
+                ':last_name' => $data['last_name'] ?? '',
                 ':id_card' => $idCard,
-                ':receipt_address' => $data['address'],
-                ':shipping_address' => $data['address'],
+                ':receipt_address' => $data['address'] ?? '',
+                ':shipping_address' => $data['address'] ?? '',
                 ':address_line' => $data['address_line'] ?? null,
                 ':province' => $data['province'] ?? null,
                 ':amphure' => $data['amphure'] ?? null,
