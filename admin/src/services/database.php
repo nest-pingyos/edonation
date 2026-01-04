@@ -24,7 +24,7 @@ class DatabaseService
                     DB_NAME,
                     DB_CHARSET
                 );
-                
+
                 self::$instance = new PDO($dsn, DB_USER, DB_PASS, [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -75,6 +75,29 @@ class DatabaseService
     }
 
     /**
+     * Authenticate CMU OAuth user by email
+     */
+    public static function authenticateCMUUser(string $email): ?array
+    {
+        $pdo = self::getInstance();
+        $stmt = $pdo->prepare("
+            SELECT id, email, name, role 
+            FROM edonation_admin_users 
+            WHERE email = :email AND status = 'active'
+        ");
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch();
+
+        if ($user) {
+            // Update last login
+            $updateStmt = $pdo->prepare("UPDATE edonation_admin_users SET last_login = NOW() WHERE id = :id");
+            $updateStmt->execute([':id' => $user['id']]);
+            return $user;
+        }
+        return null;
+    }
+
+    /**
      * Get user by ID
      */
     public static function getUserById(int $id): ?array
@@ -86,18 +109,17 @@ class DatabaseService
     }
 
     /**
-     * Create admin user
+     * Create admin user (CMU OAuth - no password)
      */
-    public static function createUser(string $email, string $password, string $name, string $role = 'admin'): bool
+    public static function createUser(string $email, string $name, string $role = 'admin'): bool
     {
         $pdo = self::getInstance();
         $stmt = $pdo->prepare("
-            INSERT INTO edonation_admin_users (email, password_hash, name, role, status, created_at) 
-            VALUES (:email, :password_hash, :name, :role, 'active', NOW())
+            INSERT INTO edonation_admin_users (email, name, role, status, created_at) 
+            VALUES (:email, :name, :role, 'active', NOW())
         ");
         return $stmt->execute([
             ':email' => $email,
-            ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
             ':name' => $name,
             ':role' => $role
         ]);

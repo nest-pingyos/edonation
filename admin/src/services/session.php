@@ -30,7 +30,18 @@ function isLoggedIn(): bool
         }
         return true;
     }
-    return isset($_SESSION['user']) && $_SESSION['user'] !== null && isset($_SESSION['user']['id']);
+
+    // Check traditional login
+    if (isset($_SESSION['user']) && $_SESSION['user'] !== null && isset($_SESSION['user']['id'])) {
+        return true;
+    }
+
+    // Check CMU OAuth login
+    if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true) {
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -38,7 +49,22 @@ function isLoggedIn(): bool
  */
 function getCurrentUser(): ?array
 {
-    return $_SESSION['user'] ?? null;
+    // Return traditional user session
+    if (isset($_SESSION['user']) && $_SESSION['user'] !== null) {
+        return $_SESSION['user'];
+    }
+
+    // Return CMU OAuth user session
+    if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true) {
+        return [
+            'id' => $_SESSION['backend_user']['id'] ?? 0,
+            'email' => $_SESSION['backend_user']['email'],
+            'name' => $_SESSION['backend_user']['name_th'],
+            'role' => $_SESSION['backend_user']['role']
+        ];
+    }
+
+    return null;
 }
 
 /**
@@ -55,7 +81,7 @@ function checkAuth(string $email, string $password = ''): bool|string
         }
         return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
     }
-    
+
     // Legacy: check if email exists (for demo)
     if (DatabaseService::checkUser($email)) {
         // For demo purposes only - should not use in production without password
@@ -78,7 +104,7 @@ function setSession(array $user): void
 {
     $_SESSION['user'] = $user;
     $_SESSION['login_time'] = time();
-    
+
     // Regenerate session ID to prevent session fixation
     session_regenerate_id(true);
 }
@@ -89,16 +115,21 @@ function setSession(array $user): void
 function logoutSession(): void
 {
     $_SESSION = [];
-    
+
     // Destroy session cookie
     if (ini_get("session.use_cookies")) {
         $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000,
-            $params["path"], $params["domain"],
-            $params["secure"], $params["httponly"]
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params["path"],
+            $params["domain"],
+            $params["secure"],
+            $params["httponly"]
         );
     }
-    
+
     session_destroy();
 }
 
@@ -107,11 +138,21 @@ function logoutSession(): void
  */
 function isSessionExpired(): bool
 {
-    if (defined('APP_ENV') && APP_ENV === 'development') return false;
-    if (!isset($_SESSION['login_time'])) {
-        return true;
+    if (defined('APP_ENV') && APP_ENV === 'development')
+        return false;
+
+    // Check traditional login time
+    if (isset($_SESSION['login_time'])) {
+        return (time() - $_SESSION['login_time']) > SESSION_LIFETIME;
     }
-    return (time() - $_SESSION['login_time']) > SESSION_LIFETIME;
+
+    // Check CMU OAuth login time
+    if (isset($_SESSION['backend_user']['login_time'])) {
+        $loginTime = strtotime($_SESSION['backend_user']['login_time']);
+        return (time() - $loginTime) > SESSION_LIFETIME;
+    }
+
+    return true;
 }
 
 /**
@@ -119,10 +160,18 @@ function isSessionExpired(): bool
  */
 function requireAuth(): void
 {
-    if (defined('APP_ENV') && APP_ENV === 'development') return;
+    if (defined('APP_ENV') && APP_ENV === 'development')
+        return;
     if (!isLoggedIn() || isSessionExpired()) {
         logoutSession();
-        header('Location: auth-signin.php');
+
+        // Redirect to CMU OAuth login if in auth folder context, otherwise traditional login
+        $currentPath = $_SERVER['PHP_SELF'] ?? '';
+        if (strpos($currentPath, '/auth/') !== false) {
+            header('Location: login.php');
+        } else {
+            header('Location: auth/login.php');
+        }
         exit();
     }
 }
@@ -133,18 +182,19 @@ function requireAuth(): void
 function hasRole(string $role): bool
 {
     $user = getCurrentUser();
-    if (!$user) return false;
-    
+    if (!$user)
+        return false;
+
     $roleHierarchy = [
         'super_admin' => 100,
         'admin' => 50,
         'editor' => 25,
         'viewer' => 10
     ];
-    
+
     $userLevel = $roleHierarchy[$user['role']] ?? 0;
     $requiredLevel = $roleHierarchy[$role] ?? 0;
-    
+
     return $userLevel >= $requiredLevel;
 }
 

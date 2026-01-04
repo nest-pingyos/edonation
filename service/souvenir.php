@@ -19,34 +19,15 @@ include_once('../config/head.php');
             <div class="container">
                 <div class="row">
                     <div class="col-sm-12 col-md-12 col-lg-12">
-                        <div class="row">
-                            <?php
-                            require_once '../config/connect.php';
-                            $stmt = $pdo->prepare("SELECT * FROM `service`");
-                            $stmt->execute();
-                            $result = $stmt->fetchAll();
-                            $count = 1; // ตัวแปรนับจำนวนผลิตภัณฑ์
-                            foreach ($result as $t1) {
-                                // ใช้ modulo (%) เพื่อให้แน่ใจว่าตัวเลขอยู่ในช่วง 1 ถึง 7
-                                $imageNumber = ($count - 1) % 7 + 1; // ทำให้หมายเลขภาพวนกลับไปที่ 1-7
-                            ?>
-                                <div class="col-sm-6 col-md-6 col-lg-3">
-                                    <div class="product-item">
-                                        <div class="product__img">
-                                            <img src="../assets/images/products/<?= $imageNumber; ?>.jpg" alt="Product <?= $count; ?>" loading="lazy">
-                                        </div>
-                                        <div class="product__info">
-                                            <h4 class="product__title"><?= $t1['name']; ?></h4>
-                                            <span class="product__price"><?= $t1['amount']; ?></span>
-                                        </div>
-                                    </div>
+                        <div class="row" id="servicesContainer">
+                            <!-- Services will be loaded via API -->
+                            <div class="col-12 text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Loading...</span>
                                 </div>
-                            <?php
-                                $count++; // เพิ่มค่าตัวแปรนับ
-                            }
-                            ?>
+                                <p class="mt-2">กำลังโหลดข้อมูล...</p>
+                            </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -62,6 +43,69 @@ include_once('../config/head.php');
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="../assets/js/plugins.js"></script>
     <script src="../assets/js/main.js"></script>
+
+    <script>
+        // Get API_BASE from meta tag
+        const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '/edonation/api/v1';
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadServices();
+        });
+
+        async function loadServices() {
+            const container = document.getElementById('servicesContainer');
+
+            try {
+                const response = await fetch(`${API_BASE}/services?type=service`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    renderServices(result.data);
+                } else {
+                    container.innerHTML = '<div class="col-12 text-center py-5"><p>ไม่พบข้อมูล</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading services:', error);
+                container.innerHTML = '<div class="col-12 text-center py-5"><p class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</p></div>';
+            }
+        }
+
+        function renderServices(services) {
+            const container = document.getElementById('servicesContainer');
+
+            if (services.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center py-5"><p>ไม่มีของที่ระลึก</p></div>';
+                return;
+            }
+
+            let html = '';
+            services.forEach((item, index) => {
+                html += `
+                    <div class="col-sm-6 col-md-6 col-lg-3">
+                        <div class="product-item">
+                            <div class="product__img">
+                                <img src="${item.image_url}" alt="${escapeHtml(item.name)}" loading="lazy"
+                                     onerror="this.src='../assets/images/products/default.jpg'">
+                            </div>
+                            <div class="product__info">
+                                <h4 class="product__title">${escapeHtml(item.name)}</h4>
+                                <span class="product__price">${escapeHtml(item.amount)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
 </body>
 
 </html>

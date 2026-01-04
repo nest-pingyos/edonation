@@ -121,6 +121,41 @@ try {
             $response = $controller->handle($method, $id, $action);
             break;
 
+        case 'admin-users':
+            require_once __DIR__ . '/controllers/AdminUserController.php';
+            $controller = new AdminUserController();
+
+            // Route based on method and id
+            if ($method === 'GET' && $id === 'check') {
+                $response = $controller->check();
+            } elseif ($method === 'GET' && $id) {
+                $response = $controller->show($id);
+            } elseif ($method === 'GET') {
+                $response = $controller->index();
+            } elseif ($method === 'POST') {
+                $response = $controller->create();
+            } elseif ($method === 'PUT' && $id) {
+                if ($action === 'activate') {
+                    $response = $controller->activate($id);
+                } elseif ($action === 'deactivate') {
+                    $response = $controller->deactivate($id);
+                } else {
+                    $response = $controller->update($id);
+                }
+            } elseif ($method === 'DELETE' && $id) {
+                $response = $controller->delete($id);
+            } else {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => ['message' => 'Invalid request']];
+            }
+            break;
+
+        case 'services':
+            require_once __DIR__ . '/controllers/ServicesController.php';
+            $controller = new ServicesController();
+            $response = $controller->handle($method, $id, $action);
+            break;
+
         default:
             $response = [
                 'success' => true,

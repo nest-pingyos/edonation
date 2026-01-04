@@ -1,105 +1,129 @@
 <?php
 /**
- * Receive Payment Callback (Bank Callback)
- * ตรวจสอบการชำระเงินจากธนาคาร
+ * Receive Payment Callback (Bank Callback Proxy)
+ * 
+ * รับ callback จากธนาคารแล้ว forward ไปยัง Payment API
+ * ไฟล์นี้ทำหน้าที่เป็น proxy เพื่อความเข้ากันได้กับ Bank URL ที่ลงทะเบียนไว้
  */
 
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't show errors to the bank response
+ini_set('display_errors', 0);
 
-// Log for debugging
+// Log file for debugging
 $logFile = __DIR__ . '/payment.log';
-function logP($msg) {
+function logP($msg)
+{
     global $logFile;
     file_put_contents($logFile, date('[Y-m-d H:i:s] ') . $msg . PHP_EOL, FILE_APPEND);
 }
 
-// 1. Database Connection
-require_once __DIR__ . '/../config/database.php';
-
-// 2. Get Input Data
+// Get incoming data
 $rawData = file_get_contents('php://input');
 logP("Incoming Request: " . $rawData);
 
+// Parse data
 $data = json_decode($rawData, true);
 if (!$data) {
-    // If not JSON, try POST
     $data = $_POST;
     if (empty($data)) {
-        // Try GET for testing
         $data = $_GET;
     }
 }
 
-// 3. Extract Fields
-// Assumed fields from Bank or Standard implementation
-// Adjust these keys based on actual Bank API docs
-$ref1 = $data['billPaymentRef1'] ?? $data['ref1'] ?? ''; 
-$amount = $data['amount'] ?? 0;
-// date format example: 20251215 or 2025-12-15T15:00:00
-$txnDate = $data['transactionDate'] ?? $data['date'] ?? date('Y-m-d H:i:s'); 
-
-logP("Processing Ref1: $ref1, Amount: $amount, Date: $txnDate");
-
-if (empty($ref1) || empty($amount)) {
-    logP("Error: Missing required parameters");
-    http_response_code(400);
-    echo json_encode(['resCode' => '99', 'resDesc' => 'Missing parameters']);
-    exit;
-}
-
-// 4. Verify & Update
+// Forward to API
 try {
-    // Check local donation record
-    $stmt = $pdo->prepare("SELECT * FROM donat_user WHERE billPaymentRef1 = :ref1 LIMIT 1");
-    $stmt->execute([':ref1' => $ref1]);
-    $donation = $stmt->fetch();
+    // Build API URL
+    require_once __DIR__ . '/../config/env.php';
+    $apiBase = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+    $apiUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+        . '://' . $_SERVER['HTTP_HOST']
+        . $apiBase . '/api/v1/payments/callback';
 
-    if (!$donation) {
-        logP("Error: Ref1 not found");
-        http_response_code(404);
-        echo json_encode(['resCode' => '02', 'resDesc' => 'Ref1 not found']);
-        exit;
+    logP("Forwarding to API: " . $apiUrl);
+
+    // Make API request
+    $ch = curl_init($apiUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($data),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Accept: application/json'
+        ],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_TIMEOUT => 30
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+    if (curl_errno($ch)) {
+        logP("cURL Error: " . curl_error($ch));
+        throw new Exception("API request failed: " . curl_error($ch));
     }
 
-    // Already Paid?
-    if ($donation['status_donat'] === 'completed') {
-        logP("Info: Already paid");
-        echo json_encode(['resCode' => '00', 'resDesc' => 'Success (Already Paid)']);
-        exit;
-    }
+    curl_close($ch);
 
-    // Verify Amount (allow small float diff?)
-    $pkgAmount = floatval($donation['amount']);
-    $payAmount = floatval($amount);
+    logP("API Response ($httpCode): " . $response);
 
-    if (abs($pkgAmount - $payAmount) > 0.01) {
-        logP("Error: Amount mismatch (Exp: $pkgAmount, Act: $payAmount)");
-        http_response_code(400);
-        echo json_encode(['resCode' => '03', 'resDesc' => 'Amount mismatch']);
-        exit;
-    }
-    
-    // Verify Date (Check if transaction date is valid / not too old?)
-    // In this scope, we just accept it if amount and ref match.
-    // If the bank sends date, we might want to store it.
-
-    // 5. Update Status
-    $updateStmt = $pdo->prepare("
-        UPDATE donat_user 
-        SET status_donat = 'completed', 
-            updated_at = NOW() 
-        WHERE id = :id
-    ");
-    $updateStmt->execute([':id' => $donation['id']]);
-
-    logP("Success: Payment updated for donation ID " . $donation['id']);
-    
-    // Response to Bank
-    echo json_encode(['resCode' => '00', 'resDesc' => 'Success']);
+    // Return API response
+    header('Content-Type: application/json');
+    http_response_code($httpCode);
+    echo $response;
 
 } catch (Exception $e) {
     logP("Exception: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['resCode' => '99', 'resDesc' => 'Internal Error']);
+
+    // Fallback: Process locally if API fails
+    logP("Fallback: Processing locally");
+
+    try {
+        require_once __DIR__ . '/../config/database.php';
+
+        $ref1 = $data['billPaymentRef1'] ?? $data['ref1'] ?? '';
+        $amount = $data['amount'] ?? 0;
+        $transactionId = $data['transactionId'] ?? '';
+
+        if (empty($ref1) || empty($amount)) {
+            throw new Exception("Missing required parameters");
+        }
+
+        // Find donation
+        $stmt = $pdo->prepare("SELECT * FROM edonation_donat_user WHERE billPaymentRef1 = :ref1 LIMIT 1");
+        $stmt->execute([':ref1' => $ref1]);
+        $donation = $stmt->fetch();
+
+        if (!$donation) {
+            throw new Exception("Ref1 not found");
+        }
+
+        // Already completed?
+        if ($donation['status_donat'] === 'completed') {
+            echo json_encode(['resCode' => '00', 'resDesc' => 'Success (Already Paid)']);
+            exit;
+        }
+
+        // Update status
+        $updateStmt = $pdo->prepare("
+            UPDATE edonation_donat_user 
+            SET status_donat = 'completed', updated_at = NOW() 
+            WHERE id = :id
+        ");
+        $updateStmt->execute([':id' => $donation['id']]);
+
+        logP("Fallback Success: Updated donation ID " . $donation['id']);
+
+        echo json_encode([
+            'resCode' => '00',
+            'resDesc' => 'Success',
+            'transactionId' => $transactionId,
+            'confirmId' => $donation['id']
+        ]);
+
+    } catch (Exception $fallbackError) {
+        logP("Fallback Error: " . $fallbackError->getMessage());
+        http_response_code(500);
+        echo json_encode(['resCode' => '99', 'resDesc' => 'Internal Error']);
+    }
 }
