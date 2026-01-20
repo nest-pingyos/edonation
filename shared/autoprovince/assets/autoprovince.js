@@ -15,7 +15,7 @@ const AutoProvince = (function () {
 
     // Default configuration
     const config = {
-        apiPath: '/appdev/edonation/shared/autoprovince/api.php',
+        apiPath: '/edonation/shared/autoprovince/api.php',
         provinceSelector: '#province',
         districtSelector: '#district',
         subdistrictSelector: '#subdistrict',

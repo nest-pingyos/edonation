@@ -6,6 +6,9 @@
  * Include ไฟล์นี้ในทุกหน้าที่ต้องการ authentication
  */
 
+// Include config for APP_ENV
+require_once __DIR__ . '/../config/config.php';
+
 // Start session if not started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -80,6 +83,11 @@ function getAuthUser(): ?array
  */
 function requireAuthentication(): void
 {
+    // Bypass authentication in development mode
+    if (defined('APP_ENV') && APP_ENV === 'development') {
+        return;
+    }
+
     if (!isAuthenticated() || isAuthSessionExpired()) {
         // Clear session
         $_SESSION = [];

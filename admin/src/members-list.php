@@ -11,42 +11,59 @@
 
     <?php include 'partials/head-css.php'; ?>
     <style>
-        .donor-badge {
+        /* Custom UI Tweaks */
+        .card-flush {
+            border: none;
+            box-shadow: 0 0.1rem 1rem rgba(0, 0, 0, 0.05);
+        }
+
+        .avatar-initial {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #f3f6f9;
+            color: #3f4254;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .table-custom th {
+            font-weight: 600;
+            text-transform: uppercase;
             font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
+            letter-spacing: 0.05em;
+            color: #6c757d;
+            background-color: #f8f9fa;
         }
 
-        .donor-new {
-            background-color: #e3f2fd;
-            color: #1976d2;
+        .btn-icon-soft {
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+            color: var(--bs-primary);
+            border: none;
         }
 
-        .donor-repeat {
-            background-color: #fff3e0;
-            color: #f57c00;
+        .btn-icon-soft:hover {
+            background-color: var(--bs-primary);
+            color: white;
         }
 
-        .donor-regular {
-            background-color: #e8f5e9;
-            color: #388e3c;
+        .form-control-flush {
+            border: none;
+            background: transparent;
         }
 
-        .donor-loyal {
-            background-color: #fce4ec;
-            color: #c2185b;
-        }
-
-        .stats-card {
-            transition: transform 0.2s;
-        }
-
-        .stats-card:hover {
-            transform: translateY(-2px);
+        .search-box {
+            background-color: #f1f3f5;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
         }
     </style>
 </head>
 
-<body>
+<body class="bg-light">
     <div class="wrapper">
         <?php include 'partials/edonation-nav.php'; ?>
 
@@ -59,131 +76,134 @@
                 $subTitle = "ผู้บริจาค";
                 include 'partials/page-title.php'; ?>
 
-                <!-- Stats Cards -->
-                <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-soft-primary rounded">
-                                        <iconify-icon icon="iconamoon:profile-duotone"
-                                            class="avatar-title text-primary fs-32"></iconify-icon>
-                                    </div>
-                                    <div class="ms-3">
-                                        <h3 class="mb-0" id="total-members">-</h3>
-                                        <p class="text-muted mb-0">สมาชิกทั้งหมด</p>
-                                    </div>
+                <!-- Stats Overview -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card card-flush h-100">
+                            <div class="card-body d-flex align-items-center">
+                                <div
+                                    class="avatar-lg rounded bg-primary-subtle d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <iconify-icon icon="iconamoon:profile-duotone"
+                                        class="fs-1 text-primary"></iconify-icon>
+                                </div>
+                                <div class="ms-3">
+                                    <span class="d-block text-muted mb-1 text-truncate">สมาชิกทั้งหมด</span>
+                                    <h4 class="mb-0 fw-bold" id="total-members">-</h4>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-soft-warning rounded">
-                                        <iconify-icon icon="iconamoon:arrow-up-duotone"
-                                            class="avatar-title text-warning fs-32"></iconify-icon>
-                                    </div>
-                                    <div class="ms-3">
-                                        <h3 class="mb-0" id="repeat-donors">-</h3>
-                                        <p class="text-muted mb-0">ผู้บริจาคซ้ำ</p>
-                                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card card-flush h-100">
+                            <div class="card-body d-flex align-items-center">
+                                <div
+                                    class="avatar-lg rounded bg-warning-subtle d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <iconify-icon icon="iconamoon:star-duotone"
+                                        class="fs-1 text-warning"></iconify-icon>
+                                </div>
+                                <div class="ms-3">
+                                    <span class="d-block text-muted mb-1 text-truncate">ผู้บริจาคซ้ำ</span>
+                                    <h4 class="mb-0 fw-bold" id="repeat-donors">-</h4>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-soft-success rounded">
-                                        <iconify-icon icon="iconamoon:heart-duotone"
-                                            class="avatar-title text-success fs-32"></iconify-icon>
-                                    </div>
-                                    <div class="ms-3">
-                                        <h3 class="mb-0" id="total-donations">-</h3>
-                                        <p class="text-muted mb-0">รายการบริจาค</p>
-                                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card card-flush h-100">
+                            <div class="card-body d-flex align-items-center">
+                                <div
+                                    class="avatar-lg rounded bg-success-subtle d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <iconify-icon icon="iconamoon:heart-duotone"
+                                        class="fs-1 text-success"></iconify-icon>
+                                </div>
+                                <div class="ms-3">
+                                    <span class="d-block text-muted mb-1 text-truncate">รายการบริจาค</span>
+                                    <h4 class="mb-0 fw-bold" id="total-donations">-</h4>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card bg-primary text-white stats-card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-white bg-opacity-25 rounded">
-                                        <iconify-icon icon="iconamoon:trend-up-duotone"
-                                            class="avatar-title text-white fs-32"></iconify-icon>
-                                    </div>
-                                    <div class="ms-3">
-                                        <h3 class="mb-0 text-white" id="total-amount">-</h3>
-                                        <p class="mb-0 opacity-75">ยอดบริจาครวม</p>
-                                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card card-flush h-100 bg-primary text-white">
+                            <div class="card-body d-flex align-items-center">
+                                <div
+                                    class="avatar-lg rounded bg-white bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <iconify-icon icon="iconamoon:trend-up-duotone"
+                                        class="fs-1 text-white"></iconify-icon>
+                                </div>
+                                <div class="ms-3">
+                                    <span class="d-block text-white-50 mb-1 text-truncate">ยอดบริจาครวม</span>
+                                    <h4 class="mb-0 fw-bold text-white" id="total-amount">-</h4>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Main Card -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h4 class="card-title mb-0">รายชื่อผู้บริจาค</h4>
-                        <div class="d-flex gap-2 align-items-center">
-                            <select id="filterType" class="form-select form-select-sm" style="width: auto;"
-                                onchange="loadMembers()">
-                                <option value="">ทุกประเภท</option>
-                                <option value="loyal">ประจำ (10+ ครั้ง)</option>
-                                <option value="regular">สม่ำเสมอ (5-9 ครั้ง)</option>
-                                <option value="repeat">ซ้ำ (2-4 ครั้ง)</option>
-                                <option value="new">ใหม่ (1 ครั้ง)</option>
-                            </select>
-                            <span class="badge bg-primary" id="result-count">0 รายการ</span>
-                        </div>
-                    </div>
+                <!-- Main Content -->
+                <div class="card card-flush">
                     <div class="card-body">
-                        <!-- Search -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <iconify-icon icon="iconamoon:search-duotone"></iconify-icon>
-                                    </span>
-                                    <input type="text" id="searchInput" class="form-control"
-                                        placeholder="ค้นหาชื่อ, เลขบัตร, รหัสสมาชิก..." onkeyup="handleSearch(event)">
-                                    <button class="btn btn-primary" onclick="searchMembers()">
-                                        ค้นหา
-                                    </button>
-                                </div>
+                        <!-- Toolbar -->
+                        <div
+                            class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mb-4">
+                            <div class="search-box d-flex align-items-center flex-grow-1" style="max-width: 400px;">
+                                <iconify-icon icon="iconamoon:search-duotone"
+                                    class="text-muted fs-5 me-2"></iconify-icon>
+                                <input type="text" id="searchInput" class="form-control form-control-flush p-0"
+                                    placeholder="ค้นหาชื่อ, รหัสสมาชิก หรือเบอร์โทร..." onkeyup="handleSearch(event)">
                             </div>
-                            <div class="col-md-6 text-end">
-                                <button class="btn btn-outline-secondary" onclick="loadMembers()">
-                                    <iconify-icon icon="iconamoon:restart-duotone" class="me-1"></iconify-icon>
-                                    รีเฟรช
+
+                            <div class="d-flex gap-2">
+                                <select id="filterType" class="form-select border-0 bg-light"
+                                    style="width: auto; min-width: 150px;" onchange="loadMembers()">
+                                    <option value="">ทั้งหมด</option>
+                                    <option value="loyal">ผู้บริจาคประจำ</option>
+                                    <option value="repeat">ผู้บริจาคซ้ำ</option>
+                                    <option value="new">ผู้บริจาคใหม่</option>
+                                </select>
+
+                                <button class="btn btn-light" onclick="loadMembers()" title="รีเฟรช">
+                                    <iconify-icon icon="iconamoon:restart-duotone" class="fs-5"></iconify-icon>
+                                </button>
+
+                                <button class="btn btn-success d-flex align-items-center gap-2"
+                                    onclick="exportSelected()" id="btnExport">
+                                    <iconify-icon icon="iconamoon:file-document-duotone" class="fs-5"></iconify-icon>
+                                    <span class="d-none d-sm-inline">Export</span>
                                 </button>
                             </div>
                         </div>
 
+                        <!-- Selected Count Badge -->
+                        <div class="mb-2">
+                            <span class="badge bg-primary-subtle text-primary" id="result-count">กำลังโหลด...</span>
+                        </div>
+                        <!-- Hidden Export Form -->
+                        <form id="exportForm" action="export_members.php" method="POST" target="_blank"
+                            style="display:none;">
+                            <input type="hidden" name="ids" id="exportIds">
+                        </form>
+
                         <!-- Table -->
                         <div class="table-responsive">
-                            <table class="table table-hover table-nowrap align-middle">
-                                <thead class="bg-light">
+                            <table class="table table-bordered table-striped table-hover align-middle">
+                                <thead class="table-light">
                                     <tr>
-                                        <th style="width: 60px;">#</th>
+                                        <th style="width: 40px;" class="text-center">
+                                            <input class="form-check-input" type="checkbox" id="selectAll"
+                                                onchange="toggleAll(this)">
+                                        </th>
+                                        <th style="width: 60px;" class="text-center">#</th>
                                         <th>ชื่อ-นามสกุล</th>
                                         <th>รหัสสมาชิก</th>
                                         <th>เลขบัตรประชาชน</th>
-                                        <th class="text-end">ยอดรวม</th>
-                                        <th class="text-center" style="width: 120px;">จัดการ</th>
+                                        <th class="text-center" style="width: 100px;">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody id="membersTable">
                                     <tr>
                                         <td colspan="6" class="text-center py-5">
                                             <div class="spinner-border text-primary"></div>
-                                            <p class="text-muted mt-2 mb-0">กำลังโหลดข้อมูล...</p>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -192,7 +212,7 @@
 
                         <!-- Pagination -->
                         <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div class="text-muted" id="pagination-info">แสดง 0-0 จาก 0 รายการ</div>
+                            <div class="text-muted" id="pagination-info"></div>
                             <nav>
                                 <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
                             </nav>
@@ -205,16 +225,13 @@
         </div>
     </div>
 
-    <!-- Member Detail Modal -->
-    <div class="modal fade" id="memberModal" tabindex="-1">
+    <!-- View Member Modal -->
+    <div class="modal fade" id="memberModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <iconify-icon icon="iconamoon:profile-duotone" class="me-2"></iconify-icon>
-                        ข้อมูลผู้บริจาค
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">ข้อมูลผู้บริจาค</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="memberModalBody">
                     <div class="text-center py-4">
@@ -223,7 +240,91 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-primary" id="btn-edit-modal">แก้ไขข้อมูล</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div class="modal fade" id="editMemberModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="editMemberForm" onsubmit="updateMember(event)">
+                    <div class="modal-header">
+                        <h5 class="modal-title">แก้ไขข้อมูลสมาชิก</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_id_members" name="id_members">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-2">
+                                <label class="form-label">คำนำหน้า</label>
+                                <input type="text" class="form-control" name="title" id="edit_title" list="titles">
+                                <datalist id="titles">
+                                    <option value="นาย">
+                                    <option value="นาง">
+                                    <option value="นางสาว">
+                                    <option value="ด.ช.">
+                                    <option value="ด.ญ.">
+                                    <option value="บริษัท">
+                                </datalist>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="first_name" id="edit_first_name" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">นามสกุล</label>
+                                <input type="text" class="form-control" name="last_name" id="edit_last_name">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">เลขบัตรประชาชน</label>
+                                <input type="text" class="form-control" name="id_card" id="edit_id_card" maxlength="13">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">เบอร์โทรศัพท์</label>
+                                <input type="text" class="form-control" name="phone" id="edit_phone">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">อาชีพ</label>
+                                <input type="text" class="form-control" name="occupation" id="edit_occupation">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">ที่อยู่</label>
+                            <input type="text" class="form-control mb-2" name="address_line" id="edit_address_line"
+                                placeholder="บ้านเลขที่, ถนน">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="district" id="edit_district"
+                                        placeholder="ตำบล">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="amphure" id="edit_amphure"
+                                        placeholder="อำเภอ">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="province" id="edit_province"
+                                        placeholder="จังหวัด">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="zip_code" id="edit_zip_code"
+                                        placeholder="รหัสไปรษณีย์">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary">บันทึก</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -250,112 +351,115 @@
         async function loadMembers(page = 1) {
             currentPage = page;
             const tbody = document.getElementById('membersTable');
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary me-2"></div><span class="text-muted">กำลังโหลดข้อมูล...</span></td></tr>';
+            document.getElementById('selectAll').checked = false;
 
             try {
-                const response = await apiGet(`/members?page=${page}&limit=${limit}`);
+                // Determine API endpoint based on search
+                const query = document.getElementById('searchInput').value.trim();
+                let url = `/members?page=${page}&limit=${limit}`;
+
+                if (query) {
+                    url = `/members/search?q=${encodeURIComponent(query)}&limit=50`; // Search usually has larger limit
+                } else {
+                    // Add filter if not searching
+                    const filter = document.getElementById('filterType').value;
+                    // Assuming API supports filter (not implemented in backend yet, handled in frontend for now)
+                }
+
+                const response = await apiGet(url);
                 members = response.data || [];
                 const meta = response.meta || {};
 
-                // Update stats
-                document.getElementById('total-members').textContent = formatNumber(meta.total || members.length);
-                document.getElementById('result-count').textContent = (meta.total || members.length) + ' รายการ';
-
-                // Count repeat donors
-                const repeatCount = members.filter(m => m.is_repeat_donor).length;
-                document.getElementById('repeat-donors').textContent = formatNumber(repeatCount);
-
-
-                // Calculate totals from visible data
-                let totalDonations = 0;
-                let totalAmount = 0;
-                members.forEach(m => {
-                    totalDonations += m.receipt_count || 0;
-                    totalAmount += m.total_amount || 0;
-                });
-                document.getElementById('total-donations').textContent = formatNumber(totalDonations);
-                document.getElementById('total-amount').textContent = formatCurrency(totalAmount);
-
-                totalPages = meta.total_pages || 1;
+                // Update Stats (Client-side calc if search, or meta from server)
+                updateStats(members, meta);
 
                 renderTable(members);
                 renderPagination(meta);
             } catch (error) {
                 showError(error.message);
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-danger">${error.message}</td></tr>`;
             }
         }
 
         async function searchMembers() {
-            const query = document.getElementById('searchInput').value.trim();
+            loadMembers(1);
+        }
 
-            if (!query) {
-                loadMembers(1);
-                return;
-            }
+        function updateStats(data, meta) {
+            document.getElementById('total-members').textContent = formatNumber(meta.total || data.length);
+            document.getElementById('result-count').textContent = (meta.total || data.length) + ' รายการ';
 
-            const tbody = document.getElementById('membersTable');
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>';
+            // Simple client side stats for demo purposes or consistent with previous logic
+            const repeatCount = data.filter(m => m.is_repeat_donor).length;
+            document.getElementById('repeat-donors').textContent = formatNumber(repeatCount);
 
-            try {
-                const response = await apiGet(`/members/search?q=${encodeURIComponent(query)}&limit=50`);
-                members = response.data || [];
-
-                document.getElementById('result-count').textContent = members.length + ' รายการ';
-                renderTable(members);
-
-                // Hide pagination for search results
-                document.getElementById('pagination').innerHTML = '';
-                document.getElementById('pagination-info').textContent = `พบ ${members.length} รายการ`;
-            } catch (error) {
-                showError(error.message);
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">${error.message}</td></tr>`;
-            }
+            let totalDonations = 0;
+            let totalAmount = 0;
+            data.forEach(m => {
+                totalDonations += m.receipt_count || 0;
+                totalAmount += m.total_amount || 0;
+            });
+            document.getElementById('total-donations').textContent = formatNumber(totalDonations);
+            document.getElementById('total-amount').textContent = formatCurrency(totalAmount);
         }
 
         function renderTable(data) {
             const tbody = document.getElementById('membersTable');
             const filterType = document.getElementById('filterType').value;
 
-            // Filter by donor type if selected
+            // Frontend filtering if needed
             let filteredData = data;
-            if (filterType) {
+            if (filterType && !document.getElementById('searchInput').value) {
                 filteredData = data.filter(m => m.donor_type === filterType);
             }
 
             if (!filteredData || filteredData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted"><iconify-icon icon="iconamoon:file-search-duotone" class="fs-48 d-block mb-2"></iconify-icon>ไม่พบข้อมูล</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = filteredData.map((item, idx) => {
-                const fullName = item.name || 'ไม่ระบุ';
-                const startIdx = (currentPage - 1) * limit + idx + 1;
+            tbody.innerHTML = filteredData.map((item, index) => {
+                const fullName = item.name || 'ไม่ระบุชื่อ';
+                const startIdx = (currentPage - 1) * limit + index + 1;
 
                 return `
                 <tr>
-                    <td>${startIdx}</td>
-                    <td>
-                        <div class="fw-semibold">${escapeHtml(truncateText(fullName, 30))}</div>
-                        ${item.phone ? `<small class="text-muted">${item.phone}</small>` : ''}
-                    </td>
-                    <td>
-                        <code class="bg-light px-2 py-1 rounded">${item.id_members || '-'}</code>
-                    </td>
-                    <td>
-                        <span class="font-monospace">${item.id_card_formatted || maskIdCard(item.id_card) || '-'}</span>
-                    </td>
-                    <td class="text-end fw-semibold text-success">
-                        ${formatCurrency(item.total_amount || 0)}
-                    </td>
                     <td class="text-center">
-                        <button class="btn btn-sm btn-soft-primary" onclick="viewMemberDetail('${item.id_members}')" title="ดูรายละเอียด">
-                            <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
-                        </button>
+                        <input class="form-check-input member-checkbox" type="checkbox" value="${item.id_members}">
+                    </td>
+                    <td class="text-center">${startIdx}</td>
+                    <td>
+                        <a href="javascript:void(0)" onclick="viewMemberDetail('${item.id_members}')" class="text-decoration-none fw-bold text-dark">
+                            ${escapeHtml(truncateText(fullName, 40))}
+                        </a>
+                        <div class="small text-muted d-md-none">${displayPhone(item.phone)}</div>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${item.id_members}</span></td>
+                    <td>${formatIdCard(item.id_card)}</td>
+                    <td class="text-center">
+                         <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                จัดการ
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="viewMemberDetail('${item.id_members}')">
+                                        <i class="fs-6 me-2 bi bi-eye"></i> ดูรายละเอียด
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="editMember('${item.id_members}')">
+                                        <i class="fs-6 me-2 bi bi-pencil"></i> แก้ไขข้อมูล
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </td>
                 </tr>
-            `;
-            }).join('');
+            `}).join('');
+
+            document.getElementById('selectAll').checked = false;
         }
 
         function renderPagination(meta) {
@@ -370,16 +474,15 @@
 
             const start = (currentPage - 1) * limit + 1;
             const end = Math.min(currentPage * limit, meta.total);
-            info.textContent = `แสดง ${start}-${end} จาก ${meta.total} รายการ`;
+            info.textContent = `แสดง ${start}ถึง ${end} จาก ${meta.total} รายการ`;
 
             let html = '';
 
-            // Previous
+            // Modern pagination style
             html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="loadMembers(${currentPage - 1}); return false;">«</a>
+                <a class="page-link" href="#" onclick="loadMembers(${currentPage - 1}); return false;"><iconify-icon icon="iconamoon:arrow-left-2-duotone"></iconify-icon></a>
             </li>`;
 
-            // Page numbers
             for (let i = 1; i <= Math.min(5, meta.total_pages); i++) {
                 html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
                     <a class="page-link" href="#" onclick="loadMembers(${i}); return false;">${i}</a>
@@ -393,29 +496,24 @@
                 </li>`;
             }
 
-            // Next
             html += `<li class="page-item ${currentPage === meta.total_pages ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="loadMembers(${currentPage + 1}); return false;">»</a>
+                <a class="page-link" href="#" onclick="loadMembers(${currentPage + 1}); return false;"><iconify-icon icon="iconamoon:arrow-right-2-duotone"></iconify-icon></a>
             </li>`;
 
             pagination.innerHTML = html;
         }
 
-        function getDonorTypeBadge(type) {
-            const badges = {
-                'new': '<span class="badge donor-badge donor-new">ใหม่</span>',
-                'repeat': '<span class="badge donor-badge donor-repeat">ซ้ำ</span>',
-                'regular': '<span class="badge donor-badge donor-regular">สม่ำเสมอ</span>',
-                'loyal': '<span class="badge donor-badge donor-loyal"><iconify-icon icon="iconamoon:star-duotone" class="me-1"></iconify-icon>ประจำ</span>'
-            };
-            return badges[type] || badges['new'];
-        }
-
         async function viewMemberDetail(idMembers) {
             const modal = new bootstrap.Modal(document.getElementById('memberModal'));
             const body = document.getElementById('memberModalBody');
-            body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+
             modal.show();
+            // body has loading spinner initally
+
+            document.getElementById('btn-edit-modal').onclick = () => {
+                modal.hide();
+                editMember(idMembers);
+            };
 
             try {
                 const response = await apiGet(`/members/${encodeURIComponent(idMembers)}`);
@@ -423,84 +521,167 @@
 
                 body.innerHTML = `
                     <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-muted mb-2">ข้อมูลส่วนตัว</h6>
-                            <table class="table table-sm">
-                                <tr><th width="120">รหัสสมาชิก:</th><td><code>${data.id_members || '-'}</code></td></tr>
-                                <tr><th>ชื่อ-นามสกุล:</th><td>${escapeHtml(data.name || '-')}</td></tr>
-                                <tr><th>เลขบัตร:</th><td class="font-monospace">${data.id_card_formatted || '-'}</td></tr>
-                                <tr><th>เบอร์โทร:</th><td>${data.phone || '-'}</td></tr>
-                                <tr><th>ที่อยู่:</th><td>${escapeHtml(data.address?.full || '-')}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-muted mb-2">สถิติการบริจาค</h6>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <div class="card bg-soft-primary border-0">
-                                        <div class="card-body text-center py-3">
-                                            <h3 class="text-primary mb-0">${formatNumber(data.statistics?.receipt_count || 0)}</h3>
-                                            <small>รายการบริจาค</small>
-                                        </div>
-                                    </div>
+                        <div class="col-md-12 mb-4">
+                            <h4 class="fw-bold text-primary mb-3">${data.name || '-'}</h4>
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <div class="fw-bold text-muted small">รหัสสมาชิก</div>
+                                    <div class="font-monospace">${data.id_members}</div>
                                 </div>
-                                <div class="col-6">
-                                    <div class="card bg-soft-success border-0">
-                                        <div class="card-body text-center py-3">
-                                            <h3 class="text-success mb-0">${formatCurrency(data.statistics?.total_amount || 0)}</h3>
-                                            <small>ยอดรวมทั้งหมด</small>
-                                        </div>
-                                    </div>
+                                <div class="col-sm-6">
+                                    <div class="fw-bold text-muted small">เลขบัตรประชาชน / ผู้เสียภาษี</div>
+                                    <div class="font-monospace">${data.id_card_formatted || '-'}</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="fw-bold text-muted small">เบอร์โทรศัพท์</div>
+                                    <div>${displayPhone(data.phone)}</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="fw-bold text-muted small">อาชีพ</div>
+                                    <div>${data.occupation || '-'}</div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="fw-bold text-muted small">ที่อยู่</div>
+                                    <div>${data.address?.full || '-'}</div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    ${data.top_projects && data.top_projects.length > 0 ? `
-                        <hr class="my-3">
-                        <h6 class="text-muted mb-2">โครงการที่บริจาค</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>โครงการ</th>
-                                        <th class="text-center">จำนวนครั้ง</th>
-                                        <th class="text-end">ยอดรวม</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${data.top_projects.map(p => `
+
+                        <div class="col-md-12">
+                            <hr class="text-muted opacity-25">
+                            <h5 class="fw-bold mb-3">สรุปข้อมูลการบริจาค</h5>
+                            
+                            <div class="row g-3 mb-4">
+                                <div class="col-sm-6">
+                                    <span class="text-muted">จำนวนครั้งที่บริจาค:</span>
+                                    <span class="fw-bold ms-2">${data.statistics?.receipt_count || 0} ครั้ง</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted">ยอดบริจาครวม:</span>
+                                    <span class="fw-bold ms-2 text-success">${formatCurrency(data.statistics?.total_amount || 0)}</span>
+                                </div>
+                            </div>
+
+                            ${data.top_projects && data.top_projects.length > 0 ? `
+                            <div class="fw-bold text-muted small mb-2">โครงการที่สนับสนุน</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
                                         <tr>
-                                            <td>${escapeHtml(p.project_name || '-')}</td>
-                                            <td class="text-center">${p.count} ครั้ง</td>
-                                            <td class="text-end text-primary">${formatCurrency(p.total)}</td>
+                                            <th>ชื่อโครงการ</th>
+                                            <th class="text-end" style="width: 150px;">ยอดเงิน</th>
                                         </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        ${data.top_projects.map(p => `
+                                            <tr>
+                                                <td>${p.project_name || p.project_number}</td>
+                                                <td class="text-end fw-medium">${formatCurrency(p.total)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>` : ''}
                         </div>
-                    ` : ''}
+                    </div>
                 `;
             } catch (error) {
-                body.innerHTML = `<div class="text-center py-4 text-danger">${error.message}</div>`;
+                body.innerHTML = `<div class="alert alert-danger mx-3">${error.message}</div>`;
             }
+        }
+
+        async function editMember(idMembers) {
+            const modal = new bootstrap.Modal(document.getElementById('editMemberModal'));
+            // Reset Form
+            const form = document.getElementById('editMemberForm');
+            form.reset();
+
+            try {
+                const response = await apiGet(`/members/${encodeURIComponent(idMembers)}`);
+                const data = response.data || {};
+
+                document.getElementById('edit_id_members').value = data.id_members;
+                document.getElementById('edit_title').value = data.title || '';
+                document.getElementById('edit_first_name').value = data.first_name || '';
+                document.getElementById('edit_last_name').value = data.last_name || '';
+                document.getElementById('edit_id_card').value = data.id_card || '';
+                document.getElementById('edit_phone').value = data.phone || '';
+                document.getElementById('edit_occupation').value = data.occupation || '';
+
+                if (data.address) {
+                    document.getElementById('edit_address_line').value = data.address.address_line || '';
+                    document.getElementById('edit_district').value = data.address.district || '';
+                    document.getElementById('edit_amphure').value = data.address.amphure || '';
+                    document.getElementById('edit_province').value = data.address.province || '';
+                    document.getElementById('edit_zip_code').value = data.address.zip_code || '';
+                }
+
+                modal.show();
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        async function updateMember(e) {
+            e.preventDefault();
+            const idMembers = document.getElementById('edit_id_members').value;
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                await apiPost(`/members/${encodeURIComponent(idMembers)}/update`, data);
+                showSuccess('อัพเดทข้อมูลเรียบร้อยแล้ว');
+                bootstrap.Modal.getInstance(document.getElementById('editMemberModal')).hide();
+                loadMembers(currentPage);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function toggleAll(source) {
+            document.querySelectorAll('.member-checkbox').forEach(cb => cb.checked = source.checked);
+        }
+
+        function exportSelected() {
+            const checkboxes = document.querySelectorAll('.member-checkbox:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            if (ids.length === 0) {
+                showWarning('กรุณาเลือกรายการที่ต้องการ Export อย่างน้อย 1 รายการ');
+                return;
+            }
+            document.getElementById('exportIds').value = ids.join(',');
+            document.getElementById('exportForm').submit();
         }
 
         function getInitials(name) {
             if (!name) return '?';
+            const parts = name.trim().split(' ');
+            if (parts.length > 1) {
+                // First char of first name + first char of last name
+                return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+            }
             return name.charAt(0).toUpperCase();
         }
 
-        function maskIdCard(idCard) {
-            if (!idCard || idCard.length < 13) return idCard;
-            return idCard.substring(0, 1) + '-' + idCard.substring(1, 5) + '-XXXXX-' + idCard.substring(10, 12) + '-X';
+        function maskIdCard(id) {
+            if (!id || id.length < 10) return id;
+            return id.substring(0, 3) + 'xxxx' + id.substring(id.length - 4);
         }
 
-        function truncateText(text, maxLength) {
-            if (!text || text.length <= maxLength) return text;
-            return text.substring(0, maxLength) + '...';
+        function formatIdCard(id) { return maskIdCard(id); } // Alias
+
+        function displayPhone(phone) {
+            if (!phone) return '-';
+            return phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
         }
+
+        function truncateText(text, length) {
+            if (!text) return '';
+            if (text.length <= length) return text;
+            return text.substring(0, length) + '...';
+        }
+
     </script>
-
 </body>
 
 </html>

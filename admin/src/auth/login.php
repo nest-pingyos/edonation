@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/config.php';
 
 // Redirect if already logged in
 if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true) {
@@ -264,6 +265,14 @@ unset($_SESSION['auth_error']);
                             </svg>
                             เข้าสู่ระบบด้วย CMU Account
                         </a>
+
+                        <?php if (defined('APP_ENV') && APP_ENV === 'development'): ?>
+                            <div class="mt-3">
+                                <a href="callback.php?dev_login=1" class="btn btn-secondary w-100">
+                                    <i class="fas fa-code me-2"></i> Developer Login
+                                </a>
+                            </div>
+                        <?php endif; ?>
 
                         <div class="divider">
                             <span>หรือ</span>

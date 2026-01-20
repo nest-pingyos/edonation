@@ -1,0 +1,28 @@
+/**
+ * eDonation Admin - Custom Styles
+ * Override default spacing and layout
+ */
+
+/* ===== Topbar Spacing ===== */
+.topbar {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ===== Page Title / Breadcrumb Spacing ===== */
+.page-title-box {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ===== Page Content Spacing ===== */
+.page-content {
+    padding-top: 1.5rem;
+}
+
+/* ===== Container Spacing ===== */
+.container-xxl {
+    padding-top: 0.5rem;
+}

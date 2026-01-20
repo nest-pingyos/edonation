@@ -79,6 +79,7 @@ class LineNotificationService
 
         // ดึงรายชื่อผู้รับ
         $recipients = $this->getRecipients($notificationType);
+        error_log("LineNotificationService: Type={$notificationType}, Found " . count($recipients) . " recipients");
 
         if (empty($recipients)) {
             error_log('LineNotificationService: No recipients for type: ' . $notificationType);
@@ -164,6 +165,8 @@ class LineNotificationService
                     'Authorization: ' . self::LINE_API_KEY,
                     'Content-Type: application/json'
                 ],
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
             ]);
 
             $response = curl_exec($curl);

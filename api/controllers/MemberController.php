@@ -64,7 +64,237 @@ class MemberController
             return $this->getMemberProfile($id);
         }
 
+        // GET /members/:id_members/update (Legacy or mistake? Should be POST)
+        // POST /members/:id_members/update - แก้ไขข้อมูลสมาชิก
+        if ($method === 'POST' && $id && $action === 'update') {
+            AuthMiddleware::requireAdmin();
+            return $this->update($id);
+        }
+
+        // POST /members/export - Export สมาชิกที่เลือก
+        if ($method === 'POST' && $id === 'export') {
+            AuthMiddleware::requireAdmin();
+            return $this->export();
+        }
+
         return Response::error('METHOD_NOT_ALLOWED', 'Method not allowed', 405);
+    }
+
+    /**
+     * POST /members/export
+     * Body: { ids: string[] }
+     * Return: CSV Content or Download Link
+     */
+    private function export(): array
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $ids = $data['ids'] ?? [];
+
+        if (empty($ids)) {
+            return Response::error('VALIDATION_ERROR', 'กรุณาเลือกรายการที่ต้องการ Export');
+        }
+
+        // Prepare Query
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        // Similar to index() query but filtered by IDs
+        $sql = "SELECT 
+                    r.id_members,
+                    r.id_card,
+                    MIN(r.payer_name) as name,
+                    MAX(du.first_name) as first_name,
+                    MAX(du.last_name) as last_name,
+                    MAX(du.title) as title,
+                    MAX(du.phone) as phone,
+                    MAX(du.occupation) as occupation,
+                    COUNT(r.id) as receipt_count,
+                    SUM(r.amount) as total_amount,
+                    MAX(r.issued_at) as last_donation,
+                    MAX(du.receipt_address) as address,
+                    MAX(du.address_line) as address_line,
+                    MAX(du.province) as province,
+                    MAX(du.amphure) as amphure,
+                    MAX(du.district) as district,
+                    MAX(du.zip_code) as zip_code
+                FROM edonation_receipts r
+                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
+                WHERE r.id_members IN ($placeholders)
+                GROUP BY r.id_members
+                ORDER BY r.id_members ASC";
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($ids);
+            $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Generate CSV
+            $output = fopen('php://temp', 'r+');
+            // BOM for Excel Thai
+            fputs($output, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
+
+            // Header
+            fputcsv($output, [
+                'รหัสสมาชิก',
+                'ชื่อ-นามสกุล',
+                'เลขบัตรประชาชน',
+                'เบอร์โทรศัพท์',
+                'อาชีพ',
+                'ที่อยู่',
+                'จังหวัด',
+                'อำเภอ',
+                'ตำบล',
+                'รหัสไปรษณีย์',
+                'จำนวนครั้งบริจาค',
+                'ยอดรวมบริจาค',
+                'บริจาคล่าสุด'
+            ]);
+
+            foreach ($members as $m) {
+                // Name Logic
+                $name = $m['name'];
+                if (empty($name) || is_numeric($name)) {
+                    $name = trim(($m['title'] ?? '') . ' ' . $m['first_name'] . ' ' . ($m['last_name'] ?? ''));
+                }
+
+                // Address Logic
+                $addr = $m['address'];
+                if (empty($addr)) {
+                    $parts = [];
+                    if ($m['address_line'])
+                        $parts[] = $m['address_line'];
+                    if ($m['district'])
+                        $parts[] = 'ต.' . $m['district'];
+                    if ($m['amphure'])
+                        $parts[] = 'อ.' . $m['amphure'];
+                    if ($m['province'])
+                        $parts[] = 'จ.' . $m['province'];
+                    if ($m['zip_code'])
+                        $parts[] = $m['zip_code'];
+                    $addr = implode(' ', $parts);
+                }
+
+                fputcsv($output, [
+                    $m['id_members'] . "\t", // Force string in Excel
+                    $name,
+                    $m['id_card'] . "\t",
+                    $m['phone'] . "\t",
+                    $m['occupation'] ?? '',
+                    $addr,
+                    $m['province'],
+                    $m['amphure'],
+                    $m['district'],
+                    $m['zip_code'],
+                    $m['receipt_count'],
+                    $m['total_amount'],
+                    $m['last_donation']
+                ]);
+            }
+
+            rewind($output);
+            $csvContent = stream_get_contents($output);
+            fclose($output);
+
+            // Convert to Base64 to send via JSON
+            return Response::success([
+                'file_name' => 'members_export_' . date('Ymd_His') . '.csv',
+                'content_type' => 'text/csv',
+                'content_base64' => base64_encode($csvContent)
+            ], 'Export สำเร็จ');
+
+        } catch (PDOException $e) {
+            error_log("Export Error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'เกิดข้อผิดพลาดในการ Export');
+        }
+    }
+
+    /**
+     * POST /members/:id_members/update
+     * แก้ไขข้อมูลสมาชิก (ชื่อ, ที่อยู่, เบอร์โทร)
+     * *Update ข้อมูลย้อนหลังทั้งหมดสำหรับ id_members นี้ (Cascade)*
+     */
+    private function update(string $idMembers): array
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        // Validation
+        if (empty($data['first_name'])) {
+            return Response::error('VALIDATION_ERROR', 'กรุณาระบุชื่อ');
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $title = $data['title'] ?? '';
+            $firstName = $data['first_name'];
+            $lastName = $data['last_name'] ?? '';
+            $fullName = trim("$title $firstName $lastName");
+
+            // 1. Update Receipts (payer_name, id_card)
+            $sqlReceipts = "UPDATE edonation_receipts 
+                            SET payer_name = :name, 
+                                id_card = :id_card
+                            WHERE id_members = :id_members";
+            $stmtReceipts = $this->pdo->prepare($sqlReceipts);
+            $stmtReceipts->execute([
+                ':name' => $fullName,
+                ':id_card' => preg_replace('/\D/', '', $data['id_card'] ?? ''),
+                ':id_members' => $idMembers
+            ]);
+
+            // 2. Update Donat Users (Name, Address, Phone) linked to this member
+            // ต้องหา donation_id ทั้งหมดก่อน หรือใช้ Join Update (MySQL supports Multi-table update but simple approach is better compatible)
+
+            // Get all donation IDs
+            $stmtIds = $this->pdo->prepare("SELECT donation_id FROM edonation_receipts WHERE id_members = :id_members");
+            $stmtIds->execute([':id_members' => $idMembers]);
+            $donationIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+
+            if (!empty($donationIds)) {
+                $idsParams = implode(',', array_fill(0, count($donationIds), '?'));
+                $sqlDonat = "UPDATE edonation_donat_user 
+                             SET title = ?, 
+                                 first_name = ?, 
+                                 last_name = ?, 
+                                 phone = ?, 
+                                 occupation = ?,
+                                 id_card = ?, 
+                                 receipt_address = ?,
+                                 address_line = ?,
+                                 district = ?, 
+                                 amphure = ?,
+                                 province = ?,
+                                 zip_code = ?
+                             WHERE id IN ($idsParams)";
+
+                $stmtDonat = $this->pdo->prepare($sqlDonat);
+                // เรียง params ตามลำดับ ?
+                $params = [
+                    $title,
+                    $firstName,
+                    $lastName,
+                    $data['phone'] ?? '',
+                    $data['occupation'] ?? '', // เพิ่มอาชีพ
+                    preg_replace('/\D/', '', $data['id_card'] ?? ''),
+                    $data['address'] ?? '',
+                    $data['address_line'] ?? '',
+                    $data['district'] ?? '', // ตำบล
+                    $data['amphure'] ?? '',  // อำเภอ
+                    $data['province'] ?? '',
+                    $data['zip_code'] ?? ''
+                ];
+
+                // Append donation IDs to params
+                $params = array_merge($params, $donationIds);
+                $stmtDonat->execute($params);
+            }
+
+            $this->pdo->commit();
+            return Response::success(['id_members' => $idMembers], 'บันทึกข้อมูลเรียบร้อย');
+
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            return Response::error('DATABASE_ERROR', 'เกิดข้อผิดพลาด: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -256,6 +486,8 @@ class MemberController
                     MAX(du.first_name) as first_name,
                     MAX(du.last_name) as last_name,
                     MAX(du.receipt_address) as receipt_address,
+                    MAX(du.phone) as phone,
+                    MAX(du.occupation) as occupation,
                     MAX(du.address_line) as address_line,
                     MAX(du.province) as province,
                     MAX(du.amphure) as amphure,
@@ -330,6 +562,7 @@ class MemberController
             'first_name' => $member['first_name'],
             'last_name' => $member['last_name'],
             'phone' => $member['phone'],
+            'occupation' => $member['occupation'] ?? '', // เพิ่มอาชีพ
             'address' => [
                 'full' => $member['receipt_address'],
                 'address_line' => $member['address_line'],

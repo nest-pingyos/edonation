@@ -587,7 +587,14 @@ class ReceiptController
                     du.first_name,
                     du.last_name,
                     du.status_donat,
-                    bt.billPaymentRef2
+                    bt.billPaymentRef2,
+                    du.receipt_address,
+                    du.shipping_address,
+                    du.address_line,
+                    du.province,
+                    du.amphure,
+                    du.district,
+                    du.zip_code
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
@@ -605,13 +612,36 @@ class ReceiptController
 
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Format payer_name properly
+        // Format payer_name and address properly
         foreach ($results as &$row) {
+            // Name
             $name = trim($row['payer_name'] ?? '');
             if (empty($name) || $name === ' ') {
                 $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
             }
             $row['payer_name'] = !empty($name) ? $name : 'ไม่ระบุชื่อ';
+
+            // Address logic (Priority: Shipping > Receipt > Components)
+            $addr = $row['shipping_address'] ?? '';
+            if (empty($addr)) {
+                $addr = $row['receipt_address'] ?? '';
+            }
+
+            if (empty($addr)) {
+                $parts = [];
+                if (!empty($row['address_line']))
+                    $parts[] = $row['address_line'];
+                if (!empty($row['district']))
+                    $parts[] = 'อ.' . $row['district']; // หรือ แขวง/ตำบล แล้วแต่ field
+                if (!empty($row['amphure']))
+                    $parts[] = 'อ.' . $row['amphure'];
+                if (!empty($row['province']))
+                    $parts[] = 'จ.' . $row['province'];
+                if (!empty($row['zip_code']))
+                    $parts[] = $row['zip_code'];
+                $addr = implode(' ', $parts);
+            }
+            $row['full_address'] = $addr;
         }
 
         // Count total (Filtered)

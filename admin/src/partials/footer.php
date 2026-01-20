@@ -6,13 +6,7 @@
                 <script>
                     document.write(new Date().getFullYear())
                 </script>
-                &copy; Reback. Crafted by
-                <iconify-icon
-                        icon="iconamoon:heart-duotone"
-                        class="fs-18 align-middle text-danger"
-                ></iconify-icon>
-                <a href="" class="fw-bold footer-text" target="_blank"
-                >Techzaa</a>
+                &copy; eDonation E-Donation System. All rights reserved.
             </div>
         </div>
     </div>

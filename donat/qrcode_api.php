@@ -12,7 +12,7 @@ ini_set('display_errors', 1);
 // Load web config and shared service
 try {
     require_once __DIR__ . '/../config/env.php';
-    require_once dirname(__DIR__, 2) . '/shared/services/SCBPaymentService.php';
+    require_once dirname(__DIR__) . '/shared/services/SCBPaymentService.php';
 } catch (Throwable $e) {
     ob_end_clean();
     header('HTTP/1.1 500 Internal Server Error');
@@ -82,6 +82,8 @@ try {
 error_log("QR Request: id=$donationId, ref1=$ref1, amount=$amount");
 
 // สร้าง QR Code ผ่าน SCB API
+// Commented out to use manual generation as default
+/*
 try {
     $scb = new SCBPaymentService();
     $result = $scb->createQRCode($amount, $ref1, $ref2);
@@ -97,6 +99,7 @@ try {
 } catch (Throwable $e) {
     error_log("SCB API Error: " . $e->getMessage());
 }
+*/
 
 // Fallback: ใช้ระบบเดิม (Manual EMVCo) กรณี SCB API ล้มเหลว
 try {

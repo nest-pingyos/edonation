@@ -1,4 +1,5 @@
 <?php include 'partials/main.php'; ?>
+
 <?php requireAuth(); ?>
 
 <!doctype html>
@@ -6,327 +7,342 @@
 
 <head>
     <?php
-    $title = "พิมพ์ที่อยู่จัดส่ง";
-    include 'partials/title-meta.php'; ?>
+    $pageTitle = "พิมพ์ที่อยู่จัดส่งใบเสร็จ";
+    include 'partials/title-meta.php';
+    ?>
     <?php include 'partials/head-css.php'; ?>
+
+    <!-- Print Styles -->
+    <style>
+        @media print {
+            body>*:not(#printArea) {
+                display: none !important;
+            }
+
+            body {
+                background: white !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            #printArea,
+            #printArea * {
+                display: block !important;
+                visibility: visible !important;
+            }
+
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+                z-index: 99999;
+                padding: 0;
+                margin: 0;
+            }
+
+            .address-label {
+                border: 1px dotted #ccc;
+                padding: 15px;
+                margin-bottom: 25px;
+                page-break-inside: avoid;
+                font-size: 16pt;
+                color: black;
+                font-family: 'Sarabun', sans-serif;
+                line-height: 1.6;
+            }
+
+            #print-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 30px;
+                padding: 20px;
+            }
+        }
+
+        .address-label-container {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
+    <!-- START Wrapper -->
     <div class="wrapper">
         <?php include 'partials/edonation-nav.php'; ?>
 
         <div class="page-content">
             <?php include 'partials/edonation-topbar.php'; ?>
 
-            <div class="container-xxl">
-                <?php
-                $pageTitle = "ใบเสร็จรับเงิน";
-                $subTitle = "พิมพ์ที่อยู่จัดส่ง";
-                include 'partials/page-title.php'; ?>
+            <div class="container-fluid">
 
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <form id="printAddressForm" action="print-preview-address.php" method="GET" target="_blank">
-
-                            <!-- Card 1: ข้อมูลและเงื่อนไข -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-soft-primary py-3 d-flex align-items-center">
-                                    <h5 class="card-title mb-0 text-primary">
-                                        <iconify-icon icon="line-md:clipboard-list-twotone"
-                                            class="me-2 fs-20"></iconify-icon>
-                                        กำหนดเงื่อนไขการพิมพ์
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <!-- เลือกรูปแบบรายงาน -->
-                                    <div class="mb-4 pb-3 border-bottom border-dashed">
-                                        <label class="form-label fw-semibold">รูปแบบรายงาน</label>
-                                        <div class="d-flex gap-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="report_mode"
-                                                    id="modeAddress" value="address" checked>
-                                                <label class="form-check-label text-dark fw-medium" for="modeAddress">
-                                                    ที่อยู่สำหรับจ่าหน้า (Labels)
-                                                </label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="report_mode"
-                                                    id="modeSummary" value="summary">
-                                                <label class="form-check-label text-dark fw-medium" for="modeSummary">
-                                                    ใบสรุปรายชื่อการส่ง (Summary List)
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 1. เลือกแหล่งข้อมูล -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-semibold">เลือกข้อมูล (ตาราง)</label>
-                                        <div class="d-flex flex-wrap gap-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="tables[]"
-                                                    value="edonation_receipts" id="tableReceipts" checked>
-                                                <label class="form-check-label" for="tableReceipts">รายการใบเสร็จทั้งหมด
-                                                    (edonation_receipts)</label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label fw-semibold">ยอดบริจาคขั้นต่ำ (บาท)</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-light">฿</span>
-                                                <input type="number" class="form-control" name="min_amount"
-                                                    placeholder="เช่น 1000" min="0">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label fw-semibold">เงื่อนไขที่อยู่</label>
-                                            <div class="form-check mt-2">
-                                                <input class="form-check-input" type="checkbox" name="has_address"
-                                                    id="hasAddress" value="1" checked>
-                                                <label class="form-check-label"
-                                                    for="hasAddress">เฉพาะผู้ที่มีข้อมูลที่อยู่</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                <!-- Page Title -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="page-title-box d-flex align-items-center justify-content-between">
+                            <h4 class="mb-0 font-size-18">พิมพ์ที่อยู่จัดส่งใบเสร็จ</h4>
+                            <div class="page-title-right">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="receipts-list.php">ใบเสร็จ</a></li>
+                                    <li class="breadcrumb-item active">พิมพ์ที่อยู่</li>
+                                </ol>
                             </div>
-
-                            <div id="labelsOptions">
-                                <!-- Card 2: ขนาดและการวางแนว -->
-                                <div class="card mb-3">
-                                    <div class="card-header bg-soft-info py-2">
-                                        <h6 class="card-title mb-0 text-info">ขนาดกระดาษและการวางแนว</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-4">
-                                            <label
-                                                class="form-label fw-semibold text-muted small">เลือกขนาดกระดาษ</label>
-                                            <div class="d-flex flex-wrap gap-3">
-                                                <div class="form-check card-radio">
-                                                    <input class="form-check-input" type="radio" name="paper_size"
-                                                        id="sizeA4" value="A4" checked>
-                                                    <label class="form-check-label" for="sizeA4">
-                                                        <span class="fs-14 fw-bold d-block">A4</span>
-                                                        <span class="text-muted small">List View</span>
-                                                    </label>
-                                                </div>
-                                                <div class="form-check card-radio">
-                                                    <input class="form-check-input" type="radio" name="paper_size"
-                                                        id="sizeA5" value="A5">
-                                                    <label class="form-check-label" for="sizeA5">
-                                                        <span class="fs-14 fw-bold d-block">A5</span>
-                                                        <span class="text-muted small">Card View</span>
-                                                    </label>
-                                                </div>
-                                                <div class="form-check card-radio">
-                                                    <input class="form-check-input" type="radio" name="paper_size"
-                                                        id="sizeCustom" value="custom">
-                                                    <label class="form-check-label" for="sizeCustom">
-                                                        <span class="fs-14 fw-bold d-block">กำหนดเอง</span>
-                                                        <span class="text-muted small">Custom CM</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-
-                                            <div id="customSizeInputs" class="mt-3 row g-2 mb-4" style="display: none;">
-                                                <div class="col-6">
-                                                    <label class="form-label small">กว้าง (cm)</label>
-                                                    <input type="number" class="form-control" name="custom_width"
-                                                        id="customWidth" value="10" step="0.1">
-                                                </div>
-                                                <div class="col-6">
-                                                    <label class="form-label small">สูง (cm)</label>
-                                                    <input type="number" class="form-control" name="custom_height"
-                                                        id="customHeight" value="15" step="0.1">
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row g-4">
-                                            <div class="col-md-6">
-                                                <label
-                                                    class="form-label fw-semibold text-muted small">วางแนวกระดาษ</label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="orientation"
-                                                            id="orientPortrait" value="portrait" checked>
-                                                        <label class="form-check-label"
-                                                            for="orientPortrait">แนวตั้ง</label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="orientation"
-                                                            id="orientLandscape" value="landscape">
-                                                        <label class="form-check-label"
-                                                            for="orientLandscape">แนวนอน</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Card 3: ปรับตำแหน่ง -->
-                                <div class="card mb-3">
-                                    <div class="card-header bg-soft-warning py-2">
-                                        <h6 class="card-title mb-0 text-warning">ปรับตำแหน่ง (Position Offset)</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-3">
-                                            <div class="col-6">
-                                                <label class="form-label small">ขยับซ้าย-ขวา (cm)</label>
-                                                <input type="number" class="form-control" name="offset_x" id="offsetX"
-                                                    value="0" step="0.1">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label small">ขยับขึ้น-ลง (cm)</label>
-                                                <input type="number" class="form-control" name="offset_y" id="offsetY"
-                                                    value="0" step="0.1">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div> <!-- End labelsOptions -->
-
-                            <!-- Visual Preview Box (Integrated) -->
-                            <div class="card mb-4 bg-light border-dashed">
-                                <div class="card-body text-center p-4">
-                                    <h6 class="text-muted mb-3">ตัวอย่างรูปแบบการจัดวาง</h6>
-                                    <div class="d-flex justify-content-center align-items-center mb-3"
-                                        style="min-height: 320px;">
-                                        <div id="preview-paper"
-                                            class="bg-white shadow d-flex align-items-center justify-content-center position-relative"
-                                            style="transition: all 0.3s; border: 1px solid #ddd;">
-                                            <div id="preview-content" class="text-center p-2"
-                                                style="border: 1px dashed #0d6efd; background: rgba(13, 110, 253, 0.05); width: 85%; transition: all 0.2s;">
-                                                <div class="fw-bold mb-1" style="font-size: 14px; color: #000;">คุณใจดี
-                                                    มีสุข (ทดสอบ)</div>
-                                                <div class="text-muted" style="font-size: 11px;">123 ถ.สุขุมวิท
-                                                    แขวงคลองเตย ...</div>
-                                            </div>
-                                            <div class="position-absolute bottom-0 end-0 m-2 badge bg-dark opacity-75"
-                                                id="preview-dim">A4</div>
-                                        </div>
-                                    </div>
-                                    <div class="text-muted small">ตัวอย่างสัดส่วนพื้นหลังเทียบกับพื้นที่พิมพ์จริง</div>
-                                </div>
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="d-flex justify-content-end gap-2 mb-5">
-                                <button type="reset" class="btn btn-light px-4">ล้างค่า</button>
-                                <button type="submit" class="btn btn-primary px-5 shadow-sm">
-                                    <iconify-icon icon="iconamoon:printer-duotone" class="me-2"></iconify-icon>
-                                    เริ่มการพิมพ์ / ดูตัวอย่าง
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
-            </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="card-title mb-0">รายการใบเสร็จรับเงิน</h4>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-soft-secondary btn-sm" onclick="window.history.back()">
+                                        <iconify-icon icon="solar:arrow-left-bold-duotone"
+                                            class="fs-16 align-middle me-1"></iconify-icon>
+                                        ย้อนกลับ
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" onclick="printSelected()">
+                                        <iconify-icon icon="solar:printer-bold-duotone"
+                                            class="fs-16 align-middle me-1"></iconify-icon>
+                                        พิมพ์รายการที่เลือก
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Filters -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label text-muted">ค้นหา</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-end-0">
+                                                <iconify-icon icon="solar:magnifer-linear" class="fs-18"></iconify-icon>
+                                            </span>
+                                            <input type="text" class="form-control border-start-0 ps-0" id="searchInput"
+                                                placeholder="เลขที่ใบเสร็จ, ชื่อผู้บริจาค...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">โครงการ</label>
+                                        <input type="text" class="form-control" id="projectFilter"
+                                            placeholder="รหัสโครงการ">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">วันที่ออกใบเสร็จ</label>
+                                        <input type="date" class="form-control" id="dateFilter">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button class="btn btn-primary w-100" onclick="loadData()">
+                                            <iconify-icon icon="solar:filter-bold-duotone"
+                                                class="fs-16 align-middle me-1"></iconify-icon>
+                                            กรองข้อมูล
+                                        </button>
+                                    </div>
+                                </div>
 
-        </div>
+                                <!-- Table -->
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-nowrap align-middle">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th style="width: 50px;" class="text-center">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" class="form-check-input" id="selectAll"
+                                                            onclick="toggleAll(this)">
+                                                        <label class="form-check-label" for="selectAll"></label>
+                                                    </div>
+                                                </th>
+                                                <th style="width: 120px;">วันที่</th>
+                                                <th style="width: 140px;">เลขที่ใบเสร็จ</th>
+                                                <th style="width: 250px;">ผู้บริจาค</th>
+                                                <th>ที่อยู่จัดส่ง</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tableBody">
+                                            <tr>
+                                                <td colspan="5" class="text-center py-5 text-muted">
+                                                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                                                    <div>กำลังโหลดข้อมูล...</div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
 
-        <?php include 'partials/footer.php'; ?>
-    </div>
-    </div>
+                                <!-- Pagination -->
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <div class="text-muted small" id="pageInfo">แสดง 0 รายการ</div>
+                                    <nav id="pagination"></nav>
+                                </div>
 
-    <?php include 'partials/vendor-scripts.php'; ?>
-
-    <script>
-        document.getElementById('printAddressForm').addEventListener('submit', function (e) {
-            const tables = document.querySelectorAll('input[name="tables[]"]:checked');
-            if (tables.length === 0) {
-                e.preventDefault();
-                alert('กรุณาเลือกข้อมูลอย่างน้อย 1 ปี (ตาราง)');
-            }
-        });
-
-        const customInputs = document.getElementById('customSizeInputs');
-        const customWidth = document.getElementById('customWidth');
-        const customHeight = document.getElementById('customHeight');
-        const offsetXInput = document.getElementById('offsetX');
-        const offsetYInput = document.getElementById('offsetY');
-        const labelsOptions = document.getElementById('labelsOptions');
-
-        function updatePreview() {
-            const reportMode = document.querySelector('input[name="report_mode"]:checked').value;
-            const paperSizeInput = document.querySelector('input[name="paper_size"]:checked');
-            const paperSize = paperSizeInput ? paperSizeInput.value : 'A4';
-            const orientationInput = document.querySelector('input[name="orientation"]:checked');
-            const orientation = orientationInput ? orientationInput.value : 'portrait';
-            const offX = parseFloat(offsetXInput.value) || 0;
-            const offY = parseFloat(offsetYInput.value) || 0;
-
-            const paper = document.getElementById('preview-paper');
-            const content = document.getElementById('preview-content');
-            const dimLabel = document.getElementById('preview-dim');
-
-            if (reportMode === 'summary') {
-                labelsOptions.style.display = 'none';
-                content.innerHTML = `
-                    <div style="text-align:left; width:100%; border:1px solid #eee;">
-                        <div style="background:#f8f9fa; font-weight:bold; font-size:9px; padding:2px; display:flex; border-bottom:1px solid #eee;">
-                            <div style="width:30%;">ชื่อ-สุกล</div><div style="width:70%;">ที่อยู่</div>
-                        </div>
-                        <div style="font-size:8px; padding:2px; display:flex; border-bottom:1px solid #eee;">
-                            <div style="width:30%;">สมชาย...</div><div style="width:70%;">123 ถ.สุขุมวิท...</div>
+                            </div>
                         </div>
                     </div>
-                `;
-                content.style.transform = 'none';
-                content.style.width = '90%';
-                const w_mm = 210, h_mm = 297, scale = 0.8;
-                paper.style.width = (w_mm * scale) + 'px';
-                paper.style.height = (h_mm * scale) + 'px';
-                dimLabel.textContent = 'A4 (Summary)';
+                </div>
+
+            </div> <!-- container-fluid -->
+
+            <?php include 'partials/footer.php'; ?>
+        </div>
+        <!-- End Page-content -->
+    </div>
+    <!-- end wrapper -->
+
+    <!-- Hidden Print Area -->
+    <div id="printArea" class="address-label-container"></div>
+
+    <?php include 'partials/vendor-scripts.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="assets/js/api-helper.js"></script>
+
+    <script>
+        let currentPage = 1;
+        const perPage = 50;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+
+            // Search with debounce
+            document.getElementById('searchInput').addEventListener('input', debounce(loadData, 500));
+            document.getElementById('projectFilter').addEventListener('change', loadData);
+            document.getElementById('dateFilter').addEventListener('change', loadData);
+        });
+
+        async function loadData(page = 1) {
+            currentPage = Number(page);
+            const search = document.getElementById('searchInput').value;
+            const project = document.getElementById('projectFilter').value;
+            const date = document.getElementById('dateFilter').value;
+
+            // Show Loading
+            showTableLoading('tableBody', 5);
+
+            const params = {
+                page: currentPage,
+                limit: perPage,
+                search: search,
+                project: project,
+                from: date || ''
+            };
+
+            try {
+                const result = await apiGet('/receipts', params);
+                const data = result.data || [];
+                const meta = result.meta || result.pagination || {};
+
+                renderTable(data);
+                
+                // Render Pagination using api-helper
+                // Note: renderPagination in helper expects string function name for onclick
+                renderPaginationHelper('pagination', meta.page, meta.total_pages, 'loadData');
+                
+                // Update Info Text
+                const info = document.getElementById('pageInfo');
+                if (info && meta.total > 0) {
+                    info.textContent = `แสดง ${data.length} รายการ จากทั้งหมด ${meta.total} รายการ (หน้า ${meta.page}/${meta.total_pages})`;
+                } else {
+                    info.textContent = 'ไม่พบรายการ';
+                }
+
+            } catch (error) {
+                console.error(error);
+                showTableError('tableBody', 5, error.message);
+            }
+        }
+
+        // Custom Pagination Wrapper to work with api-helper that expects string func name
+        window.loadData = loadData; // Expose to global scope for onclick string
+
+        function renderPaginationHelper(containerId, page, totalPages, funcName) {
+             // Re-implement simplified version if api-helper's one is strict, 
+             // OR use the one from api-helper if it exists.
+             if (typeof renderPagination === 'function') {
+                 renderPagination(containerId, page, totalPages, funcName);
+             }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                showTableEmpty('tableBody', 5);
                 return;
             }
 
-            labelsOptions.style.display = 'block';
-            content.innerHTML = `
-                <div class="fw-bold mb-1" style="font-size: 14px; color: #000;">คุณใจดี มีสุข (ทดสอบ)</div>
-                <div class="text-muted" style="font-size: 11px;">123 ถ.สุขุมวิท แขวงคลองเตย ...</div>
-            `;
-            content.style.width = '85%';
+            data.forEach(item => {
+                const hasAddress = item.full_address && item.full_address.length > 5;
+                const addressHtml = hasAddress ?
+                    `<div class="text-wrap">${escapeHtml(item.full_address)}</div>` :
+                    `<span class="badge badge-soft-warning"><iconify-icon icon="solar:danger-circle-bold-duotone" class="align-middle me-1"></iconify-icon> ไม่มีที่อยู่</span>`;
 
-            if (paperSize === 'custom') {
-                customInputs.style.display = 'flex';
-            } else {
-                customInputs.style.display = 'none';
-            }
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input row-checkbox" 
+                                value="${item.id}" 
+                                data-name="${escapeHtml(item.payer_name)}"
+                                data-address="${escapeHtml(item.full_address || '')}"
+                                ${!hasAddress ? 'disabled' : ''}>
+                                <label class="form-check-label"></label>
+                        </div>
+                    </td>
+                    <td><small class="text-muted">${formatThaiDateShort(item.receipt_date)}</small></td>
+                    <td><span class="fw-medium text-primary">${escapeHtml(item.receipt_no)}</span></td>
+                    <td><div class="fw-medium">${escapeHtml(item.payer_name)}</div></td>
+                    <td>${addressHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
 
-            const scale = 0.8;
-            let w_mm, h_mm;
-            if (paperSize === 'custom') {
-                let w_cm = parseFloat(customWidth.value) || 10;
-                let h_cm = parseFloat(customHeight.value) || 15;
-                if (orientation === 'portrait') { w_mm = w_cm * 10; h_mm = h_cm * 10; }
-                else { w_mm = h_cm * 10; h_mm = w_cm * 10; }
-                dimLabel.textContent = `Custom (${w_cm}x${h_cm} cm)`;
-            } else if (paperSize === 'A4') {
-                if (orientation === 'portrait') { w_mm = 210; h_mm = 297; }
-                else { w_mm = 297; h_mm = 210; }
-                dimLabel.textContent = `${paperSize} (${orientation})`;
-            } else {
-                if (orientation === 'portrait') { w_mm = 148; h_mm = 210; }
-                else { w_mm = 210; h_mm = 148; }
-                dimLabel.textContent = `${paperSize} (${orientation})`;
-            }
-            paper.style.width = (w_mm * scale) + 'px';
-            paper.style.height = (h_mm * scale) + 'px';
-
-            let transformStr = `translate(${offX * 10 * scale}px, ${offY * 10 * scale}px)`;
-            content.style.transform = transformStr;
+            const selAll = document.getElementById('selectAll');
+            if (selAll) selAll.checked = false;
         }
 
-        const inputs = document.querySelectorAll('input[name="report_mode"], input[name="paper_size"], input[name="orientation"], #customWidth, #customHeight, #offsetX, #offsetY');
-        inputs.forEach(input => input.addEventListener('change', updatePreview));
-        inputs.forEach(input => input.addEventListener('input', updatePreview));
-        updatePreview();
+        function toggleAll(source) {
+            document.querySelectorAll('.row-checkbox:not(:disabled)').forEach(cb => cb.checked = source.checked);
+        }
+
+        function printSelected() {
+            const selected = [];
+            document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
+                selected.push({
+                    name: cb.dataset.name,
+                    address: cb.dataset.address
+                });
+            });
+
+            if (selected.length === 0) {
+                showWarning('กรุณาเลือกรายการที่มีที่อยู่เพื่อพิมพ์ Label');
+                return;
+            }
+
+            // Generate Print Content
+            const container = document.getElementById('printArea');
+            container.innerHTML = '';
+
+            let html = '<div id="print-grid">';
+
+            selected.forEach(item => {
+                html += `
+                    <div class="address-label">
+                        <div style="font-weight: bold; font-size: 1.4rem; margin-bottom: 12px;">กรุณาส่ง: ${item.name}</div>
+                        <div style="font-size: 1.2rem; line-height: 1.6;">${item.address}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Wait for DOM
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
     </script>
 </body>
 

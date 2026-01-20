@@ -14,10 +14,10 @@
  */
 
 // Base path for assets
-$basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
+$basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
 
 // Define paths
-define('AUTOPROVINCE_BASE', dirname(__DIR__, 2) . '/shared/autoprovince');
+define('AUTOPROVINCE_BASE', dirname(__DIR__) . '/shared/autoprovince');
 define('AUTOPROVINCE_API_PATH', $basePath . '/shared/autoprovince/api.php');
 define('AUTOPROVINCE_CSS_PATH', $basePath . '/shared/autoprovince/assets/autoprovince.css');
 define('AUTOPROVINCE_JS_PATH', $basePath . '/shared/autoprovince/assets/autoprovince.js');
@@ -36,7 +36,12 @@ function getAutoProvince(): AutoProvince
 {
     static $instance = null;
     if ($instance === null) {
-        $pdo = Database::getInstance();
+        global $pdo;
+        // Fallback if global $pdo is not set (though it should be from require)
+        if (!isset($pdo)) {
+            // Re-include if necessary or throw helpful error
+            require __DIR__ . '/database.php';
+        }
         $instance = new AutoProvince($pdo);
     }
     return $instance;

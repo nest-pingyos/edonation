@@ -23,6 +23,7 @@ $basePath = '';  // Relative to the current page in src/
     <!-- Local CSS Files -->
     <link href="<?php echo $basePath; ?>assets/css/icons.css" rel="stylesheet" type="text/css" />
     <link href="<?php echo $basePath; ?>assets/css/app.css" rel="stylesheet" type="text/css" />
+    <link href="<?php echo $basePath; ?>assets/css/custom.css" rel="stylesheet" type="text/css" />
     <script src="<?php echo $basePath; ?>assets/js/config.js"></script>
 
 <?php else: ?>
@@ -55,9 +56,9 @@ $basePath = '';  // Relative to the current page in src/
     <!-- Reback Admin Custom Styles (CDN Version) -->
     <style>
         /* ============================================
-       Reback Admin Template - CDN Version
-       Primary Color: #1c84ee (Blue)
-       ============================================ */
+           Reback Admin Template - CDN Version
+           Primary Color: #1c84ee (Blue)
+           ============================================ */
 
         :root {
             --bs-primary: #1c84ee;

@@ -32,8 +32,7 @@
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-md bg-soft-primary rounded">
-                                        <iconify-icon icon="iconamoon:invoice-duotone"
-                                            class="avatar-title text-primary fs-32"></iconify-icon>
+                                        <span class="avatar-title text-primary fs-32">#</span>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0" id="total-receipts">-</h3>
@@ -48,8 +47,7 @@
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-md bg-soft-success rounded">
-                                        <iconify-icon icon="iconamoon:check-circle-1-duotone"
-                                            class="avatar-title text-success fs-32"></iconify-icon>
+                                        <span class="avatar-title text-success fs-32">✓</span>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0" id="issued-count">-</h3>
@@ -64,8 +62,7 @@
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-md bg-soft-danger rounded">
-                                        <iconify-icon icon="iconamoon:close-circle-1-duotone"
-                                            class="avatar-title text-danger fs-32"></iconify-icon>
+                                        <span class="avatar-title text-danger fs-32">✕</span>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0" id="cancelled-count">-</h3>
@@ -80,8 +77,7 @@
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-md bg-white bg-opacity-25 rounded">
-                                        <iconify-icon icon="iconamoon:trend-up-duotone"
-                                            class="avatar-title text-white fs-32"></iconify-icon>
+                                        <span class="avatar-title text-white fs-32">฿</span>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0 text-white" id="total-amount">-</h3>
@@ -98,8 +94,14 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4 class="card-title mb-0">รายการใบเสร็จรับเงิน</h4>
                         <div>
-                            <button class="btn btn-outline-success me-2" onclick="exportExcel()">
-                                <iconify-icon icon="iconamoon:file-download-duotone" class="me-1"></iconify-icon>
+                            <a href="receipts-print-address.php" class="btn btn-outline-primary me-2">
+                                <iconify-icon icon="solar:printer-bold-duotone"
+                                    class="align-middle me-1"></iconify-icon>
+                                พิมพ์ที่อยู่จัดส่ง
+                            </a>
+                            <button class="btn btn-outline-success" onclick="exportExcel()">
+                                <iconify-icon icon="solar:file-download-bold-duotone"
+                                    class="align-middle me-1"></iconify-icon>
                                 ส่งออก Excel
                             </button>
                         </div>
@@ -110,7 +112,7 @@
                             <div class="col-md-3">
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
-                                        <iconify-icon icon="iconamoon:search-duotone"></iconify-icon>
+                                        ค้นหา
                                     </span>
                                     <input type="text" id="searchInput" class="form-control"
                                         placeholder="ค้นหาเลขใบเสร็จ, ชื่อ, เลขบัตร...">
@@ -135,7 +137,6 @@
                             </div>
                             <div class="col-md-2">
                                 <button class="btn btn-primary w-100" onclick="loadReceipts()">
-                                    <iconify-icon icon="iconamoon:search-duotone" class="me-1"></iconify-icon>
                                     ค้นหา
                                 </button>
                             </div>
@@ -204,11 +205,9 @@
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
                         <button type="button" class="btn btn-outline-danger" id="cancelReceiptBtn"
                             onclick="cancelReceipt()">
-                            <iconify-icon icon="iconamoon:close-circle-1-duotone" class="me-1"></iconify-icon>
                             ยกเลิกใบเสร็จ
                         </button>
                         <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
-                            <iconify-icon icon="iconamoon:file-download-duotone" class="me-1"></iconify-icon>
                             ดาวน์โหลด PDF
                         </a>
                     </div>
@@ -357,18 +356,43 @@
             <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
             <td>${formatThaiDateShort(item.issued_at || item.created_at)}</td>
             <td class="text-center">
-                <div class="d-flex justify-content-center gap-1">
-                    <button class="btn btn-sm btn-soft-primary" onclick="viewDetail('${item.id}')" title="ดูรายละเอียด">
-                        <iconify-icon icon="iconamoon:eye-duotone"></iconify-icon>
+                 <div class="dropdown">
+                    <button class="btn btn-sm btn-light dropdown-toggle font-monospace" type="button" data-bs-toggle="dropdown">
+                        ...
                     </button>
-                    <a href="${BASE_PATH}/receipts/pdf_maker.php?id=${item.id}&admin=1" target="_blank" class="btn btn-sm btn-soft-success" title="ดาวน์โหลด PDF">
-                        <iconify-icon icon="iconamoon:file-download-duotone"></iconify-icon>
-                    </a>
-                    ${item.status !== 'cancelled' ? `
-                    <button class="btn btn-sm btn-soft-warning" onclick="resendReceipt('${item.id}')" title="ส่งอีเมลใหม่">
-                        <iconify-icon icon="iconamoon:send-duotone"></iconify-icon>
-                    </button>
-                    ` : ''}
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)" onclick="viewDetail('${item.id}')">
+                                ดูรายละเอียด
+                            </a>
+                        </li>
+                        ${item.status !== 'cancelled' ? `
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)" onclick="editReceipt('${item.id}', '${item.donation_id}')">
+                                แก้ไข
+                            </a>
+                        </li>
+                        ` : ''}
+                        <li>
+                            <a class="dropdown-item" href="${BASE_PATH}/receipts/pdf_maker.php?id=${item.id}&admin=1" target="_blank">
+                                ดาวน์โหลด PDF
+                            </a>
+                        </li>
+                        ${item.status !== 'cancelled' ? `
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-warning" href="javascript:void(0)" onclick="cancelReceiptItem('${item.id}', '${item.receipt_no}')">
+                                ยกเลิก
+                            </a>
+                        </li>
+                        ` : ''}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteReceipt('${item.donation_id}', '${item.receipt_no}')">
+                                ลบ
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </td>
         </tr>
@@ -427,29 +451,60 @@
             ` : ''}
         `;
 
-                    // Update buttons
+                    // Update buttons in modal (keep them for detail view)
                     document.getElementById('downloadPdfBtn').href = BASE_PATH + '/receipts/pdf_maker.php?id=' + r.id + '&admin=1';
                     document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
+                    // re-bind cancel button in modal to use cancelReceiptItem if needed, or keep cancelReceipt() which uses currentReceipt
 
                 } catch (error) {
                     content.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
                 }
             }
 
-            async function cancelReceipt() {
-                if (!currentReceipt) return;
+            // Wrapper for modal button
+            function cancelReceipt() {
+                if (currentReceipt) cancelReceiptItem(currentReceipt.id, currentReceipt.receipt_number);
+            }
 
-                const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${currentReceipt.receipt_number} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
+            async function cancelReceiptItem(id, receiptNo) {
+                const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${receiptNo} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
                 if (!result.isConfirmed) return;
 
                 try {
-                    await apiPost('/receipts/' + currentReceipt.id + '/cancel');
+                    await apiPost('/receipts/' + id + '/cancel');
                     showSuccess('ยกเลิกใบเสร็จสำเร็จ');
-                    bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+                    // If modal open, close it
+                    const modalEl = document.getElementById('detailModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
                     loadReceipts();
                 } catch (error) {
                     showError(error.message);
                 }
+            }
+
+            async function deleteReceipt(donationId, receiptNo) {
+                const result = await confirmAction('ลบข้อมูล?', `คุณต้องการลบใบเสร็จ ${receiptNo} และข้อมูลการบริจาคนี้ออกจากระบบหรือไม่?\n(ไม่สามารถกู้คืนได้)`, 'ลบข้อมูล', 'warning');
+                if (!result.isConfirmed) return;
+
+                try {
+                    await apiDelete('/donations/' + donationId);
+                    showSuccess('ลบข้อมูลสำเร็จ');
+                    loadReceipts();
+                } catch (error) {
+                    showError(error.message);
+                }
+            }
+
+            function editReceipt(id, donationId) {
+                // Placeholder for Edit
+                Swal.fire({
+                    icon: 'info',
+                    title: 'แก้ไขข้อมูล',
+                    text: 'ฟีเจอร์แก้ไขข้อมูลใบเสร็จยังไม่เปิดใช้งาน',
+                    confirmButtonText: 'ตกลง'
+                });
             }
 
             async function resendReceipt(id) {

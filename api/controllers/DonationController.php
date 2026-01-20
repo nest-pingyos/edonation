@@ -21,6 +21,12 @@ class DonationController
         $this->pdo = Database::getInstance();
     }
 
+    // Load services manually since autoloader is missing
+    private function loadServices()
+    {
+        require_once __DIR__ . '/../services/LineNotificationService.php';
+    }
+
     public function handle(string $method, ?string $id, ?string $action): array
     {
         // Handle special actions
@@ -75,10 +81,7 @@ class DonationController
 
         // If need receipt, validate additional fields
         if (!empty($data['needReceipt'])) {
-            $v->required('firstName')
-                ->required('lastName')
-                ->required('idCard')
-                ->required('receiptAddress')
+            $v->required('receiptAddress')
                 ->required('shippingAddress');
         }
 
@@ -107,12 +110,12 @@ class DonationController
                 "INSERT INTO edonation_donat_user (
                     billPaymentRef1, project_number, project_name, type, phone, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
-                    need_receipt, title, first_name, last_name, id_card, receipt_address, shipping_address,
+                    need_receipt, receipt_address, shipping_address,
                     address_line, province, amphure, district, zip_code
                 ) VALUES (
                     :ref1, :project_number, :project_name, :type, :phone, :amount, 
                     :fiscal_year, 'pending', 'QR PromptPay', CURDATE(),
-                    :need_receipt, :title, :first_name, :last_name, :id_card, :receipt_address, :shipping_address,
+                    :need_receipt, :receipt_address, :shipping_address,
                     :address_line, :province, :amphure, :district, :zip_code
                 )"
             );
@@ -131,10 +134,6 @@ class DonationController
                 ':amount' => $data['amount'],
                 ':fiscal_year' => (date('Y') + 543),
                 ':need_receipt' => !empty($data['needReceipt']) ? 1 : 0,
-                ':title' => $data['title'] ?? null,
-                ':first_name' => $data['firstName'] ?? null,
-                ':last_name' => $data['lastName'] ?? null,
-                ':id_card' => $data['idCard'] ?? null,
                 ':receipt_address' => $data['receiptAddress'] ?? null,
                 ':shipping_address' => $data['shippingAddress'] ?? null,
                 ':address_line' => $data['addressLine'] ?? null,
@@ -233,12 +232,12 @@ class DonationController
 
             $donationStmt = $this->pdo->prepare("
                 INSERT INTO edonation_donat_user (
-                    billPaymentRef1, project_number, project_name, type, phone, amount, 
+                    billPaymentRef1, project_number, project_name, type, phone, occupation, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
                     need_receipt, title, first_name, last_name, id_card, receipt_address, shipping_address,
                     address_line, province, amphure, district, zip_code
                 ) VALUES (
-                    :ref1, :project_number, :project_name, :type, :phone, :amount, 
+                    :ref1, :project_number, :project_name, :type, :phone, :occupation, :amount, 
                     :fiscal_year, 'completed', :payby, :receipt_date,
                     1, :title, :first_name, :last_name, :id_card, :receipt_address, :shipping_address,
                     :address_line, :province, :amphure, :district, :zip_code
@@ -251,6 +250,7 @@ class DonationController
                 ':project_name' => $projectName,
                 ':type' => $data['type'] ?? 'manual',
                 ':phone' => $data['phone'] ?? '',
+                ':occupation' => $data['occupation'] ?? '', // เพิ่มอาชีพ
                 ':amount' => $data['amount'],
                 ':fiscal_year' => $year,
                 ':payby' => $data['payment_method'] ?? 'เงินสด',
@@ -328,6 +328,28 @@ class DonationController
                 'token' => $accessToken,
                 'expire_at' => time() + 3600 // 1 hour for Admin
             ];
+
+            // ส่งแจ้งเตือน LINE Notification (Always try)
+            error_log("Attempting to send Line Notification...");
+
+            try {
+                $this->loadServices();
+                $notifier = new LineNotificationService();
+
+                if ($notifier->isNotificationEnabled()) {
+                    $nameShow = $isJuristic ? $data['first_name'] :
+                        trim(($data['title'] ?? '') . $data['first_name'] . ' ' . ($data['last_name'] ?? ''));
+
+                    // Use standard method for 'payment_success'
+                    $result = $notifier->sendPaymentSuccessNotification($donationId, $data['amount'], $projectName, $nameShow);
+
+                    error_log("Line Notification Result: " . json_encode($result));
+                } else {
+                    error_log("Line Notification is DISABLED in service");
+                }
+            } catch (Throwable $e) {
+                error_log("Line Notification Error: " . $e->getMessage());
+            }
 
             $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
 

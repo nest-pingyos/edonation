@@ -48,29 +48,9 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
 
                 <!-- Main Card -->
                 <div class="donation-card" id="mainCard" style="display: none;">
-                    <!-- Project Header -->
-                    <div class="project-header">
-                        <img id="projectImage" class="project-image" src="" alt="Project"
-                            onerror="this.src='../assets/images/projects/pro-1.jpg'">
-                        <div class="project-info">
-                            <span class="project-badge" id="projectBadge">เปิดรับบริจาค</span>
-                            <h1 class="project-title" id="projectTitle">-</h1>
-                            <p class="project-desc" id="projectDescription">-</p>
-
-                            <div class="progress-mini">
-                                <div class="progress-stats">
-                                    <span class="progress-amount" id="currentAmount">฿0</span>
-                                    <span class="progress-target">เป้าหมาย <span id="targetAmount">฿0</span></span>
-                                </div>
-                                <div class="progress-bar-wrapper">
-                                    <div class="progress-bar-fill" id="progressBar" style="width: 0%;"></div>
-                                </div>
-                                <div class="progress-meta">
-                                    <span><span id="donorCount">0</span> ผู้สนับสนุน</span>
-                                    <span id="progressPercent">0%</span>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Project Header (Clean Design) -->
+                    <div class="project-header-clean">
+                        <h1 class="project-title-clean" id="projectTitle">-</h1>
                     </div>
 
                     <!-- Stepper -->
@@ -142,43 +122,7 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                                     <div class="receipt-section">
                                         <div class="receipt-title">ข้อมูลสำหรับใบเสร็จ</div>
 
-                                        <div class="form-row cols-4">
-                                            <div>
-                                                <label class="form-label">คำนำหน้า <span
-                                                        class="required">*</span></label>
-                                                <select class="form-select" id="title">
-                                                    <option value="นาย">นาย</option>
-                                                    <option value="นาง">นาง</option>
-                                                    <option value="นางสาว">นางสาว</option>
-                                                    <option value="ด.ช.">ด.ช.</option>
-                                                    <option value="ด.ญ.">ด.ญ.</option>
-                                                    <option value="บริษัท">บริษัท</option>
-                                                    <option value="ห้างหุ้นส่วน">ห้างหุ้นส่วน</option>
-                                                    <option value="มูลนิธิ">มูลนิธิ</option>
-                                                    <option value="สมาคม">สมาคม</option>
-                                                    <option value="อื่นๆ">อื่นๆ</option>
-                                                </select>
-                                                <div class="form-text text-danger" style="font-size: 0.8rem;">*
-                                                    คำนำหน้าต้องตามบัตรประชาชนเท่านั้น</div>
-                                            </div>
-                                            <div>
-                                                <label class="form-label">ชื่อ <span class="required">*</span></label>
-                                                <input type="text" class="form-control" id="firstName"
-                                                    placeholder="ชื่อ">
-                                            </div>
-                                            <div>
-                                                <label class="form-label">นามสกุล <span
-                                                        class="required">*</span></label>
-                                                <input type="text" class="form-control" id="lastName"
-                                                    placeholder="นามสกุล">
-                                            </div>
-                                            <div>
-                                                <label class="form-label">เลขบัตรประชาชน <span
-                                                        class="required">*</span></label>
-                                                <input type="text" class="form-control" id="idCard"
-                                                    placeholder="x-xxxx-xxxxx-xx-x" maxlength="17">
-                                            </div>
-                                        </div>
+
 
                                         <div class="form-row">
                                             <div>
@@ -351,8 +295,9 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
 
     <script>
         // API Configuration
-        const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '/edonation/api/v1';
-        const AUTOPROVINCE_API = '../../shared/autoprovince/api.php';
+        // API Configuration
+        const API_BASE = '<?php echo $basePath; ?>/api/v1';
+        const AUTOPROVINCE_API = '<?php echo $basePath; ?>/shared/autoprovince/api.php';
 
         // Get Project ID
         const pathParts = window.location.pathname.split('/');
@@ -366,6 +311,16 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             setupStepper();
             setupReceiptSection();
             initAutoProvince();
+
+            // Phone number validation
+            const ph = document.getElementById('phone');
+            if (ph) {
+                ph.addEventListener('input', function (e) {
+                    let v = e.target.value.replace(/\D/g, '');
+                    if (v.length > 10) v = v.slice(0, 10);
+                    e.target.value = v;
+                });
+            }
         });
 
         function setupStepper() {
@@ -415,7 +370,8 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             // Check Receipt Fields if checked
             const needReceipt = document.getElementById('needReceipt').checked;
             if (needReceipt) {
-                const reqFields = ['firstName', 'lastName', 'idCard', 'receiptProvince', 'receiptAddressLine'];
+                // Name and ID Card removed
+                const reqFields = ['receiptProvince', 'receiptAddressLine'];
                 reqFields.forEach(id => {
                     const el = document.getElementById(id);
                     if (id === 'receiptProvince') {
@@ -460,7 +416,7 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             `;
 
             if (needReceipt) {
-                const name = document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value;
+                // const name = document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value;
                 const addr = document.getElementById('receiptAddress').value || '-';
 
                 html += `
@@ -468,10 +424,7 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                         <span class="summary-label">ขอใบเสร็จรับเงิน</span>
                         <span class="summary-value text-success"><i class="fas fa-check-circle"></i> ต้องการ</span>
                     </div>
-                    <div class="summary-row">
-                        <span class="summary-label">ชื่อ-นามสกุล</span>
-                        <span class="summary-value">${name}</span>
-                    </div>
+                    <!-- Name removed -->
                     <div class="summary-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
                         <span class="summary-label">ที่อยู่ใบเสร็จ</span>
                         <span class="summary-value" style="text-align: left; font-weight: 500;">${addr}</span>
@@ -555,16 +508,18 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                         }
                     });
                 }
+                $s.on('change', function () {
+                    const sel2 = $(this).select2('data')[0];
+                    if (sel2?.element) {
+                        const pc = $(sel2.element).data('postcode');
+                        if (pc && pc !== '0') $pc.val(pc);
+                    }
+                    updateAddr(sel);
+                });
+
             });
 
-            $s.on('change', function () {
-                const sel2 = $(this).select2('data')[0];
-                if (sel2?.element) {
-                    const pc = $(sel2.element).data('postcode');
-                    if (pc && pc !== '0') $pc.val(pc);
-                }
-                updateAddr(sel);
-            });
+
 
             $(sel.addressLine).on('change blur', () => updateAddr(sel));
         }
@@ -610,15 +565,9 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                 }
             });
 
-            document.getElementById('idCard').addEventListener('input', function (e) {
-                let v = e.target.value.replace(/\D/g, '').slice(0, 13);
-                let f = v.slice(0, 1);
-                if (v.length > 1) f += '-' + v.slice(1, 5);
-                if (v.length > 5) f += '-' + v.slice(5, 10);
-                if (v.length > 10) f += '-' + v.slice(10, 12);
-                if (v.length > 12) f += '-' + v.slice(12, 13);
-                e.target.value = f;
-            });
+
+
+
         }
 
         function syncAddressDirectly() {
@@ -660,22 +609,10 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('mainCard').style.display = 'block';
 
+            // Only update project title (other elements have been removed)
             document.getElementById('projectTitle').textContent = p.project_name;
-            document.getElementById('projectDescription').textContent = p.description || p.short_description || '';
-            document.getElementById('projectBadge').textContent = p.status === 'active' ? 'เปิดรับบริจาค' : 'โครงการ';
 
-            if (p.image_url) document.getElementById('projectImage').src = p.image_url;
-
-            const cur = parseFloat(p.current_amount) || 0;
-            const tar = parseFloat(p.target_amount) || 100000;
-            const pct = Math.min(100, (cur / tar) * 100);
-
-            document.getElementById('currentAmount').textContent = '฿' + fmt(cur);
-            document.getElementById('targetAmount').textContent = '฿' + fmt(tar);
-            document.getElementById('donorCount').textContent = fmt(p.donor_count || 0);
-            document.getElementById('progressBar').style.width = pct + '%';
-            document.getElementById('progressPercent').textContent = Math.round(pct) + '%';
-
+            // Hidden fields for form submission
             document.getElementById('project_number').value = p.project_number;
             document.getElementById('project_name_hidden').value = p.project_name;
         }
@@ -842,10 +779,6 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             };
 
             if (nr) {
-                data.title = document.getElementById('title').value;
-                data.firstName = document.getElementById('firstName').value;
-                data.lastName = document.getElementById('lastName').value;
-                data.idCard = document.getElementById('idCard').value;
                 data.receiptAddress = document.getElementById('receiptAddress').value;
                 data.shippingAddress = document.getElementById('shippingAddress').value;
 
@@ -966,6 +899,8 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
 
             document.querySelector('.stepper-wrapper').scrollIntoView({ behavior: 'smooth' });
         }
+
+
     </script>
 </body>
 

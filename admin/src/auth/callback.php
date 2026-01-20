@@ -1,5 +1,41 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/config.php';
+
+// Check for Dev Login
+if (isset($_GET['dev_login']) && defined('APP_ENV') && APP_ENV === 'development') {
+    require_once __DIR__ . '/../services/database.php';
+
+    $email = 'dev@localhost';
+    $authorizedUser = DatabaseService::authenticateCMUUser($email);
+
+    if (!$authorizedUser) {
+        // Create Dev user if not exists
+        if (DatabaseService::createUser($email, 'Developer', 'admin')) {
+            $authorizedUser = DatabaseService::authenticateCMUUser($email);
+        }
+    }
+
+    if ($authorizedUser) {
+        $_SESSION['backend_user'] = [
+            'id' => $authorizedUser['id'],
+            'email' => $authorizedUser['email'],
+            'name_th' => 'ผู้ดูแล',
+            'name_en' => 'Developer',
+            'organization' => 'Local Development',
+            'role' => $authorizedUser['role'],
+            'logged_in' => true,
+            'login_time' => date('Y-m-d H:i:s')
+        ];
+
+        header("Location: ../index.php");
+        exit;
+    } else {
+        $_SESSION['auth_error'] = 'ไม่สามารถสร้างบัญชี Dev ได้';
+        header("Location: login.php");
+        exit;
+    }
+}
 
 $client_id = '9ff50902-00e4-482f-b3d0-f0d59d31c999';
 $client_secret = '4gI8Q~qObbh7QxvOW5g3LIVkQRY.vpx71LlA1aJp';
