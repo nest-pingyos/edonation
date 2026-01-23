@@ -32,31 +32,20 @@
                             <div class="card-header">
                                 <h5 class="card-title mb-0">
                                     <iconify-icon icon="iconamoon:calendar-2-duotone" class="me-2"></iconify-icon>
-                                    ตั้งค่าปีงบประมาณ
+                                    ตั้งค่าปีสำหรับรายงาน
                                 </h5>
                             </div>
                             <div class="card-body">
                                 <p class="text-muted mb-4">
-                                    เลือกรูปแบบการคำนวณปีงบประมาณสำหรับรายงานและ Dashboard
+                                    เลือกรูปแบบการคำนวณปีสำหรับรายงานและ Dashboard
                                 </p>
 
                                 <div class="mb-4">
-                                    <label class="form-label fw-semibold">รูปแบบปีงบประมาณ</label>
+                                    <label class="form-label fw-semibold">รูปแบบปีรายงาน</label>
                                     <div class="d-flex flex-column gap-3">
                                         <div class="form-check form-check-success">
                                             <input class="form-check-input" type="radio" name="fiscalYearType"
-                                                id="fiscalThai" value="thai" checked>
-                                            <label class="form-check-label" for="fiscalThai">
-                                                <strong>ปีงบประมาณไทย</strong>
-                                                <small class="d-block text-muted">
-                                                    1 ตุลาคม (ปีก่อน) - 30 กันยายน (ปีปัจจุบัน)<br>
-                                                    เช่น ปีงบประมาณ 2569 = 1 ต.ค. 2568 - 30 ก.ย. 2569
-                                                </small>
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="fiscalYearType"
-                                                id="fiscalCalendar" value="calendar">
+                                                id="fiscalCalendar" value="calendar" checked>
                                             <label class="form-check-label" for="fiscalCalendar">
                                                 <strong>ปีปฏิทิน (Calendar Year)</strong>
                                                 <small class="d-block text-muted">
@@ -123,7 +112,7 @@
                                             </tr>
                                             <tr>
                                                 <td class="text-muted">ตัวอย่างการใช้งาน</td>
-                                                <td><code>?year=2026</code> (ปีงบฯ 2569)</td>
+                                                <td><code>?year=2026</code> (ปี 2569)</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -148,7 +137,7 @@
                                 <div class="row text-center">
                                     <div class="col-6">
                                         <h4 class="text-primary mb-1" id="currentFiscalYear">-</h4>
-                                        <p class="text-muted mb-0">ปีงบประมาณปัจจุบัน</p>
+                                        <p class="text-muted mb-0">ปีรายงานปัจจุบัน</p>
                                     </div>
                                     <div class="col-6">
                                         <h4 class="text-success mb-1" id="fiscalYearRange">-</h4>
@@ -176,30 +165,21 @@
         });
 
         function loadSettings() {
-            const savedType = localStorage.getItem('fiscalYearType') || 'thai';
-            document.querySelector(`input[value="${savedType}"]`).checked = true;
+            const savedType = localStorage.getItem('fiscalYearType') || 'calendar';
+            if (document.querySelector(`input[value="${savedType}"]`)) {
+                document.querySelector(`input[value="${savedType}"]`).checked = true;
+            }
             updateCurrentYearDisplay();
         }
 
         function updateCurrentYearDisplay() {
             const now = new Date();
             const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1; // 1-12
-            const fiscalType = document.querySelector('input[name="fiscalYearType"]:checked').value;
 
-            let fiscalYear, startDate, endDate;
-
-            if (fiscalType === 'thai') {
-                // Thai Fiscal Year: Oct-Sep
-                fiscalYear = currentMonth >= 10 ? currentYear + 1 : currentYear;
-                startDate = `1 ต.ค. ${fiscalYear - 1 + 543}`;
-                endDate = `30 ก.ย. ${fiscalYear + 543}`;
-            } else {
-                // Calendar Year: Jan-Dec
-                fiscalYear = currentYear;
-                startDate = `1 ม.ค. ${fiscalYear + 543}`;
-                endDate = `31 ธ.ค. ${fiscalYear + 543}`;
-            }
+            // Calendar Year: Jan-Dec
+            const fiscalYear = currentYear;
+            const startDate = `1 ม.ค. ${fiscalYear + 543}`;
+            const endDate = `31 ธ.ค. ${fiscalYear + 543}`;
 
             document.getElementById('currentFiscalYear').textContent = fiscalYear + 543;
             document.getElementById('fiscalYearRange').textContent = `${startDate} - ${endDate}`;
@@ -215,7 +195,7 @@
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกสำเร็จ',
-                text: 'การตั้งค่าปีงบประมาณถูกบันทึกแล้ว',
+                text: 'การตั้งค่าปีสำหรับรายงานถูกบันทึกแล้ว',
                 timer: 2000,
                 showConfirmButton: false
             });

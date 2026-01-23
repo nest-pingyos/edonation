@@ -119,7 +119,7 @@ function autoprovinceCss(): void
  */
 function autoprovinceJs(): void
 {
-    echo '<script src="' . AUTOPROVINCE_JS_PATH . '"></script>';
+    echo '<script src="' . AUTOPROVINCE_JS_PATH . '?v=2.1"></script>';
 }
 
 /**

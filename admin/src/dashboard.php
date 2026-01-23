@@ -29,14 +29,13 @@
                 <div class="row align-items-center mb-4">
                     <div class="col-md-5">
                         <div class="input-group">
-                            <span class="input-group-text bg-white">เลือกปีงบประมาณ</span>
+                            <span class="input-group-text bg-white">เลือกปี</span>
                             <select class="form-select" id="dashboardYear" onchange="loadDashboardData()">
                                 <?php
-                                $curMonth = intval(date('n'));
-                                $curFiscalYear = $curMonth >= 10 ? intval(date('Y')) + 1 : intval(date('Y'));
-                                for ($y = $curFiscalYear; $y >= 2023; $y--) {
+                                $curYear = intval(date('Y'));
+                                for ($y = $curYear; $y >= 2023; $y--) {
                                     $thaiYear = $y + 543;
-                                    $selected = ($y == $curFiscalYear) ? 'selected' : '';
+                                    $selected = ($y == $curYear) ? 'selected' : '';
                                     echo "<option value='$y' $selected>ปี $thaiYear</option>";
                                 }
                                 ?>
@@ -242,13 +241,11 @@
     <script>
         let monthlyChart, projectChart, paymentChart;
 
-        // Get fiscal year type from settings
-        const fiscalYearType = localStorage.getItem('fiscalYearType') || 'thai';
+        // Get fiscal year type from settings (default to calendar)
+        const fiscalYearType = 'calendar';
 
-        // Month names based on fiscal year type
-        const monthNamesThai = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
-        const monthNamesCalendar = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        const monthNames = fiscalYearType === 'thai' ? monthNamesThai : monthNamesCalendar;
+        // Month names based on calendar year
+        const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
         document.addEventListener('DOMContentLoaded', function () {
             initCharts();

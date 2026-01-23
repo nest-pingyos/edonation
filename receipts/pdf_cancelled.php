@@ -10,6 +10,14 @@ require_once dirname(__DIR__) . '/config/env.php';
 require_once dirname(__DIR__) . '/config/database.php';
 
 require('TCPDF/tcpdf.php');
+
+// Initialize admin session
+if (!defined('SESSION_NAME')) {
+    define('SESSION_NAME', 'edonation_admin');
+}
+session_name(SESSION_NAME);
+session_start();
+
 ob_start();
 
 // Thai month names
@@ -284,57 +292,85 @@ function fetchReceiptData($receiptId)
 }
 
 /**
- * ตรวจสอบ access token จาก database
+ * ตรวจสอบ access token และคืนค่าข้อมูลจากฐานข้อมูล
  */
-function validateAccessToken($receiptId, $token)
+function validateAccessToken($token)
 {
     if (empty($token)) {
-        return false;
+        return null;
     }
 
     global $con;
 
-    // ตรวจสอบ token จาก database
+    // ลบ token ที่หมดอายุ (เกิน 24 ชม.)
+    $con->query("DELETE FROM edonation_pdf_access_tokens WHERE expires_at < DATE_SUB(NOW(), INTERVAL 1 DAY)");
+
+    // ตรวจสอบ token
     $stmt = $con->prepare("
-        SELECT id, receipt_id, token, expires_at, used 
+        SELECT id, receipt_id, expires_at, used 
         FROM edonation_pdf_access_tokens 
-        WHERE receipt_id = ? AND token = ?
+        WHERE token = ?
     ");
-    $stmt->bind_param("is", $receiptId, $token);
+    $stmt->bind_param("s", $token);
     $stmt->execute();
     $result = $stmt->get_result();
-    $tokenData = $result->fetch_assoc();
-
-    if (!$tokenData) {
-        return false;
-    }
-
-    // ตรวจสอบว่าหมดอายุหรือยัง
-    if (strtotime($tokenData['expires_at']) < time()) {
-        // ลบ token ที่หมดอายุ
-        $deleteStmt = $con->prepare("DELETE FROM edonation_pdf_access_tokens WHERE id = ?");
-        $deleteStmt->bind_param("i", $tokenData['id']);
-        $deleteStmt->execute();
-        return false;
-    }
-
-    return true;
+    return $result->fetch_assoc();
 }
 
-// รับค่า receipt ID และ token
+// 1. รับค่า Token และ ID
+$token = $_GET['token'] ?? '';
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-$token = isset($_GET['token']) ? $_GET['token'] : '';
-$isAdmin = isset($_GET['admin']) && $_GET['admin'] == '1';
+
+// 2. ตรวจสอบความเป็น Admin จาก Session
+$isAdmin = isset($_SESSION['user']) || (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true);
+
+// 3. จัดการสิทธิ์การเข้าถึง
+if ($token) {
+    $tokenInfo = validateAccessToken($token);
+
+    if ($tokenInfo) {
+        $id = intval($tokenInfo['receipt_id']);
+        $isExpired = strtotime($tokenInfo['expires_at']) < time();
+        $isUsed = (int) $tokenInfo['used'] === 1;
+
+        // ตรวจสอบความถูกต้อง
+        if ($isExpired) {
+            accessDenied("Access Token นี้หมดอายุแล้ว");
+        }
+
+        // ถ้าเป็นคนทั่วไป (ไม่ใช่ Admin) และ Token ถูกใช้ไปนานแล้ว (เกิน 10 นาทีหลังจากหมดอายุ)
+        // หรือถ้าคุณต้องการความปลอดภัยสูง: if (!$isAdmin && $isUsed)
+        // แต่เพื่อความสะดวกในการเปิดหน้าจอซ้ำ เราจะเช็คแค่หมดอายุตราบใดที่มี Session Admin
+        if (!$isAdmin && $isUsed && $isExpired) {
+            accessDenied();
+        }
+
+        // บันทึกว่าถูกใช้งานแล้ว (ถ้ายังไม่เคยบันทึก)
+        if (!$isUsed) {
+            global $con;
+            $updateStmt = $con->prepare("UPDATE edonation_pdf_access_tokens SET used = 1 WHERE id = ?");
+            $updateStmt->bind_param("i", $tokenInfo['id']);
+            $updateStmt->execute();
+        }
+    } else if (!$isAdmin) {
+        accessDenied("Access Token ไม่ถูกต้อง");
+    }
+} else if ($isAdmin && $id > 0) {
+    // ไม่มี Token แต่เป็น Admin และมี ID ให้ยอมให้ผ่านได้
+} else {
+    accessDenied();
+}
 
 if ($id <= 0) {
-    die("ไม่ได้ระบุ ID ใบเสร็จ");
+    die("ไม่สามารถระบุ ID ใบเสร็จได้");
 }
 
-// ตรวจสอบ access token (ข้ามถ้าเปิดจาก admin)
-if (!$isAdmin && !validateAccessToken($id, $token)) {
-    // Use BASE_PATH from config
+/**
+ * แสดงหน้า Error เมื่อไม่มีสิทธิ์
+ */
+function accessDenied($message = "Access Token หมดอายุ หรือไม่มีสิทธิ์เข้าถึงเอกสารนี้")
+{
     $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-    // แสดงหน้า error สวยๆ
     echo '<!DOCTYPE html>
     <html lang="th">
     <head>
@@ -355,7 +391,7 @@ if (!$isAdmin && !validateAccessToken($id, $token)) {
         <div class="error-box">
             <div class="error-icon">🔒</div>
             <h1>ไม่สามารถเข้าถึงได้</h1>
-            <p>กรุณายืนยันตัวตนด้วยเลขประจำตัวผู้เสียภาษีก่อนเปิดใบเสร็จ</p>
+            <p>' . htmlspecialchars($message) . '</p>
             <a href="' . $basePath . '/receipts/">กลับไปหน้าค้นหา</a>
         </div>
     </body>
@@ -518,7 +554,7 @@ if ($signatureData) {
 // Initialize PDF
 $pdf = new TCPDF('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 $pdf->SetCreator(PDF_CREATOR);
-$pdf->SetHeaderData('', '', PDF_HEADER_TITLE, PDF_HEADER_STRING);
+$pdf->SetHeaderData('', 0, PDF_HEADER_TITLE, PDF_HEADER_STRING);
 $pdf->setHeaderFont([PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN]);
 $pdf->setFooterFont([PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA]);
 $pdf->SetDefaultMonospacedFont('thsarabunnew');
@@ -583,6 +619,13 @@ $imageWidth = 150;
 $x = $pdf->GetX() + ($cellWidth - $imageWidth) / 2;
 $y = $pdf->GetY() - 10;
 $pdf->Image($img, $x, $y, $imageWidth, 150, '', '', '', false, 300, '', false, false, 0, false, false, false);
+
+// ยกเลิก
+$img = 'TCPDF/pdf_recrip_cc.png';
+$pdf->SetAutoPageBreak(false, 0);
+$pdf->Image($img, 0, 0, 210, 297, '', '', '', false, 300, '', false, false, 0);
+$pdf->SetAutoPageBreak(true, 2);
+
 
 // Prepare content
 $content = '
@@ -712,7 +755,19 @@ $content = '
 // Write the content to the PDF
 $pdf->writeHTML($content);
 
+// Prepare filename: receipt_no-payer_name.pdf
+$receiptNo = $data['receipt_no'];
+$payerName = $data['payerAccountName'];
+
+// Clean filename (remove special chars, replace spaces with underscores)
+// Keep minimal cleaning to support Thai characters
+$cleanName = trim(preg_replace('/\s+/', '_', $payerName));
+// Remove potentially problematic characters for filenames
+$cleanName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '', $cleanName);
+
+$filename = "{$receiptNo}-{$cleanName}.pdf";
+
 // Output the PDF
-$pdf->Output('Receipt_' . ($data['id']) . '.pdf', 'I');
+$pdf->Output($filename, 'I');
 
 ob_end_flush();

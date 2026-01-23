@@ -77,6 +77,12 @@ class MemberController
             return $this->export();
         }
 
+        // POST /members/sync - Sync สมาชิกจากใบเสร็จ
+        if ($method === 'POST' && $id === 'sync') {
+            AuthMiddleware::requireAdmin();
+            return $this->sync();
+        }
+
         return Response::error('METHOD_NOT_ALLOWED', 'Method not allowed', 405);
     }
 
@@ -208,6 +214,128 @@ class MemberController
     }
 
     /**
+     * POST /members/sync
+     * Sync ข้อมูลสมาชิกจากตาราง edonation_receipts (Full Sync)
+     * เฉพาะผู้บริจาคที่มีใบเสร็จเท่านั้น
+     */
+    private function sync(): array
+    {
+        try {
+            // Count before sync
+            $countBefore = $this->pdo->query("SELECT COUNT(*) FROM edonation_members")->fetchColumn();
+
+            // Full Sync: INSERT new members, UPDATE existing members
+            $sql = "INSERT INTO edonation_members (
+                        id_members,
+                        id_card,
+                        type,
+                        title,
+                        first_name,
+                        last_name,
+                        phone,
+                        occupation,
+                        address_line,
+                        province,
+                        district,
+                        subdistrict,
+                        zip_code,
+                        full_address,
+                        shipping_address,
+                        total_donated,
+                        donation_count,
+                        first_donation_date,
+                        last_donation_date,
+                        benefactor_level
+                    )
+                    SELECT 
+                        r.id_members,
+                        r.id_card,
+                        CASE 
+                            WHEN du.title IN ('บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม') THEN 'juristic'
+                            ELSE 'individual'
+                        END as type,
+                        du.title,
+                        du.first_name,
+                        du.last_name,
+                        MAX(du.phone) as phone,
+                        MAX(du.occupation) as occupation,
+                        MAX(du.address_line) as address_line,
+                        MAX(du.province) as province,
+                        MAX(du.amphure) as district,
+                        MAX(du.district) as subdistrict,
+                        MAX(du.zip_code) as zip_code,
+                        MAX(COALESCE(du.receipt_address, du.shipping_address, 
+                            CONCAT_WS(' ', du.address_line, du.district, du.amphure, du.province, du.zip_code)
+                        )) as full_address,
+                        MAX(du.shipping_address) as shipping_address,
+                        SUM(r.amount) as total_donated,
+                        COUNT(DISTINCT r.id) as donation_count,
+                        MIN(DATE(r.issued_at)) as first_donation_date,
+                        MAX(DATE(r.issued_at)) as last_donation_date,
+                        CASE 
+                            WHEN SUM(r.amount) >= 1000000 THEN 'มหากุศลาธิยาอา'
+                            WHEN SUM(r.amount) >= 500000 THEN 'กุศลาธิกาอา'
+                            WHEN SUM(r.amount) >= 100000 THEN 'อุดมกุศลา'
+                            WHEN SUM(r.amount) >= 50000 THEN 'มหากุศลา'
+                            WHEN SUM(r.amount) >= 10000 THEN 'กุศลา'
+                            ELSE 'ผู้บริจาค'
+                        END as benefactor_level
+                    FROM edonation_receipts r
+                    LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
+                    WHERE r.id_members IS NOT NULL 
+                      AND r.id_members != ''
+                    GROUP BY r.id_members, r.id_card, du.title, du.first_name, du.last_name
+                    ON DUPLICATE KEY UPDATE
+                        id_card = COALESCE(VALUES(id_card), id_card),
+                        phone = COALESCE(VALUES(phone), phone),
+                        occupation = COALESCE(VALUES(occupation), occupation),
+                        address_line = COALESCE(VALUES(address_line), address_line),
+                        province = COALESCE(VALUES(province), province),
+                        district = COALESCE(VALUES(district), district),
+                        subdistrict = COALESCE(VALUES(subdistrict), subdistrict),
+                        zip_code = COALESCE(VALUES(zip_code), zip_code),
+                        full_address = COALESCE(VALUES(full_address), full_address),
+                        shipping_address = COALESCE(VALUES(shipping_address), shipping_address),
+                        total_donated = VALUES(total_donated),
+                        donation_count = VALUES(donation_count),
+                        first_donation_date = VALUES(first_donation_date),
+                        last_donation_date = VALUES(last_donation_date),
+                        benefactor_level = VALUES(benefactor_level),
+                        updated_at = CURRENT_TIMESTAMP";
+
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute();
+            $affectedRows = $stmt->rowCount();
+
+            // Count after sync
+            $countAfter = $this->pdo->query("SELECT COUNT(*) FROM edonation_members")->fetchColumn();
+            $newMembers = $countAfter - $countBefore;
+
+            // Get summary stats
+            $statsSql = "SELECT 
+                            COUNT(*) as total_members,
+                            SUM(total_donated) as total_donated,
+                            SUM(donation_count) as total_receipts
+                         FROM edonation_members";
+            $stats = $this->pdo->query($statsSql)->fetch(PDO::FETCH_ASSOC);
+
+            return Response::success([
+                'synced' => $affectedRows,
+                'new_members' => max(0, $newMembers),
+                'updated_members' => max(0, $affectedRows - $newMembers),
+                'total_members' => (int) $stats['total_members'],
+                'total_donated' => (float) $stats['total_donated'],
+                'total_receipts' => (int) $stats['total_receipts'],
+                'synced_at' => date('Y-m-d H:i:s')
+            ], 'Sync สมาชิกสำเร็จ');
+
+        } catch (PDOException $e) {
+            error_log("Sync Error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'เกิดข้อผิดพลาดในการ Sync: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * POST /members/:id_members/update
      * แก้ไขข้อมูลสมาชิก (ชื่อ, ที่อยู่, เบอร์โทร)
      * *Update ข้อมูลย้อนหลังทั้งหมดสำหรับ id_members นี้ (Cascade)*
@@ -299,7 +427,7 @@ class MemberController
 
     /**
      * GET /members
-     * รายการสมาชิกทั้งหมด (จัดกลุ่มตาม id_members)
+     * รายการสมาชิกทั้งหมด (ดึงจากตาราง edonation_members)
      */
     private function index(): array
     {
@@ -308,18 +436,28 @@ class MemberController
         $offset = ($page - 1) * $limit;
 
         $sql = "SELECT 
-                    r.id_members,
-                    r.id_card,
-                    MAX(r.payer_name) as name,
-                    COUNT(DISTINCT r.id) as receipt_count,
-                    SUM(r.amount) as total_amount,
-                    MAX(r.issued_at) as last_donation_date,
-                    MAX(du.phone) as phone,
-                    MAX(du.receipt_address) as address
-                FROM edonation_receipts r
-                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                WHERE r.id_members IS NOT NULL AND r.id_members != ''
-                GROUP BY r.id_members, r.id_card
+                    id,
+                    id_members,
+                    id_card,
+                    type,
+                    title,
+                    first_name,
+                    last_name,
+                    full_name as name,
+                    phone,
+                    email,
+                    occupation,
+                    full_address as address,
+                    total_donated,
+                    donation_count as receipt_count,
+                    benefactor_level,
+                    first_donation_date,
+                    last_donation_date,
+                    is_active,
+                    created_at,
+                    updated_at
+                FROM edonation_members
+                WHERE is_active = 1
                 ORDER BY last_donation_date DESC
                 LIMIT :limit OFFSET :offset";
 
@@ -330,14 +468,14 @@ class MemberController
         $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Count total
-        $countSql = "SELECT COUNT(DISTINCT id_members) as total FROM edonation_receipts WHERE id_members IS NOT NULL AND id_members != ''";
+        $countSql = "SELECT COUNT(*) as total FROM edonation_members WHERE is_active = 1";
         $countStmt = $this->pdo->query($countSql);
         $total = (int) $countStmt->fetch()['total'];
 
         // Format response
         foreach ($members as &$m) {
             $m['id_card_formatted'] = $this->formatIdCard($m['id_card'] ?? '');
-            $m['total_amount'] = floatval($m['total_amount']);
+            $m['total_amount'] = floatval($m['total_donated']);
             $m['receipt_count'] = (int) $m['receipt_count'];
             $m['is_repeat_donor'] = $m['receipt_count'] > 1;
             $m['donor_type'] = $this->getDonorTypeFromCount($m['receipt_count']);
@@ -398,49 +536,80 @@ class MemberController
 
     /**
      * GET /members/search?q=xxx
-     * ค้นหาสมาชิกด้วยชื่อ, เลขบัตร, หรือรหัสสมาชิก
+     * ค้นหาสมาชิกด้วยชื่อ, เลขบัตร, หรือรหัสสมาชิก (ดึงจากตาราง edonation_members)
      */
     private function search(): array
     {
         $query = trim($_GET['q'] ?? '');
+        $type = $_GET['type'] ?? 'all'; // all, name, id_card
         $limit = min(50, max(1, intval($_GET['limit'] ?? 20)));
 
         $sql = "SELECT 
-                    r.id_members,
-                    r.id_card,
-                    MAX(r.payer_name) as name,
-                    COUNT(DISTINCT r.id) as receipt_count,
-                    SUM(r.amount) as total_amount,
-                    MAX(r.issued_at) as last_donation_date,
-                    MAX(du.phone) as phone,
-                    MAX(du.title) as title,
-                    MAX(du.first_name) as first_name,
-                    MAX(du.last_name) as last_name
-                FROM edonation_receipts r
-                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                WHERE r.id_members IS NOT NULL AND r.id_members != ''";
+                    id,
+                    id_members,
+                    id_card,
+                    type,
+                    title,
+                    first_name,
+                    last_name,
+                    full_name as name,
+                    phone,
+                    email,
+                    occupation,
+                    address_line,
+                    province,
+                    district,
+                    subdistrict,
+                    zip_code,
+                    full_address as address,
+                    total_donated as total_amount,
+                    donation_count as receipt_count,
+                    benefactor_level,
+                    last_donation_date
+                FROM edonation_members
+                WHERE is_active = 1";
 
         $params = [];
 
         if (!empty($query)) {
-            $sql .= " AND (
-                r.payer_name LIKE :q1 
-                OR r.id_card LIKE :q2 
-                OR r.id_members LIKE :q3
-                OR du.first_name LIKE :q4
-                OR du.last_name LIKE :q5
-            )";
-            $searchVal = '%' . $query . '%';
-            $params[':q1'] = $searchVal;
-            $params[':q2'] = '%' . preg_replace('/\D/', '', $query) . '%';
-            $params[':q3'] = $searchVal;
-            $params[':q4'] = $searchVal;
-            $params[':q5'] = $searchVal;
+            switch ($type) {
+                case 'name':
+                    $sql .= " AND (
+                        full_name LIKE :q1 
+                        OR first_name LIKE :q2
+                        OR last_name LIKE :q3
+                    )";
+                    $searchVal = '%' . $query . '%';
+                    $params[':q1'] = $searchVal;
+                    $params[':q2'] = $searchVal;
+                    $params[':q3'] = $searchVal;
+                    break;
+
+                case 'id_card':
+                    $sql .= " AND id_card LIKE :q1";
+                    $params[':q1'] = '%' . preg_replace('/\D/', '', $query) . '%';
+                    break;
+
+                default: // all
+                    $sql .= " AND (
+                        full_name LIKE :q1 
+                        OR id_card LIKE :q2 
+                        OR id_members LIKE :q3
+                        OR first_name LIKE :q4
+                        OR last_name LIKE :q5
+                        OR phone LIKE :q6
+                    )";
+                    $searchVal = '%' . $query . '%';
+                    $params[':q1'] = $searchVal;
+                    $params[':q2'] = '%' . preg_replace('/\D/', '', $query) . '%';
+                    $params[':q3'] = $searchVal;
+                    $params[':q4'] = $searchVal;
+                    $params[':q5'] = $searchVal;
+                    $params[':q6'] = '%' . preg_replace('/\D/', '', $query) . '%';
+            }
         }
 
-        $sql .= " GROUP BY r.id_members, r.id_card
-                  ORDER BY last_donation_date DESC
-                  LIMIT :limit";
+        $sql .= " ORDER BY last_donation_date DESC LIMIT :limit";
 
         $stmt = $this->pdo->prepare($sql);
         foreach ($params as $key => $val) {
@@ -454,49 +623,23 @@ class MemberController
             $m['id_card_formatted'] = $this->formatIdCard($m['id_card'] ?? '');
             $m['total_amount'] = floatval($m['total_amount']);
             $m['receipt_count'] = (int) $m['receipt_count'];
-            // ถ้าไม่มี title ให้พยายามหาจาก name
-            if (empty($m['title']) && !empty($m['name'])) {
-                $m['title'] = $this->extractTitleFromName($m['name']);
-            }
         }
 
         return Response::success($results, null, [
             'count' => count($results),
-            'query' => $query
+            'query' => $query,
+            'type' => $type
         ]);
     }
 
     /**
      * GET /members/:id_members
-     * ดึงข้อมูลโปรไฟล์สมาชิกจาก id_members
+     * ดึงข้อมูลโปรไฟล์สมาชิกจาก id_members (ดึงจากตาราง edonation_members)
      */
     private function getMemberProfile(string $idMembers): array
     {
-        // ดึงข้อมูลรวมจาก receipts + donat_user
-        $sql = "SELECT 
-                    r.id_members,
-                    r.id_card,
-                    MAX(r.payer_name) as name,
-                    COUNT(DISTINCT r.id) as receipt_count,
-                    SUM(r.amount) as total_amount,
-                    MIN(r.issued_at) as first_donation_date,
-                    MAX(r.issued_at) as last_donation_date,
-                    MAX(du.phone) as phone,
-                    MAX(du.title) as title,
-                    MAX(du.first_name) as first_name,
-                    MAX(du.last_name) as last_name,
-                    MAX(du.receipt_address) as receipt_address,
-                    MAX(du.phone) as phone,
-                    MAX(du.occupation) as occupation,
-                    MAX(du.address_line) as address_line,
-                    MAX(du.province) as province,
-                    MAX(du.amphure) as amphure,
-                    MAX(du.district) as district,
-                    MAX(du.zip_code) as zip_code
-                FROM edonation_receipts r
-                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                WHERE r.id_members = :id_members
-                GROUP BY r.id_members, r.id_card";
+        // ดึงข้อมูลจากตาราง edonation_members
+        $sql = "SELECT * FROM edonation_members WHERE id_members = :id_members AND is_active = 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id_members' => $idMembers]);
@@ -536,7 +679,7 @@ class MemberController
         $donationYears = $yearsStmt->fetchAll(PDO::FETCH_COLUMN);
 
         // คำนวณความถี่การบริจาค
-        $receiptCount = (int) $member['receipt_count'];
+        $receiptCount = (int) $member['donation_count'];
         $isRepeatDonor = $receiptCount > 1;
         $donorType = 'new';
         if ($receiptCount >= 10) {
@@ -547,28 +690,27 @@ class MemberController
             $donorType = 'repeat'; // ผู้บริจาคซ้ำ
         }
 
-        // ถ้าไม่มี title ให้พยายามหาจาก name
-        $title = $member['title'];
-        if (empty($title) && !empty($member['name'])) {
-            $title = $this->extractTitleFromName($member['name']);
-        }
+        $totalAmount = floatval($member['total_donated']);
 
         return Response::success([
+            'id' => $member['id'],
             'id_members' => $member['id_members'],
             'id_card' => $member['id_card'],
             'id_card_formatted' => $this->formatIdCard($member['id_card'] ?? ''),
-            'name' => $member['name'] ?? trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? '')),
-            'title' => $title,
+            'type' => $member['type'],
+            'name' => $member['full_name'] ?? trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? '')),
+            'title' => $member['title'],
             'first_name' => $member['first_name'],
             'last_name' => $member['last_name'],
             'phone' => $member['phone'],
-            'occupation' => $member['occupation'] ?? '', // เพิ่มอาชีพ
+            'email' => $member['email'],
+            'occupation' => $member['occupation'] ?? '',
             'address' => [
-                'full' => $member['receipt_address'],
+                'full' => $member['full_address'],
                 'address_line' => $member['address_line'],
                 'province' => $member['province'],
-                'amphure' => $member['amphure'],
                 'district' => $member['district'],
+                'subdistrict' => $member['subdistrict'],
                 'zip_code' => $member['zip_code']
             ],
             'statistics' => [
@@ -585,7 +727,7 @@ class MemberController
                 'donor_type' => $donorType,
                 'donor_type_label' => $this->getDonorTypeLabel($donorType)
             ],
-            'benefactor_level' => $benefactorLevel,
+            'benefactor_level' => $member['benefactor_level'] ?? $this->getBenefactorLevel($totalAmount),
             'top_projects' => $projects,
             'api_version' => self::VERSION
         ], 'พบข้อมูลสมาชิก');

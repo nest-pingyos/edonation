@@ -5,14 +5,17 @@
  */
 
 // API Base URL - detect from current location
-const API_BASE = (() => {
-    // Get base path from current URL (handles /appdev/edonation or /edonation)
-    const path = window.location.pathname;
-    // Look for /edonation or /appdev/edonation pattern
-    const match = path.match(/^(.*?\/edonation)/);
-    const basePath = match ? match[1] : '';
-    return basePath + '/api/v1';
-})();
+// API Base URL - detect from current location
+if (typeof API_BASE === 'undefined') {
+    var API_BASE = (() => {
+        // Get base path from current URL (handles /appdev/edonation or /edonation)
+        const path = window.location.pathname;
+        // Look for /edonation or /appdev/edonation pattern
+        const match = path.match(/^(.*?\/edonation)/);
+        const basePath = match ? match[1] : '';
+        return basePath + '/api/v1';
+    })();
+}
 
 /**
  * HTTP Request Functions

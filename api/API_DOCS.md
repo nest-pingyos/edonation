@@ -126,7 +126,7 @@ GET /donations/:id/status
     "payer_name": "นายทดสอบ ระบบ",
     "receipt_id": 456,
     "receipt_no": "2569-E0001",
-    "pdf_url": "/edonation/web/receipts/pdf_maker.php?id=456&token=xxx",
+    "pdf_url": "/edonation/web/receipts/pdf_completed.php?id=456&token=xxx",
     "amount": 1000
   }
 }

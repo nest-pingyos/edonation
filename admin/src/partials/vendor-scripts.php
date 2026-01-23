@@ -88,8 +88,14 @@ $basePath = '';
         // Close mobile menu when clicking outside
         document.addEventListener('click', function (e) {
             const nav = document.querySelector('.main-nav');
-            const toggleBtn = document.querySelector('.menu-toggle');
-            if (nav && !nav.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
+            // Check if clicked element is (or is inside) the toggle button
+            const isToggleBtn = e.target.closest('.menu-toggle');
+
+            // If clicked on toggle button, let the toggle function handle it (do nothing here)
+            if (isToggleBtn) return;
+
+            // If menu is open and click is outside menu -> close it
+            if (nav && nav.classList.contains('show') && !nav.contains(e.target)) {
                 nav.classList.remove('show');
             }
         });
@@ -228,7 +234,9 @@ $basePath = '';
     // API Request Helper
     // ============================================
 
-    const API_BASE_URL = '<?php echo defined("API_URL") ? API_URL : "/edonation/api/v1"; ?>';
+    if (typeof API_BASE_URL === 'undefined') {
+        var API_BASE_URL = '<?php echo defined("API_URL") ? API_URL : "/edonation/api/v1"; ?>';
+    }
 
     async function apiRequest(endpoint, options = {}) {
         const url = API_BASE_URL + endpoint;

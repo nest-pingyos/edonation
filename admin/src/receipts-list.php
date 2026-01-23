@@ -108,236 +108,279 @@
                     </div>
                     <div class="card-body">
                         <!-- Filters -->
-                        <div class="row mb-3 g-2">
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        ค้นหา
-                                    </span>
-                                    <input type="text" id="searchInput" class="form-control"
-                                        placeholder="ค้นหาเลขใบเสร็จ, ชื่อ, เลขบัตร...">
+                        <div class="bg-light p-3 rounded mb-4">
+                            <div class="row g-3">
+                                <!-- Search Row -->
+                                <div class="col-lg-4 col-md-6">
+                                    <label class="form-label fw-bold">ระบุคำค้นหา</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0">
+                                            <iconify-icon icon="solar:magnifer-linear" class="fs-18"></iconify-icon>
+                                        </span>
+                                        <input type="text" id="searchInput" class="form-control border-start-0 ps-0"
+                                            placeholder="เลขใบเสร็จ, ชื่อ, เลขบัตรประชาชน...">
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-2 col-md-3">
+                                    <label class="form-label fw-bold">สถานะ</label>
+                                    <select id="statusFilter" class="form-select">
+                                        <option value="">ทุกสถานะ</option>
+                                        <option value="issued">ออกแล้ว</option>
+                                        <option value="cancelled">ยกเลิก</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-3 col-md-3">
+                                    <label class="form-label fw-bold">โครงการ</label>
+                                    <select id="projectFilter" class="form-select">
+                                        <option value="">ทุกโครงการ</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-1 col-md-2">
+                                    <label class="form-label fw-bold">ปีงบฯ</label>
+                                    <select id="yearFilter" class="form-select">
+                                        <option value="">ทุกปี</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-2 col-md-4">
+                                    <label class="form-label fw-bold">แสดงรายการ</label>
+                                    <div class="input-group">
+                                        <select id="limitSelector" class="form-select" onchange="changeLimit()">
+                                            <option value="25">25 รายการ</option>
+                                            <option value="50">50 รายการ</option>
+                                            <option value="100">100 รายการ</option>
+                                            <option value="250">250 รายการ</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Date & Action Row -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label fw-bold">ตั้งแต่วันที่</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white">
+                                            <iconify-icon icon="solar:calendar-date-outline"></iconify-icon>
+                                        </span>
+                                        <input type="date" id="dateFrom" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label fw-bold">ถึงวันที่</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white">
+                                            <iconify-icon icon="solar:calendar-date-outline"></iconify-icon>
+                                        </span>
+                                        <input type="date" id="dateTo" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-2 col-md-12 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100 py-2 d-flex align-items-center justify-content-center" onclick="searchReceipts()">
+                                        <iconify-icon icon="solar:filter-bold-duotone" class="me-2 fs-18"></iconify-icon>
+                                        ค้นหาใบเสร็จ
+                                    </button>
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <select id="statusFilter" class="form-select">
-                                    <option value="">ทุกสถานะ</option>
-                                    <option value="issued">ออกแล้ว</option>
-                                    <option value="cancelled">ยกเลิก</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <select id="projectFilter" class="form-select">
-                                    <option value="">ทุกโครงการ</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <select id="yearFilter" class="form-select">
-                                    <option value="">ทุกปี</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <button class="btn btn-primary w-100" onclick="loadReceipts()">
-                                    ค้นหา
-                                </button>
-                            </div>
                         </div>
-                        <div class="row mb-3 g-2">
-                            <div class="col-md-3">
-                                <input type="date" id="dateFrom" class="form-control" placeholder="จากวันที่">
-                            </div>
-                            <div class="col-md-3">
-                                <input type="date" id="dateTo" class="form-control" placeholder="ถึงวันที่">
-                            </div>
 
-                            <!-- Table -->
-                            <div class="table-responsive">
-                                <table class="table table-hover table-nowrap align-middle">
-                                    <thead class="bg-light">
-                                        <tr>
-                                        <tr>
-                                            <th style="width: 50px;">#</th>
-                                            <th style="width: 130px;">เลขที่ใบเสร็จ</th>
-                                            <th>ผู้บริจาค</th>
-                                            <th>โครงการ</th>
-                                            <th class="text-end" style="width: 120px;">จำนวนเงิน</th>
-                                            <th style="width: 120px;">วันที่ออก</th>
-                                            <th style="width: 150px;" class="text-center">จัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="receiptsTable">
-                                        <tr>
-                                        <tr>
-                                            <td colspan="7" class="text-center py-4">
-                                                <div class="spinner-border text-primary"></div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-nowrap align-middle">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th style="width: 130px;">เลขที่ใบเสร็จ</th>
+                                        <th>ผู้บริจาค</th>
+                                        <th>โครงการ</th>
+                                        <th class="text-end" style="width: 120px;">จำนวนเงิน</th>
+                                        <th style="width: 120px;">วันที่ออก</th>
+                                        <th style="width: 100px;">สถานะ</th>
+                                        <th style="width: 150px;" class="text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="receiptsTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <div class="spinner-border text-primary"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                            <!-- Pagination -->
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div id="pagination-info" class="text-muted small"></div>
-                                <nav id="pagination"></nav>
-                            </div>
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div id="pagination-info" class="text-muted small"></div>
+                            <nav id="pagination"></nav>
                         </div>
                     </div>
                 </div>
-
-                <?php include 'partials/footer.php'; ?>
             </div>
-        </div>
 
-        <!-- Detail Modal -->
-        <div class="modal fade" id="detailModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">รายละเอียดใบเสร็จ</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <?php include 'partials/footer.php'; ?>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">รายละเอียดใบเสร็จ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detailContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary"></div>
                     </div>
-                    <div class="modal-body" id="detailContent">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary"></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
-                        <button type="button" class="btn btn-outline-danger" id="cancelReceiptBtn"
-                            onclick="cancelReceipt()">
-                            ยกเลิกใบเสร็จ
-                        </button>
-                        <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
-                            ดาวน์โหลด PDF
-                        </a>
-                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-outline-danger" id="cancelReceiptBtn"
+                        onclick="cancelReceipt()">
+                        ยกเลิกใบเสร็จ
+                    </button>
+                    <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
+                        ดาวน์โหลด PDF
+                    </a>
                 </div>
             </div>
         </div>
+    </div>
 
-        <?php include 'partials/vendor-scripts.php'; ?>
-        <script src="assets/js/api-helper.js"></script>
+    <?php include 'partials/vendor-scripts.php'; ?>
+    <script src="assets/js/api-helper.js"></script>
 
-        <script>
-            // Get BASE_PATH from current URL
-            const BASE_PATH = (() => {
-                const path = window.location.pathname;
-                const match = path.match(/^(.*?\/edonation)/);
-                return match ? match[1] : '/edonation';
-            })();
+    <script>
+        // Get BASE_PATH from current URL
+        const BASE_PATH = (() => {
+            const path = window.location.pathname;
+            const match = path.match(/^(.*?\/edonation)/);
+            return match ? match[1] : '/edonation';
+        })();
 
-            let receipts = [];
-            let currentPage = 1;
-            let currentReceipt = null;
-            const perPage = 20;
+        let receipts = [];
+        let currentPage = 1;
+        let currentReceipt = null;
+        let perPage = 25;
 
-            document.addEventListener('DOMContentLoaded', function () {
-                // Populate year filter
-                const yearSelect = document.getElementById('yearFilter');
-                const currentYear = new Date().getFullYear() + 543; // BE Year
-                for (let y = currentYear; y >= currentYear - 5; y--) {
-                    const option = document.createElement('option');
-                    option.value = y;
-                    option.textContent = y;
-                    yearSelect.appendChild(option);
-                }
+        document.addEventListener('DOMContentLoaded', function () {
+            // Populate year filter
+            const yearSelect = document.getElementById('yearFilter');
+            const currentYear = new Date().getFullYear() + 543; // BE Year
+            for (let y = currentYear; y >= currentYear - 5; y--) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.textContent = y;
+                yearSelect.appendChild(option);
+            }
 
-                loadProjects(); // Load projects first
+            loadProjects(); // Load projects first
+            loadReceipts();
+
+            // Filter handlers
+            document.getElementById('searchInput').addEventListener('input', debounce(() => {
+                currentPage = 1;
                 loadReceipts();
+            }, 500));
+            document.getElementById('statusFilter').addEventListener('change', () => { currentPage = 1; loadReceipts(); });
+            document.getElementById('yearFilter').addEventListener('change', () => { currentPage = 1; loadReceipts(); });
+            document.getElementById('projectFilter').addEventListener('change', () => { currentPage = 1; loadReceipts(); });
+        });
 
-                // Filter handlers
-                document.getElementById('searchInput').addEventListener('input', debounce(loadReceipts, 500));
-                document.getElementById('statusFilter').addEventListener('change', loadReceipts);
-                document.getElementById('yearFilter').addEventListener('change', loadReceipts);
-                document.getElementById('projectFilter').addEventListener('change', loadReceipts); // Add listener
-            });
+        async function loadProjects() {
+            try {
+                const response = await apiGet('/projects');
+                const projects = response.data || [];
+                const select = document.getElementById('projectFilter');
 
-            async function loadProjects() {
-                try {
-                    const response = await apiGet('/projects');
-                    const projects = response.data || [];
-                    const select = document.getElementById('projectFilter');
+                projects.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.project_number; // Use project_number as value
+                    // If project has no number, fallback to ID? Usually project_number is key.
+                    option.textContent = truncateText(p.project_name, 40);
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load projects:', error);
+            }
+        }
 
-                    projects.forEach(p => {
-                        const option = document.createElement('option');
-                        option.value = p.project_number; // Use project_number as value
-                        // If project has no number, fallback to ID? Usually project_number is key.
-                        option.textContent = truncateText(p.project_name, 40);
-                        select.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error('Failed to load projects:', error);
-                }
+        function truncateText(text, length) {
+            if (!text) return '';
+            if (text.length <= length) return text;
+            return text.substring(0, length) + '...';
+        }
+
+        async function loadReceipts() {
+            showTableLoading('receiptsTable', 7);
+
+            try {
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('limit', perPage);
+
+                const search = document.getElementById('searchInput').value;
+                if (search) params.append('search', search);
+
+                const status = document.getElementById('statusFilter').value;
+                if (status) params.append('status', status);
+
+                const year = document.getElementById('yearFilter').value;
+                if (year) params.append('year', year);
+
+                const project = document.getElementById('projectFilter').value; // Add project param
+                if (project) params.append('project', project);
+
+                const dateFrom = document.getElementById('dateFrom').value;
+                if (dateFrom) params.append('from', dateFrom);
+
+                const dateTo = document.getElementById('dateTo').value;
+                if (dateTo) params.append('to', dateTo);
+
+                const response = await apiGet('/receipts?' + params.toString());
+                receipts = response.data || [];
+
+                // Update stats
+                const stats = response.meta || {};
+                document.getElementById('total-receipts').textContent = formatNumber(stats.total || 0);
+                document.getElementById('issued-count').textContent = formatNumber(stats.issued || 0);
+                document.getElementById('cancelled-count').textContent = formatNumber(stats.cancelled || 0);
+
+                // Calculate total amount
+                const totalAmount = receipts.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+                document.getElementById('total-amount').textContent = formatNumber(stats.total_amount || totalAmount);
+
+                renderTable(receipts);
+
+                // Update pagination
+                const total = stats.total || receipts.length;
+                const totalPages = stats.total_pages || Math.ceil(total / perPage);
+                renderPagination(totalPages, currentPage);
+
+                const from = total > 0 ? (currentPage - 1) * perPage + 1 : 0;
+                const to = Math.min(currentPage * perPage, total);
+                document.getElementById('pagination-info').textContent = `แสดง ${from}-${to} จาก ${total} รายการ`;
+
+            } catch (error) {
+                showTableError('receiptsTable', 7, error.message);
+                showError(error.message);
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('receiptsTable');
+
+            if (!data || data.length === 0) {
+                showTableEmpty('receiptsTable', 7, 'ไม่พบใบเสร็จ');
+                return;
             }
 
-            function truncateText(text, length) {
-                if (!text) return '';
-                if (text.length <= length) return text;
-                return text.substring(0, length) + '...';
-            }
-
-            async function loadReceipts() {
-                showTableLoading('receiptsTable', 7);
-
-                try {
-                    const params = new URLSearchParams();
-                    params.append('page', currentPage);
-                    params.append('limit', perPage);
-
-                    const search = document.getElementById('searchInput').value;
-                    if (search) params.append('search', search);
-
-                    const status = document.getElementById('statusFilter').value;
-                    if (status) params.append('status', status);
-
-                    const year = document.getElementById('yearFilter').value;
-                    if (year) params.append('year', year);
-
-                    const project = document.getElementById('projectFilter').value; // Add project param
-                    if (project) params.append('project', project);
-
-                    const dateFrom = document.getElementById('dateFrom').value;
-                    if (dateFrom) params.append('from', dateFrom);
-
-                    const dateTo = document.getElementById('dateTo').value;
-                    if (dateTo) params.append('to', dateTo);
-
-                    const response = await apiGet('/receipts?' + params.toString());
-                    receipts = response.data || [];
-
-                    // Update stats
-                    const stats = response.meta || {};
-                    document.getElementById('total-receipts').textContent = formatNumber(stats.total || receipts.length);
-                    document.getElementById('issued-count').textContent = formatNumber(stats.issued || receipts.filter(r => r.status !== 'cancelled').length);
-                    document.getElementById('cancelled-count').textContent = formatNumber(stats.cancelled || receipts.filter(r => r.status === 'cancelled').length);
-
-                    // Calculate total amount
-                    const totalAmount = receipts.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
-                    document.getElementById('total-amount').textContent = formatNumber(stats.total_amount || totalAmount);
-
-                    renderTable(receipts);
-
-                    // Update pagination info
-                    const total = stats.total || receipts.length;
-                    const from = (currentPage - 1) * perPage + 1;
-                    const to = Math.min(currentPage * perPage, total);
-                    document.getElementById('pagination-info').textContent = `แสดง ${from}-${to} จาก ${total} รายการ`;
-
-                } catch (error) {
-                    showTableError('receiptsTable', 7, error.message);
-                    showError(error.message);
-                }
-            }
-
-            function renderTable(data) {
-                const tbody = document.getElementById('receiptsTable');
-
-                if (!data || data.length === 0) {
-                    showTableEmpty('receiptsTable', 7, 'ไม่พบใบเสร็จ');
-                    return;
-                }
-
-                tbody.innerHTML = data.map((item, index) => `
+            tbody.innerHTML = data.map((item, index) => `
         <tr>
             <td>${(currentPage - 1) * perPage + index + 1}</td>
             <td>
@@ -355,6 +398,7 @@
             </td>
             <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
             <td>${formatThaiDateShort(item.issued_at || item.created_at)}</td>
+            <td>${getReceiptStatusBadge(item.status)}</td>
             <td class="text-center">
                  <div class="dropdown">
                     <button class="btn btn-sm btn-light dropdown-toggle font-monospace" type="button" data-bs-toggle="dropdown">
@@ -374,7 +418,7 @@
                         </li>
                         ` : ''}
                         <li>
-                            <a class="dropdown-item" href="${BASE_PATH}/receipts/pdf_maker.php?id=${item.id}&admin=1" target="_blank">
+                            <a class="dropdown-item" href="javascript:void(0)" onclick="downloadSecurePdf('${item.id}')">
                                 ดาวน์โหลด PDF
                             </a>
                         </li>
@@ -397,30 +441,30 @@
             </td>
         </tr>
     `).join('');
-            }
+        }
 
-            function getReceiptStatusBadge(status) {
-                const badges = {
-                    'issued': '<span class="badge badge-soft-success">ออกแล้ว</span>',
-                    'pending': '<span class="badge badge-soft-warning">รอออก</span>',
-                    'cancelled': '<span class="badge badge-soft-danger">ยกเลิก</span>'
-                };
-                return badges[status] || badges['issued'];
-            }
+        function getReceiptStatusBadge(status) {
+            const badges = {
+                'issued': '<span class="badge badge-soft-success">ออกแล้ว</span>',
+                'pending': '<span class="badge badge-soft-warning">รอออก</span>',
+                'cancelled': '<span class="badge badge-soft-danger">ยกเลิก</span>'
+            };
+            return badges[status] || badges['issued'];
+        }
 
-            async function viewDetail(id) {
-                const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-                modal.show();
+        async function viewDetail(id) {
+            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+            modal.show();
 
-                const content = document.getElementById('detailContent');
-                content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+            const content = document.getElementById('detailContent');
+            content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
 
-                try {
-                    const response = await apiGet('/receipts/' + id);
-                    const r = response.data;
-                    currentReceipt = r;
+            try {
+                const response = await apiGet('/receipts/' + id);
+                const r = response.data;
+                currentReceipt = r;
 
-                    content.innerHTML = `
+                content.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
                     <h6 class="text-muted mb-3">ข้อมูลใบเสร็จ</h6>
@@ -451,99 +495,170 @@
             ` : ''}
         `;
 
-                    // Update buttons in modal (keep them for detail view)
-                    document.getElementById('downloadPdfBtn').href = BASE_PATH + '/receipts/pdf_maker.php?id=' + r.id + '&admin=1';
-                    document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
-                    // re-bind cancel button in modal to use cancelReceiptItem if needed, or keep cancelReceipt() which uses currentReceipt
+                // Update buttons in modal
+                document.getElementById('downloadPdfBtn').onclick = () => downloadSecurePdf(r.id);
+                document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
+                // re-bind cancel button in modal to use cancelReceiptItem if needed, or keep cancelReceipt() which uses currentReceipt
 
-                } catch (error) {
-                    content.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
-                }
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
             }
+        }
 
-            // Wrapper for modal button
-            function cancelReceipt() {
-                if (currentReceipt) cancelReceiptItem(currentReceipt.id, currentReceipt.receipt_number);
-            }
+        // Wrapper for modal button
+        function cancelReceipt() {
+            if (currentReceipt) cancelReceiptItem(currentReceipt.id, currentReceipt.receipt_number);
+        }
 
-            async function cancelReceiptItem(id, receiptNo) {
-                const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${receiptNo} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
-                if (!result.isConfirmed) return;
+        async function cancelReceiptItem(id, receiptNo) {
+            const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${receiptNo} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
+            if (!result.isConfirmed) return;
 
-                try {
-                    await apiPost('/receipts/' + id + '/cancel');
-                    showSuccess('ยกเลิกใบเสร็จสำเร็จ');
-                    // If modal open, close it
-                    const modalEl = document.getElementById('detailModal');
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
+            try {
+                await apiPost('/receipts/' + id + '/cancel');
+                showSuccess('ยกเลิกใบเสร็จสำเร็จ');
+                // If modal open, close it
+                const modalEl = document.getElementById('detailModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
 
-                    loadReceipts();
-                } catch (error) {
-                    showError(error.message);
-                }
-            }
-
-            async function deleteReceipt(donationId, receiptNo) {
-                const result = await confirmAction('ลบข้อมูล?', `คุณต้องการลบใบเสร็จ ${receiptNo} และข้อมูลการบริจาคนี้ออกจากระบบหรือไม่?\n(ไม่สามารถกู้คืนได้)`, 'ลบข้อมูล', 'warning');
-                if (!result.isConfirmed) return;
-
-                try {
-                    await apiDelete('/donations/' + donationId);
-                    showSuccess('ลบข้อมูลสำเร็จ');
-                    loadReceipts();
-                } catch (error) {
-                    showError(error.message);
-                }
-            }
-
-            function editReceipt(id, donationId) {
-                // Placeholder for Edit
-                Swal.fire({
-                    icon: 'info',
-                    title: 'แก้ไขข้อมูล',
-                    text: 'ฟีเจอร์แก้ไขข้อมูลใบเสร็จยังไม่เปิดใช้งาน',
-                    confirmButtonText: 'ตกลง'
-                });
-            }
-
-            async function resendReceipt(id) {
-                const result = await confirmAction('ส่งใบเสร็จทางอีเมล?', 'ระบบจะส่งใบเสร็จไปยังอีเมลของผู้บริจาคอีกครั้ง', 'ส่งอีเมล');
-                if (!result.isConfirmed) return;
-
-                try {
-                    await apiPost('/receipts/' + id + '/resend');
-                    showSuccess('ส่งใบเสร็จทางอีเมลสำเร็จ');
-                } catch (error) {
-                    showError(error.message);
-                }
-            }
-
-            function exportExcel() {
-                // Build query string for export
-                const params = new URLSearchParams();
-                params.append('export', 'excel');
-
-                const status = document.getElementById('statusFilter').value;
-                if (status) params.append('status', status);
-
-                const year = document.getElementById('yearFilter').value;
-                if (year) params.append('year', year);
-
-                const dateFrom = document.getElementById('dateFrom').value;
-                if (dateFrom) params.append('from', dateFrom);
-
-                const dateTo = document.getElementById('dateTo').value;
-                if (dateTo) params.append('to', dateTo);
-
-                window.open('../api/v1/receipts/export?' + params.toString(), '_blank');
-            }
-
-            function goToPage(page) {
-                currentPage = page;
                 loadReceipts();
+            } catch (error) {
+                showError(error.message);
             }
-        </script>
+        }
+
+        async function deleteReceipt(donationId, receiptNo) {
+            const result = await confirmAction('ลบข้อมูล?', `คุณต้องการลบใบเสร็จ ${receiptNo} และข้อมูลการบริจาคนี้ออกจากระบบหรือไม่?\n(ไม่สามารถกู้คืนได้)`, 'ลบข้อมูล', 'warning');
+            if (!result.isConfirmed) return;
+
+            try {
+                await apiDelete('/donations/' + donationId);
+                showSuccess('ลบข้อมูลสำเร็จ');
+                loadReceipts();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function editReceipt(id, donationId) {
+            window.location.href = `receipts-edit.php?id=${id}`;
+        }
+
+        async function resendReceipt(id) {
+            const result = await confirmAction('ส่งใบเสร็จทางอีเมล?', 'ระบบจะส่งใบเสร็จไปยังอีเมลของผู้บริจาคอีกครั้ง', 'ส่งอีเมล');
+            if (!result.isConfirmed) return;
+
+            try {
+                await apiPost('/receipts/' + id + '/resend');
+                showSuccess('ส่งใบเสร็จทางอีเมลสำเร็จ');
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function downloadSecurePdf(id) {
+            try {
+                // ขอ Secure URL จาก API (ซึ่งมี token และซ่อน ID)
+                const response = await apiGet('/receipts/' + id + '/admin_pdf');
+                if (response.success && response.data.pdf_url) {
+                    window.open(response.data.pdf_url, '_blank');
+                } else {
+                    alert('ไม่สามารถสร้างลิงก์ดาวน์โหลดได้: ' + (response.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Download failed:', error);
+                alert('เกิดข้อผิดพลาดในการดาวน์โหลด PDF');
+            }
+        }
+
+        function exportExcel() {
+            // Build query string for export
+            const params = new URLSearchParams();
+            params.append('export', 'excel');
+
+            const status = document.getElementById('statusFilter').value;
+            if (status) params.append('status', status);
+
+            const year = document.getElementById('yearFilter').value;
+            if (year) params.append('year', year);
+
+            const project = document.getElementById('projectFilter').value;
+            if (project) params.append('project', project);
+
+            const dateFrom = document.getElementById('dateFrom').value;
+            if (dateFrom) params.append('from', dateFrom);
+
+            const dateTo = document.getElementById('dateTo').value;
+            if (dateTo) params.append('to', dateTo);
+
+            window.open('../api/v1/receipts/export?' + params.toString(), '_blank');
+        }
+
+        function changeLimit() {
+            perPage = parseInt(document.getElementById('limitSelector').value);
+            currentPage = 1;
+            loadReceipts();
+        }
+
+        function searchReceipts() {
+            currentPage = 1;
+            loadReceipts();
+        }
+
+        function goToPage(page) {
+            if (page < 1) return;
+            currentPage = page;
+            loadReceipts();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderPagination(totalPages, currentPage) {
+            const pagination = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '<ul class="pagination pagination-sm mb-0">';
+
+            // First & Previous
+            html += `
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" title="หน้าแรก">«</a>
+                    </li>
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" title="ก่อนหน้า">‹</a>
+                    </li>
+                `;
+
+            // Calculate range
+            let start = Math.max(1, currentPage - 2);
+            let end = Math.min(totalPages, start + 4);
+            if (end - start < 4) start = Math.max(1, end - 4);
+
+            for (let i = start; i <= end; i++) {
+                html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${i})">${i}</a>
+                        </li>
+                    `;
+            }
+
+            // Next & Last
+            html += `
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" title="ถัดไป">›</a>
+                    </li>
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" title="หน้าสุดท้าย">»</a>
+                    </li>
+                `;
+
+            html += '</ul>';
+            pagination.innerHTML = html;
+        }
+    </script>
 
 </body>
 

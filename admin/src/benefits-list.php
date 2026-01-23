@@ -88,10 +88,29 @@
                     </div>
                     <div class="card-body">
                         <!-- Filters -->
-                        <div class="row mb-3">
+                        <div class="row mb-3 g-2 align-items-center">
+                            <div class="col-md-2">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">แสดง</span>
+                                    <select id="limitSelector" class="form-select border-0 bg-light"
+                                        onchange="changeLimit()">
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="250">250</option>
+                                        <option value="500">500</option>
+                                    </select>
+                                    <span class="input-group-text bg-light">แถว</span>
+                                </div>
+                            </div>
                             <div class="col-md-4">
-                                <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาชื่อระดับ..."
-                                    oninput="filterTable()">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        ค้นหา
+                                    </span>
+                                    <input type="text" id="searchInput" class="form-control"
+                                        placeholder="ค้นหาชื่อระดับ..." oninput="filterTable()">
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <select id="statusFilter" class="form-select" onchange="filterTable()">
@@ -126,117 +145,135 @@
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div id="pagination-info" class="text-muted small"></div>
+                            <nav id="pagination"></nav>
+                        </div>
                     </div>
                 </div>
+
+                <?php include 'partials/footer.php'; ?>
             </div>
-
-            <?php include 'partials/footer.php'; ?>
         </div>
-    </div>
 
-    <!-- Benefits Modal -->
-    <div class="modal fade" id="benefitModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">เพิ่มระดับใหม่</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <!-- Benefits Modal -->
+        <div class="modal fade" id="benefitModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">เพิ่มระดับใหม่</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="benefitForm">
+                        <div class="modal-body">
+                            <input type="hidden" id="benefitId" name="id">
+
+                            <div class="mb-3">
+                                <label class="form-label">ชื่อระดับ <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required
+                                    placeholder="เช่น ผู้มีอุปการคุณระดับทอง">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">ยอดบริจาคขั้นต่ำ (บาท) <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">฿</span>
+                                    <input type="number" class="form-control" id="amount" name="amount" required
+                                        min="0">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">รายละเอียด/สิทธิประโยชน์</label>
+                                <textarea class="form-control" id="description" name="description" rows="3"
+                                    placeholder="รายละเอียดสิทธิประโยชน์ที่จะได้รับ"></textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">ลำดับการแสดง</label>
+                                    <input type="number" class="form-control" id="sort_order" name="sort_order"
+                                        value="0">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">สถานะ</label>
+                                    <select class="form-select" id="is_active" name="is_active">
+                                        <option value="1">เปิดใช้งาน</option>
+                                        <option value="0">ปิดใช้งาน</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm me-1 d-none" id="submitSpinner"></span>
+                                บันทึก
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <form id="benefitForm">
-                    <div class="modal-body">
-                        <input type="hidden" id="benefitId" name="id">
-
-                        <div class="mb-3">
-                            <label class="form-label">ชื่อระดับ <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" required
-                                placeholder="เช่น ผู้มีอุปการคุณระดับทอง">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">ยอดบริจาคขั้นต่ำ (บาท) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text">฿</span>
-                                <input type="number" class="form-control" id="amount" name="amount" required min="0">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">รายละเอียด/สิทธิประโยชน์</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"
-                                placeholder="รายละเอียดสิทธิประโยชน์ที่จะได้รับ"></textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">ลำดับการแสดง</label>
-                                <input type="number" class="form-control" id="sort_order" name="sort_order" value="0">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">สถานะ</label>
-                                <select class="form-select" id="is_active" name="is_active">
-                                    <option value="1">เปิดใช้งาน</option>
-                                    <option value="0">ปิดใช้งาน</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
-                            <span class="spinner-border spinner-border-sm me-1 d-none" id="submitSpinner"></span>
-                            บันทึก
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
-    </div>
 
-    <?php include 'partials/vendor-scripts.php'; ?>
-    <script src="assets/js/api-helper.js"></script>
+        <?php include 'partials/vendor-scripts.php'; ?>
+        <script src="assets/js/api-helper.js"></script>
 
-    <script>
-        let benefits = [];
-        let editMode = false;
+        <script>
+            let benefits = [];
+            let currentPage = 1;
+            let perPage = 25;
+            let editMode = false;
 
-        document.addEventListener('DOMContentLoaded', function () {
-            loadBenefits();
-            document.getElementById('benefitForm').addEventListener('submit', handleSubmit);
-        });
+            document.addEventListener('DOMContentLoaded', function () {
+                loadBenefits();
+                document.getElementById('benefitForm').addEventListener('submit', handleSubmit);
+            });
 
-        async function loadBenefits() {
-            try {
-                const response = await apiGet('/benefits?active=0');
-                benefits = response.data || [];
+            async function loadBenefits() {
+                try {
+                    const response = await apiGet('/benefits?active=0');
+                    benefits = response.data || [];
 
-                // Update stats
-                const activeCount = benefits.filter(b => b.is_active).length;
-                const inactiveCount = benefits.filter(b => !b.is_active).length;
+                    // Update stats
+                    const activeCount = benefits.filter(b => b.is_active).length;
+                    const inactiveCount = benefits.filter(b => !b.is_active).length;
 
-                document.getElementById('total-count').textContent = benefits.length;
-                document.getElementById('active-count').textContent = activeCount;
-                document.getElementById('inactive-count').textContent = inactiveCount;
+                    document.getElementById('total-count').textContent = benefits.length;
+                    document.getElementById('active-count').textContent = activeCount;
+                    document.getElementById('inactive-count').textContent = inactiveCount;
 
-                renderTable(benefits);
-            } catch (error) {
-                showError(error.message);
-                document.getElementById('benefitsTable').innerHTML = `
+                    renderTable(benefits);
+                } catch (error) {
+                    showError(error.message);
+                    document.getElementById('benefitsTable').innerHTML = `
                     <tr><td colspan="8" class="text-center py-4 text-danger">${error.message}</td></tr>
                 `;
-            }
-        }
-
-        function renderTable(data) {
-            const tbody = document.getElementById('benefitsTable');
-
-            if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><iconify-icon icon="iconamoon:file-search-duotone" class="fs-48 d-block mb-2"></iconify-icon>ยังไม่มีระดับสิทธิประโยชน์</td></tr>';
-                return;
+                }
             }
 
-            tbody.innerHTML = data.map((item, idx) => `
+            function renderTable(data) {
+                const tbody = document.getElementById('benefitsTable');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><iconify-icon icon="iconamoon:file-search-duotone" class="fs-48 d-block mb-2"></iconify-icon>ยังไม่มีระดับสิทธิประโยชน์</td></tr>';
+                    document.getElementById('pagination-info').textContent = '';
+                    document.getElementById('pagination').innerHTML = '';
+                    return;
+                }
+
+                // Client-side pagination since benefits are typically few
+                const total = data.length;
+                const totalPages = Math.ceil(total / perPage);
+                const startIdx = (currentPage - 1) * perPage;
+                const endIdx = Math.min(startIdx + perPage, total);
+                const paginatedData = data.slice(startIdx, endIdx);
+
+                tbody.innerHTML = paginatedData.map((item, idx) => `
                 <tr class="${!item.is_active ? 'table-secondary' : ''}">
-                    <td>${idx + 1}</td>
+                    <td>${startIdx + idx + 1}</td>
                     <td>
                         <img src="${item.image_url || 'assets/images/placeholder.jpg'}" 
                              class="rounded" width="48" height="48" 
@@ -255,8 +292,8 @@
                     </td>
                     <td class="text-center">
                         ${item.is_active
-                    ? '<span class="badge badge-soft-success">เปิดใช้งาน</span>'
-                    : '<span class="badge badge-soft-secondary">ปิดใช้งาน</span>'}
+                        ? '<span class="badge badge-soft-success">เปิดใช้งาน</span>'
+                        : '<span class="badge badge-soft-secondary">ปิดใช้งาน</span>'}
                     </td>
                     <td class="text-center">
                         <button class="btn btn-sm btn-soft-primary me-1" onclick="openEditModal(${item.id})" title="แก้ไข">
@@ -271,114 +308,169 @@
                     </td>
                 </tr>
             `).join('');
-        }
 
-        function filterTable() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const status = document.getElementById('statusFilter').value;
+                // Update pagination UI
+                renderPagination(totalPages, currentPage);
+                document.getElementById('pagination-info').textContent = `แสดง ${total > 0 ? startIdx + 1 : 0}-${endIdx} จาก ${total} รายการ`;
+            }
 
-            const filtered = benefits.filter(item => {
-                const matchSearch = item.name.toLowerCase().includes(search) ||
-                    (item.description || '').toLowerCase().includes(search);
-                const matchStatus = !status ||
-                    (status === 'active' && item.is_active) ||
-                    (status === 'inactive' && !item.is_active);
-                return matchSearch && matchStatus;
-            });
+            function changeLimit() {
+                perPage = parseInt(document.getElementById('limitSelector').value);
+                currentPage = 1;
+                renderTable(benefits); // benefits is the global filtered list? No, filterTable sets it.
+                // Actually filterTable should call renderTable.
+            }
 
-            renderTable(filtered);
-        }
+            function goToPage(page) {
+                if (page < 1) return;
+                currentPage = page;
+                filterTable(); // Re-apply filters and render
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
 
-        function truncateText(text, max) {
-            if (!text) return '';
-            return text.length > max ? text.substring(0, max) + '...' : text;
-        }
-
-        function openCreateModal() {
-            editMode = false;
-            document.getElementById('modalTitle').textContent = 'เพิ่มระดับใหม่';
-            document.getElementById('benefitForm').reset();
-            document.getElementById('benefitId').value = '';
-            new bootstrap.Modal(document.getElementById('benefitModal')).show();
-        }
-
-        function openEditModal(id) {
-            const item = benefits.find(b => b.id == id);
-            if (!item) return;
-
-            editMode = true;
-            document.getElementById('modalTitle').textContent = 'แก้ไขระดับ';
-            document.getElementById('benefitId').value = item.id;
-            document.getElementById('name').value = item.name || '';
-            document.getElementById('amount').value = item.amount || 0;
-            document.getElementById('description').value = item.description || '';
-            document.getElementById('sort_order').value = item.sort_order || 0;
-            document.getElementById('is_active').value = item.is_active ? '1' : '0';
-
-            new bootstrap.Modal(document.getElementById('benefitModal')).show();
-        }
-
-        async function handleSubmit(e) {
-            e.preventDefault();
-
-            const submitBtn = document.getElementById('submitBtn');
-            const spinner = document.getElementById('submitSpinner');
-
-            submitBtn.disabled = true;
-            spinner.classList.remove('d-none');
-
-            try {
-                const formData = {
-                    name: document.getElementById('name').value,
-                    amount: parseFloat(document.getElementById('amount').value),
-                    description: document.getElementById('description').value,
-                    sort_order: parseInt(document.getElementById('sort_order').value),
-                    is_active: parseInt(document.getElementById('is_active').value)
-                };
-
-                if (editMode) {
-                    const id = document.getElementById('benefitId').value;
-                    await apiPut('/benefits/' + id, formData);
-                    showSuccess('อัปเดตสำเร็จ');
-                } else {
-                    await apiPost('/benefits', formData);
-                    showSuccess('เพิ่มระดับใหม่สำเร็จ');
+            function renderPagination(totalPages, currentPage) {
+                const pagination = document.getElementById('pagination');
+                if (totalPages <= 1) {
+                    pagination.innerHTML = '';
+                    return;
                 }
 
-                bootstrap.Modal.getInstance(document.getElementById('benefitModal')).hide();
-                loadBenefits();
+                let html = '<ul class="pagination pagination-sm mb-0">';
+                html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)">«</a>
+                </li>
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})">‹</a>
+                </li>
+            `;
 
-            } catch (error) {
-                showError(error.message);
-            } finally {
-                submitBtn.disabled = false;
-                spinner.classList.add('d-none');
+                for (let i = 1; i <= totalPages; i++) {
+                    html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${i})">${i}</a>
+                    </li>
+                `;
+                }
+
+                html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})">›</a>
+                </li>
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})">»</a>
+                </li>
+            `;
+                html += '</ul>';
+                pagination.innerHTML = html;
             }
-        }
 
-        async function toggleStatus(id, currentStatus) {
-            try {
-                await apiPut('/benefits/' + id, { is_active: currentStatus ? 0 : 1 });
-                showSuccess(currentStatus ? 'ปิดใช้งานแล้ว' : 'เปิดใช้งานแล้ว');
-                loadBenefits();
-            } catch (error) {
-                showError(error.message);
+            function filterTable() {
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const status = document.getElementById('statusFilter').value;
+
+                const filtered = benefits.filter(item => {
+                    const matchSearch = item.name.toLowerCase().includes(search) ||
+                        (item.description || '').toLowerCase().includes(search);
+                    const matchStatus = !status ||
+                        (status === 'active' && item.is_active) ||
+                        (status === 'inactive' && !item.is_active);
+                    return matchSearch && matchStatus;
+                });
+
+                renderTable(filtered);
             }
-        }
 
-        async function deleteBenefit(id, name) {
-            const result = await confirmDelete(name);
-            if (!result.isConfirmed) return;
-
-            try {
-                await apiDelete('/benefits/' + id);
-                showSuccess('ลบสำเร็จ');
-                loadBenefits();
-            } catch (error) {
-                showError(error.message);
+            function truncateText(text, max) {
+                if (!text) return '';
+                return text.length > max ? text.substring(0, max) + '...' : text;
             }
-        }
-    </script>
+
+            function openCreateModal() {
+                editMode = false;
+                document.getElementById('modalTitle').textContent = 'เพิ่มระดับใหม่';
+                document.getElementById('benefitForm').reset();
+                document.getElementById('benefitId').value = '';
+                new bootstrap.Modal(document.getElementById('benefitModal')).show();
+            }
+
+            function openEditModal(id) {
+                const item = benefits.find(b => b.id == id);
+                if (!item) return;
+
+                editMode = true;
+                document.getElementById('modalTitle').textContent = 'แก้ไขระดับ';
+                document.getElementById('benefitId').value = item.id;
+                document.getElementById('name').value = item.name || '';
+                document.getElementById('amount').value = item.amount || 0;
+                document.getElementById('description').value = item.description || '';
+                document.getElementById('sort_order').value = item.sort_order || 0;
+                document.getElementById('is_active').value = item.is_active ? '1' : '0';
+
+                new bootstrap.Modal(document.getElementById('benefitModal')).show();
+            }
+
+            async function handleSubmit(e) {
+                e.preventDefault();
+
+                const submitBtn = document.getElementById('submitBtn');
+                const spinner = document.getElementById('submitSpinner');
+
+                submitBtn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                try {
+                    const formData = {
+                        name: document.getElementById('name').value,
+                        amount: parseFloat(document.getElementById('amount').value),
+                        description: document.getElementById('description').value,
+                        sort_order: parseInt(document.getElementById('sort_order').value),
+                        is_active: parseInt(document.getElementById('is_active').value)
+                    };
+
+                    if (editMode) {
+                        const id = document.getElementById('benefitId').value;
+                        await apiPut('/benefits/' + id, formData);
+                        showSuccess('อัปเดตสำเร็จ');
+                    } else {
+                        await apiPost('/benefits', formData);
+                        showSuccess('เพิ่มระดับใหม่สำเร็จ');
+                    }
+
+                    bootstrap.Modal.getInstance(document.getElementById('benefitModal')).hide();
+                    loadBenefits();
+
+                } catch (error) {
+                    showError(error.message);
+                } finally {
+                    submitBtn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
+            }
+
+            async function toggleStatus(id, currentStatus) {
+                try {
+                    await apiPut('/benefits/' + id, { is_active: currentStatus ? 0 : 1 });
+                    showSuccess(currentStatus ? 'ปิดใช้งานแล้ว' : 'เปิดใช้งานแล้ว');
+                    loadBenefits();
+                } catch (error) {
+                    showError(error.message);
+                }
+            }
+
+            async function deleteBenefit(id, name) {
+                const result = await confirmDelete(name);
+                if (!result.isConfirmed) return;
+
+                try {
+                    await apiDelete('/benefits/' + id);
+                    showSuccess('ลบสำเร็จ');
+                    loadBenefits();
+                } catch (error) {
+                    showError(error.message);
+                }
+            }
+        </script>
 
 </body>
 

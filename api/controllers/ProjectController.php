@@ -7,11 +7,12 @@
  * GET    /projects/:id      - รายละเอียดโครงการ
  * POST   /projects          - สร้างโครงการ (Admin)
  * PUT    /projects/:id      - แก้ไขโครงการ (Admin)
+ * DELETE /projects/:id      - ลบโครงการ (Admin)
  */
 
 class ProjectController
 {
-    const VERSION = '2.0';
+    const VERSION = '2.1';
     private PDO $pdo;
 
     public function __construct()
@@ -29,102 +30,120 @@ class ProjectController
                 return $this->create();
             case 'PUT':
                 AuthMiddleware::requireAdmin();
+                if (!$id)
+                    return Response::error('VALIDATION_ERROR', 'กรุณาระบุ ID');
                 return $this->update($id);
+            case 'DELETE':
+                AuthMiddleware::requireAdmin();
+                if (!$id)
+                    return Response::error('VALIDATION_ERROR', 'กรุณาระบุ ID');
+                return $this->delete($id);
             default:
                 return Response::error('METHOD_NOT_ALLOWED', 'Method not allowed', 405);
         }
     }
 
-    // GET /projects
+    /**
+     * GET /projects
+     * รายการโครงการทั้งหมด
+     */
     private function index(): array
     {
-        try {
-            $page = max(1, intval($_GET['page'] ?? 1));
-            $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
-            $offset = ($page - 1) * $limit;
+        $page = max(1, intval($_GET['page'] ?? 1));
+        $limit = min(500, max(1, intval($_GET['limit'] ?? 20)));
+        $offset = ($page - 1) * $limit;
+        $status = $_GET['status'] ?? null;
+        $search = $_GET['search'] ?? null;
+        $sort = strtolower($_GET['sort'] ?? 'desc');
+        $orderDir = ($sort === 'asc') ? 'ASC' : 'DESC';
 
-            // Filter by status if provided
-            $status = $_GET['status'] ?? null;
-            $whereClause = "";
-            $params = [
-                ':limit' => $limit,
-                ':offset' => $offset
-            ];
+        $whereClauses = [];
+        $params = [':limit' => $limit, ':offset' => $offset];
 
-            if ($status && $status !== 'all') {
-                $whereClause = "WHERE LOWER(status) = LOWER(:status)";
-                $params[':status'] = $status;
-            }
-
-            $sql = "SELECT * FROM edonation_projects $whereClause ORDER BY id DESC LIMIT :limit OFFSET :offset";
-
-            $stmt = $this->pdo->prepare($sql);
-            foreach ($params as $key => $val) {
-                // Determine param type
-                $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
-                $stmt->bindValue($key, $val, $type);
-            }
-            $stmt->execute();
-            $results = $stmt->fetchAll();
-
-            // Add image URL - use BASE_PATH from config
-            $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/assets/images/projects/';
-            foreach ($results as &$item) {
-                // Check if img_file exists (legacy) or just use default rotation based on ID
-                if (!empty($item['img_file'])) {
-                    $item['image_url'] = $baseImageUrl . $item['img_file'];
-                } elseif (!empty($item['image_url'])) { // New schema support
-                    $item['image_url'] = strpos($item['image_url'], 'http') === 0
-                        ? $item['image_url']
-                        : $baseImageUrl . basename($item['image_url']);
-                } else {
-                    // Fallback to rotation of pro-1, pro-2, pro-3 based on ID
-                    $imgNum = ($item['id'] % 3) + 1;
-                    $item['image_url'] = $baseImageUrl . "pro-{$imgNum}.jpg";
-                }
-            }
-
-            return Response::success($results);
-        } catch (PDOException $e) {
-            error_log("Projects index error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+        if ($status && $status !== 'all') {
+            $whereClauses[] = "LOWER(status) = LOWER(:status)";
+            $params[':status'] = $status;
         }
+
+        if ($search) {
+            $whereClauses[] = "(project_name LIKE :search OR project_number LIKE :search2)";
+            $params[':search'] = "%$search%";
+            $params[':search2'] = "%$search%";
+        }
+
+        $whereClause = !empty($whereClauses) ? "WHERE " . implode(" AND ", $whereClauses) : "";
+
+        $sql = "SELECT id, project_number, project_name, project_receipt_name, description, image_url, status, created_at 
+                FROM edonation_projects $whereClause 
+                ORDER BY id $orderDir LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val, is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Count total for pagination
+        $countSql = "SELECT COUNT(*) FROM edonation_projects $whereClause";
+        $countStmt = $this->pdo->prepare($countSql);
+        $countParams = array_filter($params, fn($k) => $k !== ':limit' && $k !== ':offset', ARRAY_FILTER_USE_KEY);
+        $countStmt->execute($countParams);
+        $total = (int) $countStmt->fetchColumn();
+
+        // Add image URL fallback
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+        foreach ($results as &$item) {
+            if (empty($item['image_url'])) {
+                $imgNum = ($item['id'] % 3) + 1;
+                $item['image_url'] = "{$basePath}/assets/images/projects/pro-{$imgNum}.jpg";
+            } elseif (strpos($item['image_url'], 'http') !== 0) {
+                $item['image_url'] = "{$basePath}/assets/images/projects/" . basename($item['image_url']);
+            }
+        }
+
+        return Response::success($results, null, [
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'total_pages' => ceil($total / $limit)
+        ]);
     }
 
-    // GET /projects/:id
+    /**
+     * GET /projects/:id
+     * รายละเอียดโครงการ
+     */
     private function show(string $id): array
     {
-        try {
-            $stmt = $this->pdo->prepare(
-                "SELECT * FROM edonation_projects WHERE id = :id OR project_number = :pn LIMIT 1"
-            );
-            $stmt->execute([':id' => $id, ':pn' => $id]);
-            $project = $stmt->fetch();
+        $stmt = $this->pdo->prepare(
+            "SELECT id, project_number, project_name, project_receipt_name, description, image_url, status, created_at 
+             FROM edonation_projects 
+             WHERE id = :id OR project_number = :pn LIMIT 1"
+        );
+        $stmt->execute([':id' => $id, ':pn' => $id]);
+        $project = $stmt->fetch();
 
-            if (!$project)
-                return Response::notFound('ไม่พบโครงการ');
-
-            // Add image URL logic - use BASE_PATH from config
-            $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/assets/images/projects/';
-            if (!empty($project['img_file'])) {
-                $project['image_url'] = $baseImageUrl . $project['img_file'];
-            } elseif (!empty($project['image_url'])) {
-                $project['image_url'] = strpos($project['image_url'], 'http') === 0
-                    ? $project['image_url']
-                    : $baseImageUrl . basename($project['image_url']);
-            } else {
-                $imgNum = ($project['id'] % 3) + 1;
-                $project['image_url'] = $baseImageUrl . "pro-{$imgNum}.jpg";
-            }
-
-            return Response::success($project);
-        } catch (PDOException $e) {
-            error_log("Project show error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+        if (!$project) {
+            return Response::notFound('ไม่พบโครงการ');
         }
+
+        // Add image URL fallback
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+        if (empty($project['image_url'])) {
+            $imgNum = ($project['id'] % 3) + 1;
+            $project['image_url'] = "{$basePath}/assets/images/projects/pro-{$imgNum}.jpg";
+        } elseif (strpos($project['image_url'], 'http') !== 0) {
+            $project['image_url'] = "{$basePath}/assets/images/projects/" . basename($project['image_url']);
+        }
+
+        return Response::success($project);
     }
 
-    // POST /projects
+    /**
+     * POST /projects
+     * สร้างโครงการใหม่ (Admin)
+     */
     private function create(): array
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -132,67 +151,72 @@ class ProjectController
         $v = new Validator($data);
         $v->required('project_number')->required('project_name');
 
-        if (!$v->passes())
+        if (!$v->passes()) {
             return Response::validation($v->errors());
-
-        try {
-            // Check existing columns
-            $columnsStmt = $this->pdo->query("SHOW COLUMNS FROM edonation_projects");
-            $columns = array_column($columnsStmt->fetchAll(), 'Field');
-
-            // Build dynamic insert based on available columns
-            $insertCols = ['project_number', 'project_name'];
-            $insertVals = [':number', ':name'];
-            $params = [
-                ':number' => $data['project_number'],
-                ':name' => $data['project_name']
-            ];
-
-            if (in_array('project_tex', $columns) && isset($data['project_tex'])) {
-                $insertCols[] = 'project_tex';
-                $insertVals[] = ':tex';
-                $params[':tex'] = $data['project_tex'];
-            }
-
-            if (in_array('status', $columns)) {
-                $insertCols[] = 'status';
-                $insertVals[] = ':status';
-                $params[':status'] = $data['status'] ?? 'active';
-            }
-
-            $sql = "INSERT INTO edonation_projects (" . implode(', ', $insertCols) . ") VALUES (" . implode(', ', $insertVals) . ")";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-
-            return Response::success(['id' => $this->pdo->lastInsertId()], 'สร้างโครงการสำเร็จ');
-        } catch (PDOException $e) {
-            error_log("Create project error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถสร้างโครงการได้: ' . $e->getMessage(), 500);
         }
+
+        $sql = "INSERT INTO edonation_projects (project_number, project_name, project_receipt_name, description, status) 
+                VALUES (:number, :name, :receipt_name, :description, :status)";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':number' => $data['project_number'],
+            ':name' => $data['project_name'],
+            ':receipt_name' => $data['project_receipt_name'] ?? $data['project_name'],
+            ':description' => $data['description'] ?? null,
+            ':status' => $data['status'] ?? 'active'
+        ]);
+
+        return Response::success(['id' => $this->pdo->lastInsertId()], 'สร้างโครงการสำเร็จ');
     }
 
-    // PUT /projects/:id
+    /**
+     * PUT /projects/:id
+     * แก้ไขโครงการ (Admin)
+     */
     private function update(string $id): array
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
+        $allowedFields = ['project_name', 'project_receipt_name', 'description', 'status'];
         $fields = [];
         $params = [':id' => $id];
 
-        foreach (['project_name', 'project_tex', 'status'] as $field) {
+        foreach ($allowedFields as $field) {
             if (isset($data[$field])) {
                 $fields[] = "{$field} = :{$field}";
                 $params[":{$field}"] = $data[$field];
             }
         }
 
-        if (empty($fields))
+        if (empty($fields)) {
             return Response::error('NO_DATA', 'ไม่มีข้อมูลที่จะอัปเดต');
+        }
 
         $sql = "UPDATE edonation_projects SET " . implode(', ', $fields) . " WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
 
+        if ($stmt->rowCount() === 0) {
+            return Response::notFound('ไม่พบโครงการ');
+        }
+
         return Response::success(null, 'อัปเดตสำเร็จ');
+    }
+
+    /**
+     * DELETE /projects/:id
+     * ลบโครงการ (Admin)
+     */
+    private function delete(string $id): array
+    {
+        $stmt = $this->pdo->prepare("DELETE FROM edonation_projects WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+
+        if ($stmt->rowCount() === 0) {
+            return Response::notFound('ไม่พบโครงการ');
+        }
+
+        return Response::success(null, 'ลบโครงการสำเร็จ');
     }
 }

@@ -10,172 +10,165 @@
  * 3. Initialize: AutoProvince.init({ apiPath: '/shared/autoprovince/api.php' });
  */
 
-const AutoProvince = (function () {
-    'use strict';
+/**
+ * AutoProvince JavaScript Module
+ * ระบบเลือกจังหวัด อำเภอ ตำบล อัตโนมัติ
+ * 
+ * @version 2.1 - Multiple Instance Support
+ */
 
-    // Default configuration
-    const config = {
-        apiPath: '/edonation/shared/autoprovince/api.php',
-        provinceSelector: '#province',
-        districtSelector: '#district',
-        subdistrictSelector: '#subdistrict',
-        postcodeSelector: '#postcode',
-        loaderSelector: '#loader',
-        useSelect2: true,
-        select2Theme: 'bootstrap-5',
-        placeholders: {
-            province: 'เลือกจังหวัด',
-            district: 'เลือกอำเภอ',
-            subdistrict: 'เลือกตำบล'
-        },
-        onProvinceChange: null,
-        onDistrictChange: null,
-        onSubdistrictChange: null,
-        onAddressComplete: null
-    };
-
-    let isInitialized = false;
-
-    /**
-     * Initialize AutoProvince
-     * @param {Object} options - Configuration options
-     */
-    function init(options = {}) {
-        if (isInitialized) {
-            console.warn('AutoProvince already initialized');
-            return;
-        }
+class AutoProvince {
+    constructor(options = {}) {
+        // Default configuration
+        this.config = {
+            apiPath: '/edonation/shared/autoprovince/api.php',
+            provinceSelector: '#province',
+            districtSelector: '#district',
+            subdistrictSelector: '#subdistrict',
+            postcodeSelector: '#postcode',
+            loaderSelector: '#loader',
+            useSelect2: true,
+            select2Theme: 'bootstrap-5',
+            placeholders: {
+                province: 'เลือกจังหวัด',
+                district: 'เลือกอำเภอ',
+                subdistrict: 'เลือกตำบล'
+            },
+            onProvinceChange: null,
+            onDistrictChange: null,
+            onSubdistrictChange: null,
+            onAddressComplete: null
+        };
 
         // Merge options
-        Object.assign(config, options);
+        Object.assign(this.config, options);
+        this.isInitialized = false;
 
-        // Wait for DOM
+        // Auto setup if DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setup);
+            document.addEventListener('DOMContentLoaded', () => this.setup());
         } else {
-            setup();
+            this.setup();
         }
     }
 
-    function setup() {
-        const $province = $(config.provinceSelector);
-        const $district = $(config.districtSelector);
-        const $subdistrict = $(config.subdistrictSelector);
+    setup() {
+        const $province = $(this.config.provinceSelector);
+        const $district = $(this.config.districtSelector);
+        const $subdistrict = $(this.config.subdistrictSelector);
 
         if (!$province.length) {
-            console.error('AutoProvince: Province selector not found');
             return;
         }
 
         // Initialize Select2 if enabled
-        if (config.useSelect2 && typeof $.fn.select2 !== 'undefined') {
-            initSelect2($province, config.placeholders.province);
-            if ($district.length) initSelect2($district, config.placeholders.district);
-            if ($subdistrict.length) initSelect2($subdistrict, config.placeholders.subdistrict);
+        if (this.config.useSelect2 && typeof $.fn.select2 !== 'undefined') {
+            this.initSelect2($province, this.config.placeholders.province);
+            if ($district.length) this.initSelect2($district, this.config.placeholders.district);
+            if ($subdistrict.length) this.initSelect2($subdistrict, this.config.placeholders.subdistrict);
         }
 
         // Load provinces
-        loadProvinces();
+        this.loadProvinces();
 
         // Bind events
-        $province.on('change', handleProvinceChange);
-        if ($district.length) $district.on('change', handleDistrictChange);
-        if ($subdistrict.length) $subdistrict.on('change', handleSubdistrictChange);
+        $province.on('change', () => this.handleProvinceChange());
+        if ($district.length) $district.on('change', () => this.handleDistrictChange());
+        if ($subdistrict.length) $subdistrict.on('change', () => this.handleSubdistrictChange());
 
-        isInitialized = true;
-        console.log('AutoProvince initialized');
+        this.isInitialized = true;
     }
 
-    function initSelect2($element, placeholder) {
+    initSelect2($element, placeholder) {
         $element.select2({
-            theme: config.select2Theme,
+            theme: this.config.select2Theme,
             width: '100%',
             allowClear: true,
             placeholder: placeholder
         });
     }
 
-    function toggleLoader(show) {
-        const $loader = $(config.loaderSelector);
+    toggleLoader(show) {
+        const $loader = $(this.config.loaderSelector);
         if ($loader.length) {
             if (show) $loader.css('display', 'flex');
             else $loader.fadeOut(200);
         }
     }
 
-    function loadProvinces() {
-        toggleLoader(true);
+    loadProvinces() {
+        this.toggleLoader(true);
 
-        $.get(`${config.apiPath}?action=get_provinces`)
-            .done(function (response) {
+        $.get(`${this.config.apiPath}?action=get_provinces`)
+            .done((response) => {
                 if (response.status === 'success') {
-                    const $province = $(config.provinceSelector);
+                    const $province = $(this.config.provinceSelector);
                     $province.empty().append('<option value=""></option>');
 
-                    response.data.forEach(function (item) {
+                    response.data.forEach((item) => {
                         $province.append(new Option(item.name, item.id, false, false));
                     });
 
-                    if (config.useSelect2) {
+                    if (this.config.useSelect2) {
                         $province.trigger('change.select2');
                     }
                 }
             })
-            .fail(function (xhr) {
-                console.error('Failed to load provinces:', xhr.responseText);
-            })
-            .always(function () {
-                toggleLoader(false);
+            .always(() => {
+                this.toggleLoader(false);
             });
     }
 
-    function handleProvinceChange() {
-        const provinceId = $(this).val();
-        const $district = $(config.districtSelector);
-        const $subdistrict = $(config.subdistrictSelector);
-        const $postcode = $(config.postcodeSelector);
+    handleProvinceChange() {
+        const $province = $(this.config.provinceSelector);
+        const provinceId = $province.val();
+        const $district = $(this.config.districtSelector);
+        const $subdistrict = $(this.config.subdistrictSelector);
+        const $postcode = $(this.config.postcodeSelector);
 
         // Reset dependent fields
-        resetSelect($district, config.placeholders.district);
-        resetSelect($subdistrict, config.placeholders.subdistrict);
+        this.resetSelect($district, this.config.placeholders.district);
+        this.resetSelect($subdistrict, this.config.placeholders.subdistrict);
         if ($postcode.length) $postcode.val('');
 
         if (provinceId) {
-            fetchData('get_districts', { province_id: provinceId }, config.districtSelector);
+            this.fetchData('get_districts', { province_id: provinceId }, this.config.districtSelector);
         }
 
         // Callback
-        if (typeof config.onProvinceChange === 'function') {
-            const selectedText = $(this).find('option:selected').text();
-            config.onProvinceChange({ id: provinceId, name: selectedText });
+        if (typeof this.config.onProvinceChange === 'function') {
+            const selectedText = $province.find('option:selected').text();
+            this.config.onProvinceChange({ id: provinceId, name: selectedText });
         }
     }
 
-    function handleDistrictChange() {
-        const districtId = $(this).val();
-        const $subdistrict = $(config.subdistrictSelector);
-        const $postcode = $(config.postcodeSelector);
+    handleDistrictChange() {
+        const $district = $(this.config.districtSelector);
+        const districtId = $district.val();
+        const $subdistrict = $(this.config.subdistrictSelector);
+        const $postcode = $(this.config.postcodeSelector);
 
         // Reset dependent fields
-        resetSelect($subdistrict, config.placeholders.subdistrict);
+        this.resetSelect($subdistrict, this.config.placeholders.subdistrict);
         if ($postcode.length) $postcode.val('');
 
         if (districtId) {
-            fetchData('get_subdistricts', { district_id: districtId }, config.subdistrictSelector);
+            this.fetchData('get_subdistricts', { district_id: districtId }, this.config.subdistrictSelector);
         }
 
         // Callback
-        if (typeof config.onDistrictChange === 'function') {
-            const selectedText = $(this).find('option:selected').text();
-            config.onDistrictChange({ id: districtId, name: selectedText });
+        if (typeof this.config.onDistrictChange === 'function') {
+            const selectedText = $district.find('option:selected').text();
+            this.config.onDistrictChange({ id: districtId, name: selectedText });
         }
     }
 
-    function handleSubdistrictChange() {
-        const $postcode = $(config.postcodeSelector);
+    handleSubdistrictChange() {
+        const $subdistrict = $(this.config.subdistrictSelector);
+        const $postcode = $(this.config.postcodeSelector);
 
-        if (config.useSelect2) {
-            const selectedData = $(this).select2('data')[0];
+        if (this.config.useSelect2) {
+            const selectedData = $subdistrict.select2('data')[0];
             if (selectedData && selectedData.element) {
                 const postcode = $(selectedData.element).data('postcode');
                 if (postcode && postcode !== '0' && $postcode.length) {
@@ -183,64 +176,61 @@ const AutoProvince = (function () {
                 }
             }
         } else {
-            const postcode = $(this).find('option:selected').data('postcode');
+            const postcode = $subdistrict.find('option:selected').data('postcode');
             if (postcode && $postcode.length) {
                 $postcode.val(postcode);
             }
         }
 
         // Callback
-        if (typeof config.onSubdistrictChange === 'function') {
-            const selectedText = $(this).find('option:selected').text();
-            const postcode = $(this).find('option:selected').data('postcode');
-            config.onSubdistrictChange({
-                id: $(this).val(),
+        if (typeof this.config.onSubdistrictChange === 'function') {
+            const selectedText = $subdistrict.find('option:selected').text();
+            const postcode = $subdistrict.find('option:selected').data('postcode');
+            this.config.onSubdistrictChange({
+                id: $subdistrict.val(),
                 name: selectedText,
                 postcode: postcode
             });
         }
 
         // Complete callback
-        if (typeof config.onAddressComplete === 'function') {
-            const address = getSelectedAddress();
-            config.onAddressComplete(address);
+        if (typeof this.config.onAddressComplete === 'function') {
+            const address = this.getAddress();
+            this.config.onAddressComplete(address);
         }
     }
 
-    function fetchData(action, params, targetSelector) {
-        toggleLoader(true);
+    fetchData(action, params, targetSelector) {
+        this.toggleLoader(true);
 
         $.ajax({
-            url: `${config.apiPath}?action=${action}`,
+            url: `${this.config.apiPath}?action=${action}`,
             type: 'POST',
             data: params,
             dataType: 'json'
         })
-            .done(function (response) {
+            .done((response) => {
                 if (response.status === 'success') {
                     const $target = $(targetSelector);
                     $target.prop('disabled', false);
 
-                    response.data.forEach(function (item) {
+                    response.data.forEach((item) => {
                         const option = new Option(item.name, item.id, false, false);
                         if (item.postcode) $(option).data('postcode', item.postcode);
                         $target.append(option);
                     });
 
-                    if (config.useSelect2) {
+                    if (this.config.useSelect2) {
                         $target.trigger('change.select2');
                     }
                 }
             })
-            .fail(function (xhr) {
-                console.error(`Error fetching ${action}:`, xhr.responseText);
-            })
-            .always(function () {
-                toggleLoader(false);
+            .always(() => {
+                this.toggleLoader(false);
             });
     }
 
-    function resetSelect(selector, placeholder) {
+    resetSelect(selector, placeholder) {
         const $el = $(selector);
         if (!$el.length) return;
 
@@ -248,20 +238,16 @@ const AutoProvince = (function () {
             .append('<option value=""></option>')
             .prop('disabled', true);
 
-        if (config.useSelect2) {
+        if (this.config.useSelect2) {
             $el.trigger('change.select2');
         }
     }
 
-    /**
-     * Get currently selected address
-     * @returns {Object} Selected address parts
-     */
-    function getSelectedAddress() {
-        const $province = $(config.provinceSelector);
-        const $district = $(config.districtSelector);
-        const $subdistrict = $(config.subdistrictSelector);
-        const $postcode = $(config.postcodeSelector);
+    getAddress() {
+        const $province = $(this.config.provinceSelector);
+        const $district = $(this.config.districtSelector);
+        const $subdistrict = $(this.config.subdistrictSelector);
+        const $postcode = $(this.config.postcodeSelector);
 
         return {
             province: {
@@ -280,12 +266,8 @@ const AutoProvince = (function () {
         };
     }
 
-    /**
-     * Format address as string
-     * @returns {string} Formatted address
-     */
-    function formatAddress() {
-        const addr = getSelectedAddress();
+    formatAddress() {
+        const addr = this.getAddress();
         if (!addr.province.id) return '';
 
         let parts = [];
@@ -301,37 +283,37 @@ const AutoProvince = (function () {
      * Set values programmatically
      * @param {Object} values - { provinceId, districtId, subdistrictId }
      */
-    function setValues(values) {
-        return new Promise(function (resolve) {
-            const $province = $(config.provinceSelector);
+    setValues(values) {
+        return new Promise((resolve) => {
+            const $province = $(this.config.provinceSelector);
 
             if (values.provinceId) {
                 $province.val(values.provinceId);
-                if (config.useSelect2) $province.trigger('change.select2');
+                if (this.config.useSelect2) $province.trigger('change.select2');
                 $province.trigger('change');
 
-                // Wait for districts to load
-                setTimeout(function () {
+                // Wait for districts to load (using a delay since we don't have explicit callbacks for internal loads yet)
+                setTimeout(() => {
+                    const $district = $(this.config.districtSelector);
                     if (values.districtId) {
-                        const $district = $(config.districtSelector);
                         $district.val(values.districtId);
-                        if (config.useSelect2) $district.trigger('change.select2');
+                        if (this.config.useSelect2) $district.trigger('change.select2');
                         $district.trigger('change');
 
                         // Wait for subdistricts to load
-                        setTimeout(function () {
+                        setTimeout(() => {
+                            const $subdistrict = $(this.config.subdistrictSelector);
                             if (values.subdistrictId) {
-                                const $subdistrict = $(config.subdistrictSelector);
                                 $subdistrict.val(values.subdistrictId);
-                                if (config.useSelect2) $subdistrict.trigger('change.select2');
+                                if (this.config.useSelect2) $subdistrict.trigger('change.select2');
                                 $subdistrict.trigger('change');
                             }
                             resolve();
-                        }, 500);
+                        }, 600);
                     } else {
                         resolve();
                     }
-                }, 500);
+                }, 600);
             } else {
                 resolve();
             }
@@ -344,20 +326,20 @@ const AutoProvince = (function () {
      * @param {number} limit
      * @returns {Promise}
      */
-    function search(keyword, limit = 20) {
-        return $.get(`${config.apiPath}?action=search&q=${encodeURIComponent(keyword)}&limit=${limit}`);
+    search(keyword, limit = 20) {
+        return $.get(`${this.config.apiPath}?action=search&q=${encodeURIComponent(keyword)}&limit=${limit}`);
     }
 
-    // Public API
-    return {
-        init: init,
-        getAddress: getSelectedAddress,
-        formatAddress: formatAddress,
-        setValues: setValues,
-        search: search,
-        reload: loadProvinces
-    };
-})();
+    static init(options = {}) {
+        return new AutoProvince(options);
+    }
+}
+
+// Export to global scope
+window.AutoProvince = AutoProvince;
+
+// Support legacy static calls
+window.AutoProvince.init = (options) => new AutoProvince(options);
 
 // Auto-init if data attribute present
 $(document).ready(function () {

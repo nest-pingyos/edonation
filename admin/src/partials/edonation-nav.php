@@ -19,6 +19,9 @@
 
             <li class="nav-item">
                 <a class="nav-link" href="dashboard.php">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:home-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">Dashboard</span>
                 </a>
             </li>
@@ -26,6 +29,9 @@
             <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarReceipts" data-bs-toggle="collapse" role="button"
                     aria-expanded="false" aria-controls="sidebarReceipts">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:invoice-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">ใบเสร็จรับเงิน</span>
                 </a>
                 <div class="collapse" id="sidebarReceipts">
@@ -45,18 +51,27 @@
 
             <li class="nav-item">
                 <a class="nav-link" href="projects-list.php">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:folder-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">โครงการ</span>
                 </a>
             </li>
 
             <li class="nav-item">
                 <a class="nav-link" href="benefits-list.php">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:gift-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">สิทธิประโยชน์</span>
                 </a>
             </li>
 
             <li class="nav-item">
                 <a class="nav-link" href="news-list.php">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:news-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">ข่าวสาร</span>
                 </a>
             </li>
@@ -64,6 +79,9 @@
             <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarMembers" data-bs-toggle="collapse" role="button"
                     aria-expanded="false" aria-controls="sidebarMembers">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:profile-circle-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">สมาชิก</span>
                 </a>
                 <div class="collapse" id="sidebarMembers">
@@ -81,6 +99,9 @@
             <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarReports" data-bs-toggle="collapse" role="button"
                     aria-expanded="false" aria-controls="sidebarReports">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:file-document-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">รายงาน</span>
                 </a>
                 <div class="collapse" id="sidebarReports">
@@ -101,6 +122,9 @@
             <li class="nav-item">
                 <a class="nav-link menu-arrow" href="#sidebarSettings" data-bs-toggle="collapse" role="button"
                     aria-expanded="false" aria-controls="sidebarSettings">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:settings-duotone"></iconify-icon>
+                    </span>
                     <span class="nav-text">ตั้งค่า</span>
                 </a>
                 <div class="collapse" id="sidebarSettings">
@@ -117,6 +141,9 @@
 
             <li class="nav-item">
                 <a class="nav-link text-danger" href="logout.php">
+                    <span class="nav-icon">
+                        <iconify-icon icon="iconamoon:exit-duotone" class="text-danger"></iconify-icon>
+                    </span>
                     <span class="nav-text">ออกจากระบบ</span>
                 </a>
             </li>

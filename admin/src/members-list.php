@@ -60,6 +60,20 @@
             border-radius: 0.5rem;
             padding: 0.5rem 1rem;
         }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
@@ -146,6 +160,20 @@
                         <!-- Toolbar -->
                         <div
                             class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mb-4">
+                            <div class="col-md-2">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">แสดง</span>
+                                    <select id="limitSelector" class="form-select border-0 bg-light"
+                                        onchange="changeLimit()">
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="250">250</option>
+                                        <option value="500">500</option>
+                                    </select>
+                                    <span class="input-group-text bg-light">แถว</span>
+                                </div>
+                            </div>
                             <div class="search-box d-flex align-items-center flex-grow-1" style="max-width: 400px;">
                                 <iconify-icon icon="iconamoon:search-duotone"
                                     class="text-muted fs-5 me-2"></iconify-icon>
@@ -164,6 +192,13 @@
 
                                 <button class="btn btn-light" onclick="loadMembers()" title="รีเฟรช">
                                     <iconify-icon icon="iconamoon:restart-duotone" class="fs-5"></iconify-icon>
+                                </button>
+
+                                <button class="btn btn-primary d-flex align-items-center gap-2" onclick="syncMembers()"
+                                    id="btnSync" title="Sync ข้อมูลสมาชิกจากใบเสร็จ">
+                                    <iconify-icon icon="iconamoon:synchronize-duotone" class="fs-5"
+                                        id="syncIcon"></iconify-icon>
+                                    <span class="d-none d-sm-inline">Sync</span>
                                 </button>
 
                                 <button class="btn btn-success d-flex align-items-center gap-2"
@@ -336,7 +371,7 @@
         let members = [];
         let currentPage = 1;
         let totalPages = 1;
-        const limit = 20;
+        let perPage = 25;
 
         document.addEventListener('DOMContentLoaded', function () {
             loadMembers();
@@ -357,14 +392,16 @@
             try {
                 // Determine API endpoint based on search
                 const query = document.getElementById('searchInput').value.trim();
-                let url = `/members?page=${page}&limit=${limit}`;
+                let url = `/members?page=${page}&limit=${perPage}`;
 
                 if (query) {
-                    url = `/members/search?q=${encodeURIComponent(query)}&limit=50`; // Search usually has larger limit
+                    // If searching, we skip normal pagination for now as API search might have different behavior
+                    // but we try to keep it consistent if possible
+                    url = `/members/search?q=${encodeURIComponent(query)}&limit=${perPage}`;
                 } else {
                     // Add filter if not searching
                     const filter = document.getElementById('filterType').value;
-                    // Assuming API supports filter (not implemented in backend yet, handled in frontend for now)
+                    if (filter) url += `&type=${filter}`;
                 }
 
                 const response = await apiGet(url);
@@ -421,7 +458,7 @@
 
             tbody.innerHTML = filteredData.map((item, index) => {
                 const fullName = item.name || 'ไม่ระบุชื่อ';
-                const startIdx = (currentPage - 1) * limit + index + 1;
+                const startIdx = (currentPage - 1) * perPage + index + 1;
 
                 return `
                 <tr>
@@ -462,44 +499,63 @@
             document.getElementById('selectAll').checked = false;
         }
 
+        function changeLimit() {
+            perPage = parseInt(document.getElementById('limitSelector').value);
+            loadMembers(1);
+        }
+
         function renderPagination(meta) {
             const pagination = document.getElementById('pagination');
             const info = document.getElementById('pagination-info');
 
             if (!meta || meta.total_pages <= 1) {
                 pagination.innerHTML = '';
-                info.textContent = `แสดง ${meta?.total || 0} รายการ`;
+                info.textContent = `แสดงทั้งหมด ${meta?.total || members.length} รายการ`;
                 return;
             }
 
-            const start = (currentPage - 1) * limit + 1;
-            const end = Math.min(currentPage * limit, meta.total);
-            info.textContent = `แสดง ${start}ถึง ${end} จาก ${meta.total} รายการ`;
+            const total = meta.total || 0;
+            const totalPages = meta.total_pages || 1;
+            const start = (currentPage - 1) * perPage + 1;
+            const end = Math.min(currentPage * perPage, total);
+            info.textContent = `แสดง ${total > 0 ? start : 0}-${end} จาก ${total} รายการ`;
 
-            let html = '';
+            let html = '<ul class="pagination pagination-sm mb-0">';
 
-            // Modern pagination style
-            html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="loadMembers(${currentPage - 1}); return false;"><iconify-icon icon="iconamoon:arrow-left-2-duotone"></iconify-icon></a>
-            </li>`;
+            // First & Previous
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadMembers(1)" title="หน้าแรก">«</a>
+                </li>
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadMembers(${currentPage - 1})" title="ก่อนหน้า">‹</a>
+                </li>
+            `;
 
-            for (let i = 1; i <= Math.min(5, meta.total_pages); i++) {
-                html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="loadMembers(${i}); return false;">${i}</a>
-                </li>`;
+            // Calculate range
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="loadMembers(${i})">${i}</a>
+                    </li>
+                `;
             }
 
-            if (meta.total_pages > 5) {
-                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-                html += `<li class="page-item ${currentPage === meta.total_pages ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="loadMembers(${meta.total_pages}); return false;">${meta.total_pages}</a>
-                </li>`;
-            }
+            // Next & Last
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadMembers(${currentPage + 1})" title="ถัดไป">›</a>
+                </li>
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="loadMembers(${totalPages})" title="หน้าสุดท้าย">»</a>
+                </li>
+            `;
 
-            html += `<li class="page-item ${currentPage === meta.total_pages ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="loadMembers(${currentPage + 1}); return false;"><iconify-icon icon="iconamoon:arrow-right-2-duotone"></iconify-icon></a>
-            </li>`;
-
+            html += '</ul>';
             pagination.innerHTML = html;
         }
 
@@ -651,6 +707,42 @@
             }
             document.getElementById('exportIds').value = ids.join(',');
             document.getElementById('exportForm').submit();
+        }
+
+        async function syncMembers() {
+            const btn = document.getElementById('btnSync');
+            const icon = document.getElementById('syncIcon');
+
+            // Confirm before sync
+            if (!confirm('ต้องการ Sync ข้อมูลสมาชิกจากใบเสร็จหรือไม่?\n(จะอัปเดตข้อมูลสมาชิกทั้งหมด)')) {
+                return;
+            }
+
+            // Disable button and show loading
+            btn.disabled = true;
+            icon.setAttribute('icon', 'iconamoon:loading');
+            icon.classList.add('spin');
+
+            try {
+                const response = await apiPost('/members/sync');
+                const data = response.data || {};
+
+                showSuccess(`Sync สำเร็จ!\n` +
+                    `• สมาชิกใหม่: ${data.new_members || 0} คน\n` +
+                    `• อัปเดต: ${data.updated_members || 0} คน\n` +
+                    `• สมาชิกทั้งหมด: ${data.total_members || 0} คน`);
+
+                // Reload member list
+                loadMembers();
+
+            } catch (error) {
+                showError(error.message || 'เกิดข้อผิดพลาดในการ Sync');
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                icon.setAttribute('icon', 'iconamoon:synchronize-duotone');
+                icon.classList.remove('spin');
+            }
         }
 
         function getInitials(name) {

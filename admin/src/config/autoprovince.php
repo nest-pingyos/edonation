@@ -116,7 +116,7 @@ function adminAutoprovinceCss(): void
  */
 function adminAutoprovinceJs(): void
 {
-    echo '<script src="' . AUTOPROVINCE_JS_PATH . '"></script>';
+    echo '<script src="' . AUTOPROVINCE_JS_PATH . '?v=2.1"></script>';
 }
 
 /**

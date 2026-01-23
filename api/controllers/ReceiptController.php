@@ -50,7 +50,7 @@ class ReceiptController
                 case 'verify':
                     return $this->verifyTaxId($id);
                 case 'details':
-                    return $this->getDetails($id); // สำหรับ pdf_maker.php
+                    return $this->getDetails($id); // สำหรับ pdf_completed.php
                 case 'cancel':
                     AuthMiddleware::requireAdmin();
                     return $this->cancel($id);
@@ -66,6 +66,11 @@ class ReceiptController
                     return $this->show($id);
                 AuthMiddleware::requireAdmin();
                 return $this->index();
+            case 'PUT':
+                AuthMiddleware::requireAdmin();
+                if (!$id)
+                    return Response::error('VALIDATION_ERROR', 'กรุณาระบุ ID ใบเสร็จ');
+                return $this->update($id);
             default:
                 return Response::error('METHOD_NOT_ALLOWED', 'Method not allowed', 405);
         }
@@ -118,7 +123,7 @@ class ReceiptController
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
                     WHERE bt.billPaymentRef2 = :keyword OR du.id_card = :keyword2
-                    ORDER BY r.id DESC 
+                    ORDER BY r.receipt_no DESC 
                     LIMIT 50";
             $searchValue = $cleanKeyword;
         } else {
@@ -139,7 +144,7 @@ class ReceiptController
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
                     WHERE r.receipt_no = :keyword
-                    ORDER BY r.id DESC 
+                    ORDER BY r.receipt_no DESC 
                     LIMIT 50";
             $searchValue = $keyword;
         }
@@ -327,8 +332,10 @@ class ReceiptController
 
         // ส่ง receipt ID พร้อม token - use BASE_PATH from config
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+        $pdfFile = ((int) ($receipt['status'] ?? 0) === 2) ? 'pdf_cancelled.php' : 'pdf_completed.php';
+
         return Response::success([
-            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'pdf_url' => "{$basePath}/receipts/{$pdfFile}?token={$accessToken}",
             'receipt_no' => $receipt['receipt_no'],
             'api_version' => self::VERSION
         ]);
@@ -381,8 +388,10 @@ class ReceiptController
 
         // ส่ง receipt URL พร้อม token
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+        $pdfFile = ((int) ($receipt['status'] ?? 0) === 2) ? 'pdf_cancelled.php' : 'pdf_completed.php';
+
         return Response::success([
-            'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$id}&token={$accessToken}",
+            'pdf_url' => "{$basePath}/receipts/{$pdfFile}?token={$accessToken}",
             'receipt_no' => $receipt['receipt_no'],
             'api_version' => self::VERSION
         ]);
@@ -390,7 +399,7 @@ class ReceiptController
 
     /**
      * GET /receipts/:id/details
-     * ดึงข้อมูลใบเสร็จครบถ้วนสำหรับ pdf_maker.php
+     * ดึงข้อมูลใบเสร็จครบถ้วนสำหรับ pdf_completed.php
      */
     private function getDetails(string $id): array
     {
@@ -417,7 +426,8 @@ class ReceiptController
                     du.zip_code,
                     bt.billPaymentRef2,
                     bt.billPaymentRef1,
-                    bt.payerAccountName
+                    bt.payerAccountName,
+                    r.status
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
@@ -453,6 +463,7 @@ class ReceiptController
             'billPaymentRef2' => $receipt['billPaymentRef2'] ?? '',
             'id_card' => $receipt['id_card'] ?? '',
             'id_members' => $receipt['id_members'] ?? '',
+            'status' => ((int) ($receipt['status'] ?? 1) === 2) ? 'cancelled' : 'issued',
             'api_version' => self::VERSION
         ]);
     }
@@ -471,11 +482,25 @@ class ReceiptController
                     r.issued_at,
                     r.donation_id,
                     r.bank_transaction_id,
+                    r.status,
                     r.id_card,
                     r.id_members,
                     du.project_name,
                     du.project_number,
                     du.payby,
+                    du.title,
+                    du.first_name,
+                    du.last_name,
+                    du.phone,
+                    du.occupation,
+                    du.receiptDate,
+                    du.receipt_address,
+                    du.address_line,
+                    du.province,
+                    du.amphure,
+                    du.district,
+                    du.zip_code,
+                    du.email,
                     bt.billPaymentRef2
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
@@ -496,9 +521,25 @@ class ReceiptController
             'payer_name' => $receipt['payer_name'],
             'amount' => floatval($receipt['amount']),
             'receipt_date' => $receipt['issued_at'],
+            'donation_id' => $receipt['donation_id'],
             'project_name' => $receipt['project_name'] ?? '',
             'project_number' => $receipt['project_number'] ?? '',
             'pay_by' => $receipt['payby'] ?? 'QR PromptPay',
+            'title' => $receipt['title'] ?? '',
+            'first_name' => $receipt['first_name'] ?? '',
+            'last_name' => $receipt['last_name'] ?? '',
+            'id_card' => $receipt['id_card'] ?? '',
+            'phone' => $receipt['phone'] ?? '',
+            'occupation' => $receipt['occupation'] ?? '',
+            'receiptDate' => $receipt['receiptDate'] ?? '',
+            'receipt_address' => $receipt['receipt_address'] ?? '',
+            'address_line' => $receipt['address_line'] ?? '',
+            'province' => $receipt['province'] ?? '',
+            'amphure' => $receipt['amphure'] ?? '',
+            'district' => $receipt['district'] ?? '',
+            'zip_code' => $receipt['zip_code'] ?? '',
+            'email' => $receipt['email'] ?? '',
+            'status' => ((int) ($receipt['status'] ?? 1) === 2) ? 'cancelled' : 'issued',
             'has_tax_id' => !empty($receipt['billPaymentRef2']),
             'api_version' => self::VERSION
         ]);
@@ -511,32 +552,29 @@ class ReceiptController
     private function index(): array
     {
         $page = max(1, intval($_GET['page'] ?? 1));
-        $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
+        $limit = min(1000, max(1, intval($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
 
         $where = [];
         $params = [];
 
-        // Search filter
         if (!empty($_GET['search'])) {
-            $where[] = "(r.receipt_no LIKE :s1 OR r.payer_name LIKE :s2 OR du.first_name LIKE :s3 OR du.last_name LIKE :s4 OR bt.billPaymentRef2 LIKE :s5)";
+            $where[] = "(r.receipt_no LIKE :s1 OR r.payer_name LIKE :s2 OR du.first_name LIKE :s3 OR du.last_name LIKE :s4 OR bt.billPaymentRef2 LIKE :s5 OR du.project_number LIKE :s6 OR du.project_name LIKE :s7)";
             $searchVal = '%' . $_GET['search'] . '%';
             $params[':s1'] = $searchVal;
             $params[':s2'] = $searchVal;
             $params[':s3'] = $searchVal;
             $params[':s4'] = $searchVal;
             $params[':s5'] = $searchVal;
+            $params[':s6'] = $searchVal;
+            $params[':s7'] = $searchVal;
         }
 
-        // Status filter (in main receipts table, status might be a column or derived)
-        // For now, let's assume status_donat in du or status column in r if exists
-        // Looking at the schema used in index, we have du.status_donat
+        // Status filter
         if (!empty($_GET['status'])) {
-            if ($_GET['status'] === 'cancelled') {
-                // If there's a status column in r, use it. Otherwise use a convention.
-                // In generate(), it doesn't set a status. Let's check cancel().
-                // cancel() currently DELETES the record. So 'cancelled' status might not exist in table.
-            }
+            $statusVal = ($_GET['status'] === 'cancelled') ? 2 : 1;
+            $where[] = "r.status = :status";
+            $params[':status'] = $statusVal;
         }
 
         // Year filter (Buddhist Era)
@@ -587,6 +625,7 @@ class ReceiptController
                     du.first_name,
                     du.last_name,
                     du.status_donat,
+                    r.status,
                     bt.billPaymentRef2,
                     du.receipt_address,
                     du.shipping_address,
@@ -599,74 +638,99 @@ class ReceiptController
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
                 $whereClause
-                ORDER BY r.id DESC 
+                ORDER BY r.receipt_no DESC 
                 LIMIT :limit OFFSET :offset";
 
-        $stmt = $this->pdo->prepare($sql);
-        foreach ($params as $key => $val) {
-            $stmt->bindValue($key, $val);
-        }
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Format payer_name and address properly
-        foreach ($results as &$row) {
-            // Name
-            $name = trim($row['payer_name'] ?? '');
-            if (empty($name) || $name === ' ') {
-                $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $val) {
+                $stmt->bindValue($key, $val);
             }
-            $row['payer_name'] = !empty($name) ? $name : 'ไม่ระบุชื่อ';
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
 
-            // Address logic (Priority: Shipping > Receipt > Components)
-            $addr = $row['shipping_address'] ?? '';
-            if (empty($addr)) {
-                $addr = $row['receipt_address'] ?? '';
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Format payer_name and address properly
+            foreach ($results as &$row) {
+                // Name
+                $name = trim($row['payer_name'] ?? '');
+                if (empty($name) || $name === ' ') {
+                    $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+                }
+                $row['payer_name'] = !empty($name) ? $name : 'ไม่ระบุชื่อ';
+
+                // Address logic (Priority: Shipping > Receipt > Components)
+                $addr = $row['shipping_address'] ?? '';
+                if (empty($addr)) {
+                    $addr = $row['receipt_address'] ?? '';
+                }
+
+                if (empty($addr)) {
+                    $parts = [];
+                    if (!empty($row['address_line']))
+                        $parts[] = $row['address_line'];
+                    if (!empty($row['district']))
+                        $parts[] = 'อ.' . $row['district']; // หรือ แขวง/ตำบล แล้วแต่ field
+                    if (!empty($row['amphure']))
+                        $parts[] = 'อ.' . $row['amphure'];
+                    if (!empty($row['province']))
+                        $parts[] = 'จ.' . $row['province'];
+                    if (!empty($row['zip_code']))
+                        $parts[] = $row['zip_code'];
+                    $addr = implode(' ', $parts);
+                }
+                $row['full_address'] = $addr;
+                $row['status'] = ((int) $row['status'] === 2) ? 'cancelled' : 'issued';
             }
 
-            if (empty($addr)) {
-                $parts = [];
-                if (!empty($row['address_line']))
-                    $parts[] = $row['address_line'];
-                if (!empty($row['district']))
-                    $parts[] = 'อ.' . $row['district']; // หรือ แขวง/ตำบล แล้วแต่ field
-                if (!empty($row['amphure']))
-                    $parts[] = 'อ.' . $row['amphure'];
-                if (!empty($row['province']))
-                    $parts[] = 'จ.' . $row['province'];
-                if (!empty($row['zip_code']))
-                    $parts[] = $row['zip_code'];
-                $addr = implode(' ', $parts);
+            // Count filtered totals and stats
+            $summarySql = "SELECT 
+                        COUNT(*) as filtered_total, 
+                        SUM(CASE WHEN r.status = 1 THEN r.amount ELSE 0 END) as filtered_amount,
+                        SUM(CASE WHEN r.status = 1 THEN 1 ELSE 0 END) as issued_count,
+                        SUM(CASE WHEN r.status = 2 THEN 1 ELSE 0 END) as cancelled_count
+                      FROM edonation_receipts r 
+                      LEFT JOIN edonation_donat_user du ON r.donation_id = du.id 
+                      LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id 
+                      $whereClause";
+            $summaryStmt = $this->pdo->prepare($summarySql);
+            foreach ($params as $key => $val) {
+                $summaryStmt->bindValue($key, $val);
             }
-            $row['full_address'] = $addr;
+            $summaryStmt->execute();
+            $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$summary) {
+                $summary = ['filtered_total' => 0, 'filtered_amount' => 0, 'issued_count' => 0, 'cancelled_count' => 0];
+            }
+
+            $total = (int) $summary['filtered_total'];
+            $filteredAmount = (float) $summary['filtered_amount'];
+            $issuedCount = (int) $summary['issued_count'];
+            $cancelledCount = (int) $summary['cancelled_count'];
+
+            // Calculate Grand Total Amount (Unfiltered, but excluding cancelled)
+            $grandTotalStmt = $this->pdo->query("SELECT SUM(r.amount) FROM edonation_receipts r WHERE r.status = 1");
+            $grandTotalAmount = ($grandTotalStmt) ? (float) $grandTotalStmt->fetchColumn() : 0;
+
+            return Response::success($results, null, [
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $total,
+                'total_pages' => ceil($total / $limit),
+                'total_amount' => $filteredAmount,
+                'issued' => $issuedCount,
+                'cancelled' => $cancelledCount,
+                'grand_total' => $grandTotalAmount,
+                'api_version' => self::VERSION
+            ]);
+
+        } catch (PDOException $e) {
+            error_log("Receipt index error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'เกิดข้อผิดพลาดในการดึงข้อมูล: ' . $e->getMessage(), 500);
         }
-
-        // Count total (Filtered)
-        $countSql = "SELECT COUNT(*) FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id $whereClause";
-        $countStmt = $this->pdo->prepare($countSql);
-        foreach ($params as $key => $val) {
-            $countStmt->bindValue($key, $val);
-        }
-        $countStmt->execute();
-        $total = (int) $countStmt->fetchColumn();
-
-        // Calculate Grand Total Amount (Unfiltered)
-        $grandTotalSql = "SELECT SUM(amount) as total_amount FROM edonation_receipts";
-        $grandTotalStmt = $this->pdo->prepare($grandTotalSql);
-        $grandTotalStmt->execute();
-        $grandTotalAmount = $grandTotalStmt->fetch(PDO::FETCH_ASSOC)['total_amount'] ?? 0;
-
-        return Response::success($results, null, [
-            'page' => $page,
-            'limit' => $limit,
-            'total' => $total,
-            'total_pages' => ceil($total / $limit),
-            'total_amount' => $grandTotalAmount,
-            'api_version' => self::VERSION
-        ]);
     }
 
     /**
@@ -737,7 +801,7 @@ class ReceiptController
                     ) VALUES (
                         :ref1, :project_number, :project_name, :type, :phone, :amount, 
                         :fiscal_year, 'completed', :payby, :receipt_date,
-                        1, :first_name, :last_name, :id_card, :address, :address
+                        1, :first_name, :last_name, :id_card, :address, :shipping_address
                     )
                 ");
 
@@ -754,7 +818,8 @@ class ReceiptController
                     ':first_name' => $data['first_name'],
                     ':last_name' => $data['last_name'] ?? '',
                     ':id_card' => !empty($data['id_card']) ? preg_replace('/\D/', '', $data['id_card']) : '',
-                    ':address' => $data['address'] ?? ''
+                    ':address' => $data['address'] ?? '',
+                    ':shipping_address' => $data['shipping_address'] ?? $data['address'] ?? ''
                 ]);
 
                 $donationId = $this->pdo->lastInsertId();
@@ -776,6 +841,20 @@ class ReceiptController
             }
             $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
 
+            // Check for duplicate receipt_no (safety check)
+            $checkDupe = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE receipt_no = :rno");
+            $checkDupe->execute([':rno' => $receiptNo]);
+            if ($checkDupe->fetchColumn() > 0) {
+                // Find next available number
+                $safetyLoop = 0;
+                do {
+                    $nextNum++;
+                    $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+                    $checkDupe->execute([':rno' => $receiptNo]);
+                    $safetyLoop++;
+                } while ($checkDupe->fetchColumn() > 0 && $safetyLoop < 100);
+            }
+
             // Manage id_members
             $idCardClean = preg_replace('/\D/', '', $data['id_card']);
             $checkMember = $this->pdo->prepare("SELECT id_members FROM edonation_receipts WHERE id_card = :id LIMIT 1");
@@ -794,8 +873,8 @@ class ReceiptController
 
             // Create receipt record
             $receiptStmt = $this->pdo->prepare("
-                INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at, id_card, id_members)
-                VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW(), :id_card, :id_members)
+                INSERT INTO edonation_receipts (donation_id, bank_transaction_id, receipt_no, payer_name, amount, issued_at, id_card, id_members, status)
+                VALUES (:donation_id, :bank_transaction_id, :receipt_no, :payer_name, :amount, NOW(), :id_card, :id_members, 1)
             ");
 
             $receiptStmt->execute([
@@ -835,7 +914,7 @@ class ReceiptController
                 'receipt_no' => $receiptNo,
                 'payer_name' => $payerName,
                 'amount' => floatval($data['amount']),
-                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'pdf_url' => "{$basePath}/receipts/pdf_completed.php?id={$receiptId}&token={$accessToken}",
                 'access_token' => $accessToken,
                 'api_version' => self::VERSION
             ], 'ออกใบเสร็จสำเร็จ');
@@ -868,8 +947,8 @@ class ReceiptController
         try {
             $this->pdo->beginTransaction();
 
-            // Delete the receipt
-            $stmt = $this->pdo->prepare("DELETE FROM edonation_receipts WHERE id = :id");
+            // Update the receipt status instead of deleting
+            $stmt = $this->pdo->prepare("UPDATE edonation_receipts SET status = 2 WHERE id = :id");
             $stmt->execute([':id' => $id]);
 
             // Update donation status back to cancelled/voided
@@ -908,5 +987,117 @@ class ReceiptController
         }
 
         return Response::success(['api_version' => self::VERSION], 'ส่งใบเสร็จไปยัง ' . $data['email'] . ' เรียบร้อย');
+    }
+
+    /**
+     * PUT /receipts/:id (Admin)
+     * แก้ไขข้อมูลใบเสร็จ
+     */
+    private function update(string $id): array
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        // ดึงข้อมูลใบเสร็จเดิม
+        $stmt = $this->pdo->prepare("
+            SELECT r.*, d.status_donat 
+            FROM edonation_receipts r
+            LEFT JOIN edonation_donat_user d ON r.donation_id = d.id
+            WHERE r.id = :id
+        ");
+        $stmt->execute([':id' => $id]);
+        $receipt = $stmt->fetch();
+
+        if (!$receipt) {
+            return Response::notFound('ไม่พบใบเสร็จ');
+        }
+
+        // ตรวจสอบว่าไม่ใช่ใบเสร็จที่ยกเลิกแล้ว
+        if ($receipt['status_donat'] === 'cancelled') {
+            return Response::error('VALIDATION_ERROR', 'ไม่สามารถแก้ไขใบเสร็จที่ยกเลิกแล้วได้');
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            // อัปเดตตาราง edonation_receipts
+            $receiptFields = [];
+            $receiptParams = [':id' => $id];
+
+            if (isset($data['payer_name'])) {
+                $receiptFields[] = 'payer_name = :payer_name';
+                $receiptParams[':payer_name'] = $data['payer_name'];
+            }
+            if (isset($data['amount'])) {
+                $receiptFields[] = 'amount = :amount';
+                $receiptParams[':amount'] = $data['amount'];
+            }
+            if (isset($data['id_card'])) {
+                $idCard = preg_replace('/\D/', '', $data['id_card']);
+                $receiptFields[] = 'id_card = :id_card';
+                $receiptParams[':id_card'] = $idCard;
+            }
+
+            if (!empty($receiptFields)) {
+                $sql = "UPDATE edonation_receipts SET " . implode(', ', $receiptFields) . " WHERE id = :id";
+                $updateStmt = $this->pdo->prepare($sql);
+                $updateStmt->execute($receiptParams);
+            }
+
+            // อัปเดตตาราง edonation_donat_user (ถ้ามี donation_id)
+            if ($receipt['donation_id']) {
+                $donationFields = [];
+                $donationParams = [':id' => $receipt['donation_id']];
+
+                $allowedDonationFields = [
+                    'title',
+                    'first_name',
+                    'last_name',
+                    'id_card',
+                    'phone',
+                    'email',
+                    'occupation',
+                    'receipt_address',
+                    'amount',
+                    'project_number',
+                    'project_name',
+                    'receiptDate',
+                    'address_line',
+                    'province',
+                    'amphure',
+                    'district',
+                    'zip_code',
+                    'payby'
+                ];
+
+                foreach ($allowedDonationFields as $field) {
+                    if (isset($data[$field])) {
+                        $value = $data[$field];
+                        if ($field === 'id_card') {
+                            $value = preg_replace('/\D/', '', $value);
+                        }
+                        $donationFields[] = "{$field} = :{$field}";
+                        $donationParams[":{$field}"] = $value;
+                    }
+                }
+
+                if (!empty($donationFields)) {
+                    $sql = "UPDATE edonation_donat_user SET " . implode(', ', $donationFields) . " WHERE id = :id";
+                    $updateDonation = $this->pdo->prepare($sql);
+                    $updateDonation->execute($donationParams);
+                }
+            }
+
+            $this->pdo->commit();
+
+            return Response::success([
+                'id' => (int) $id,
+                'receipt_no' => $receipt['receipt_no']
+            ], 'แก้ไขใบเสร็จสำเร็จ');
+
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Update receipt error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถแก้ไขใบเสร็จได้: ' . $e->getMessage(), 500);
+        }
     }
 }

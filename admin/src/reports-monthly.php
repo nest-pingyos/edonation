@@ -43,9 +43,6 @@
                                 <iconify-icon icon="iconamoon:calendar-2-duotone"></iconify-icon>
                             </span>
                             <select id="reportMonth" class="form-select" style="max-width: 120px;">
-                                <option value="10">ตุลาคม</option>
-                                <option value="11">พฤศจิกายน</option>
-                                <option value="12">ธันวาคม</option>
                                 <option value="1">มกราคม</option>
                                 <option value="2">กุมภาพันธ์</option>
                                 <option value="3">มีนาคม</option>
@@ -55,6 +52,9 @@
                                 <option value="7">กรกฎาคม</option>
                                 <option value="8">สิงหาคม</option>
                                 <option value="9">กันยายน</option>
+                                <option value="10">ตุลาคม</option>
+                                <option value="11">พฤศจิกายน</option>
+                                <option value="12">ธันวาคม</option>
                             </select>
                             <select id="reportYear" class="form-select" style="max-width: 100px;"></select>
                             <button class="btn btn-primary" onclick="loadReport()">
@@ -228,8 +228,8 @@
         let donations = [];
         let dailyChart, projectPieChart;
 
-        // Get fiscal year type from settings
-        const fiscalYearType = localStorage.getItem('fiscalYearType') || 'thai';
+        // Default to calendar year
+        const fiscalYearType = 'calendar';
 
         document.addEventListener('DOMContentLoaded', function () {
             initYearSelector();
@@ -243,13 +243,7 @@
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth() + 1; // 1-12
 
-            // Calculate default year based on fiscal type
-            let defaultYear;
-            if (fiscalYearType === 'thai') {
-                defaultYear = currentMonth >= 10 ? currentYear + 1 : currentYear;
-            } else {
-                defaultYear = currentYear;
-            }
+            const defaultYear = currentYear;
 
             for (let y = defaultYear; y >= 2023; y--) {
                 const option = document.createElement('option');
@@ -260,11 +254,7 @@
 
             // Set current month
             document.getElementById('reportMonth').value = currentMonth;
-
-            // Set correct year (for Thai fiscal, if month is Oct-Dec, year should be fiscalYear)
-            if (fiscalYearType === 'thai' && currentMonth >= 10) {
-                document.getElementById('reportYear').value = defaultYear;
-            }
+            document.getElementById('reportYear').value = defaultYear;
         }
 
         function initCharts() {

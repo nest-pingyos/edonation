@@ -64,7 +64,7 @@ include_once('../config/head.php');
             const projectsGrid = document.getElementById('projectsGrid');
 
             try {
-                const response = await fetch(`${API_BASE}/projects?status=active`);
+                const response = await fetch(`${API_BASE}/projects?status=active&sort=asc`);
                 const result = await response.json();
 
                 loadingState.style.display = 'none';
@@ -96,15 +96,19 @@ include_once('../config/head.php');
 
             let html = '';
             projects.forEach(project => {
+                const projectName = project.project_name || 'โครงการ';
+                const description = project.description || 'รายละเอียดโครงการ...';
+
                 html += `
                 <div class="project-card">
                     <div class="project-card-image">
-                        <img src="${project.image_url}" alt="${escapeHtml(project.project_name || 'Project')}" 
+                        <img src="${project.image_url || '../assets/images/projects/pro-1.jpg'}" 
+                             alt="${escapeHtml(projectName)}" 
                              onerror="this.src='../assets/images/projects/pro-1.jpg'">
                     </div>
                     <div class="project-card-content">
-                        <h3 class="project-card-title">${escapeHtml(project.project_name_web || project.project_name || 'โครงการ')}</h3>
-                        <p class="project-card-desc">${escapeHtml(project.description || project.short_description || project.project_description || project.project_tex || 'รายละเอียดโครงการ...')}</p>
+                        <h3 class="project-card-title">${escapeHtml(truncateText(projectName, 60))}</h3>
+                        <p class="project-card-desc">${escapeHtml(truncateText(description, 80))}</p>
                         <div class="project-card-footer">
                             <a href="../donat/${project.project_number}${langParam}" class="btn-donate">
                                 <i class="fas fa-heart"></i>
@@ -125,6 +129,12 @@ include_once('../config/head.php');
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength).trim() + '...';
         }
     </script>
 </body>

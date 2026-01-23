@@ -195,6 +195,11 @@ class DonationController
             return Response::error('VALIDATION_ERROR', 'กรุณากรอกข้อมูลให้ครบ: ' . implode(', ', $missing));
         }
 
+        // Validate donation_date is required
+        if (empty($data['donation_date'])) {
+            return Response::error('VALIDATION_ERROR', 'กรุณาระบุวันที่บริจาค');
+        }
+
         // Validate ID card format (13 digits) - ถ้ามีข้อมูล
         $idCard = !empty($data['id_card']) ? preg_replace('/\D/', '', $data['id_card']) : '';
         if (!empty($idCard) && strlen($idCard) !== 13) {
@@ -232,12 +237,12 @@ class DonationController
 
             $donationStmt = $this->pdo->prepare("
                 INSERT INTO edonation_donat_user (
-                    billPaymentRef1, project_number, project_name, type, phone, occupation, amount, 
+                    billPaymentRef1, project_number, project_name, type, phone, email, occupation, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
                     need_receipt, title, first_name, last_name, id_card, receipt_address, shipping_address,
                     address_line, province, amphure, district, zip_code
                 ) VALUES (
-                    :ref1, :project_number, :project_name, :type, :phone, :occupation, :amount, 
+                    :ref1, :project_number, :project_name, :type, :phone, :email, :occupation, :amount, 
                     :fiscal_year, 'completed', :payby, :receipt_date,
                     1, :title, :first_name, :last_name, :id_card, :receipt_address, :shipping_address,
                     :address_line, :province, :amphure, :district, :zip_code
@@ -250,17 +255,18 @@ class DonationController
                 ':project_name' => $projectName,
                 ':type' => $data['type'] ?? 'manual',
                 ':phone' => $data['phone'] ?? '',
+                ':email' => $data['email'] ?? '',
                 ':occupation' => $data['occupation'] ?? '', // เพิ่มอาชีพ
                 ':amount' => $data['amount'],
                 ':fiscal_year' => $year,
                 ':payby' => $data['payment_method'] ?? 'เงินสด',
-                ':receipt_date' => $data['donation_date'] ?? date('Y-m-d'),
+                ':receipt_date' => $data['donation_date'],
                 ':title' => $data['title'] ?? null,
                 ':first_name' => $data['first_name'],
                 ':last_name' => $data['last_name'] ?? '',
                 ':id_card' => $idCard,
                 ':receipt_address' => $data['address'] ?? '',
-                ':shipping_address' => $data['address'] ?? '',
+                ':shipping_address' => $data['shipping_address'] ?? $data['address'] ?? '',
                 ':address_line' => $data['address_line'] ?? null,
                 ':province' => $data['province'] ?? null,
                 ':amphure' => $data['amphure'] ?? null,
@@ -274,17 +280,49 @@ class DonationController
             // Generate receipt number Format: YYYY-EXXXX
             $prefix = $year . '-E';
 
-            // Lock for safe increment
-            $maxStmt = $this->pdo->prepare("SELECT MAX(receipt_no) as max_no FROM edonation_receipts WHERE receipt_no LIKE :prefix FOR UPDATE");
-            $maxStmt->execute([':prefix' => $prefix . '%']);
-            $maxRow = $maxStmt->fetch();
+            // Lock for safe increment and date validation
+            $lastReceiptStmt = $this->pdo->prepare("
+                SELECT r.receipt_no, du.receiptDate 
+                FROM edonation_receipts r 
+                JOIN edonation_donat_user du ON r.donation_id = du.id 
+                WHERE r.receipt_no LIKE :prefix 
+                ORDER BY r.receipt_no DESC 
+                LIMIT 1 
+                FOR UPDATE
+            ");
+            $lastReceiptStmt->execute([':prefix' => $prefix . '%']);
+            $lastReceipt = $lastReceiptStmt->fetch();
+
+            // Validate date - Cannot issue before latest receipt record
+            if ($lastReceipt) {
+                $lastDate = $lastReceipt['receiptDate'];
+                if ($data['donation_date'] < $lastDate) {
+                    $this->pdo->rollBack();
+                    $lastDateThai = date('d/m/Y', strtotime($lastDate));
+                    return Response::error('VALIDATION_ERROR', "ไม่สามารถออกใบเสร็จย้อนหลังได้ ใบล่าสุดเลขที่ {$lastReceipt['receipt_no']} ลงวันที่ {$lastDateThai}");
+                }
+            }
 
             $nextNum = 1;
-            if ($maxRow && $maxRow['max_no']) {
-                $numPart = preg_replace('/^\d{4}-E/', '', $maxRow['max_no']);
+            if ($lastReceipt && $lastReceipt['receipt_no']) {
+                $numPart = preg_replace('/^\d{4}-E/', '', $lastReceipt['receipt_no']);
                 $nextNum = intval($numPart) + 1;
             }
             $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+
+            // Check for duplicate receipt_no (safety check)
+            $checkDupe = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE receipt_no = :rno");
+            $checkDupe->execute([':rno' => $receiptNo]);
+            if ($checkDupe->fetchColumn() > 0) {
+                // Find next available number
+                $safetyLoop = 0;
+                do {
+                    $nextNum++;
+                    $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+                    $checkDupe->execute([':rno' => $receiptNo]);
+                    $safetyLoop++;
+                } while ($checkDupe->fetchColumn() > 0 && $safetyLoop < 100);
+            }
 
             // Manage id_members for receipt
             $checkMember = $this->pdo->prepare("SELECT id_members FROM edonation_receipts WHERE id_card = :id LIMIT 1");
@@ -362,7 +400,7 @@ class DonationController
                 'amount' => floatval($data['amount']),
                 'project_name' => $projectName,
                 'status' => 'completed',
-                'pdf_url' => "{$basePath}/receipts/pdf_maker.php?id={$receiptId}&token={$accessToken}",
+                'pdf_url' => "{$basePath}/receipts/pdf_completed.php?id={$receiptId}&token={$accessToken}",
                 'access_token' => $accessToken
             ], 'บันทึกข้อมูลและออกใบเสร็จสำเร็จ');
 
@@ -495,6 +533,20 @@ class DonationController
                             }
                             $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
 
+                            // Check for duplicate receipt_no (safety check)
+                            $checkDupe = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE receipt_no = :rno");
+                            $checkDupe->execute([':rno' => $receiptNo]);
+                            if ($checkDupe->fetchColumn() > 0) {
+                                // Find next available number
+                                $safetyLoop = 0;
+                                do {
+                                    $nextNum++;
+                                    $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+                                    $checkDupe->execute([':rno' => $receiptNo]);
+                                    $safetyLoop++;
+                                } while ($checkDupe->fetchColumn() > 0 && $safetyLoop < 100);
+                            }
+
                             // 3. Insert Receipt
                             // Manage id_members
                             $idCardClean = preg_replace('/\D/', '', $donation['id_card']);
@@ -575,7 +627,7 @@ class DonationController
 
                     // Use BASE_PATH from config
                     $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-                    $pdfUrl = "{$basePath}/receipts/pdf_maker.php?id={$receipt['id']}&token={$accessToken}";
+                    $pdfUrl = "{$basePath}/receipts/pdf_completed.php?id={$receipt['id']}&token={$accessToken}";
                 }
 
                 return Response::success([
@@ -620,12 +672,14 @@ class DonationController
 
             // Search filter
             if (!empty($_GET['search'])) {
-                $where[] = "(first_name LIKE :s1 OR last_name LIKE :s2 OR billPaymentRef1 LIKE :s3 OR id_card LIKE :s4)";
+                $where[] = "(first_name LIKE :s1 OR last_name LIKE :s2 OR billPaymentRef1 LIKE :s3 OR id_card LIKE :s4 OR project_number LIKE :s5 OR project_name LIKE :s6)";
                 $searchVal = '%' . $_GET['search'] . '%';
                 $params[':s1'] = $searchVal;
                 $params[':s2'] = $searchVal;
                 $params[':s3'] = $searchVal;
                 $params[':s4'] = $searchVal;
+                $params[':s5'] = $searchVal;
+                $params[':s6'] = $searchVal;
             }
 
             // Status filter

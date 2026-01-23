@@ -119,7 +119,7 @@
                 $subTitle = "ใบเสร็จ";
                 include 'partials/page-title.php'; ?>
 
-                <form id="receiptForm">
+                <form id="receiptForm" onsubmit="handleSubmit(event)">
                     <div class="row">
                         <!-- Form Column -->
                         <div class="col-12">
@@ -191,24 +191,7 @@
 
                                     <div class="row g-3">
 
-                                        <!-- Donor Type Selection -->
-                                        <div class="col-12">
-                                            <div class="mb-2">
-                                                <label class="form-label d-block">ประเภทผู้บริจาค</label>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="donorType"
-                                                        id="typePerson" value="person" checked
-                                                        onchange="toggleDonorType()">
-                                                    <label class="form-check-label" for="typePerson">บุคคลธรรมดา</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="donorType"
-                                                        id="typeJuristic" value="juristic" onchange="toggleDonorType()">
-                                                    <label class="form-check-label" for="typeJuristic">นิติบุคคล
-                                                        (บริษัท/องค์กร)</label>
-                                                </div>
-                                            </div>
-                                        </div>
+
 
                                         <div class="col-md-6" id="affiliationGroup">
                                             <label class="form-label">ประเภท <span class="text-danger">*</span></label>
@@ -223,14 +206,23 @@
                                         <div class="col-md-6" id="titleGroup">
                                             <label class="form-label">คำนำหน้า <span
                                                     class="text-danger">*</span></label>
-                                            <select class="form-select" id="title" name="title" required>
+                                            <select class="form-select" id="title" name="title" required
+                                                onchange="toggleDonorType()">
                                                 <option value="">-- เลือก --</option>
-                                                <option value="นาย">นาย</option>
-                                                <option value="นาง">นาง</option>
-                                                <option value="นางสาว">นางสาว</option>
-                                                <option value="ด.ช.">ด.ช.</option>
-                                                <option value="ด.ญ.">ด.ญ.</option>
-                                                <option value="อื่นๆ">อื่นๆ</option>
+                                                <optgroup label="บุคคลธรรมดา">
+                                                    <option value="นาย">นาย</option>
+                                                    <option value="นาง">นาง</option>
+                                                    <option value="นางสาว">นางสาว</option>
+                                                    <option value="ด.ช.">ด.ช.</option>
+                                                    <option value="ด.ญ.">ด.ญ.</option>
+                                                    <option value="อื่นๆ">อื่นๆ</option>
+                                                </optgroup>
+                                                <optgroup label="นิติบุคคล">
+                                                    <option value="บริษัท">บริษัท</option>
+                                                    <option value="ห้างหุ้นส่วน">ห้างหุ้นส่วน</option>
+                                                    <option value="มูลนิธิ">มูลนิธิ</option>
+                                                    <option value="สมาคม">สมาคม</option>
+                                                </optgroup>
                                             </select>
                                         </div>
 
@@ -261,8 +253,7 @@
 
                                         <div class="col-md-6">
                                             <label class="form-label">อาชีพ</label>
-                                            <input type="text" class="form-control" id="occupation" name="occupation"
-                                                placeholder="ระบุอาชีพของเจ้าของใบเสร็จ">
+                                            <input type="text" class="form-control" id="occupation" name="occupation">
                                         </div>
 
                                         <div class="col-md-6">
@@ -308,6 +299,51 @@
                                         <!-- Hidden Full Address for compatibility -->
                                         <input type="hidden" id="address" name="address">
                                     </div>
+
+                                    <!-- ที่อยู่จัดส่งใบเสร็จ -->
+                                    <hr class="my-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="text-muted mb-0">ที่อยู่จัดส่งใบเสร็จ <small>(ถ้ามี)</small></h6>
+                                        <button type="button" class="btn btn-sm btn-outline-info"
+                                            onclick="copyReceiptAddress()">
+                                            <iconify-icon icon="solar:copy-bold-duotone"
+                                                class="align-middle me-1"></iconify-icon>
+                                            ใช้ที่อยู่เดียวกับใบเสร็จ
+                                        </button>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">ที่อยู่ (บ้านเลขที่ ซอย ถนน)</label>
+                                            <input type="text" class="form-control" id="ship_address_line"
+                                                name="ship_address_line">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">จังหวัด</label>
+                                            <select class="form-select" id="ship_province" name="ship_province">
+                                                <option value="">-- เลือกจังหวัด --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">อำเภอ/เขต</label>
+                                            <select class="form-select" id="ship_district" name="ship_district"
+                                                disabled>
+                                                <option value="">-- เลือกอำเภอ/เขต --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">ตำบล/แขวง</label>
+                                            <select class="form-select" id="ship_subdistrict" name="ship_subdistrict"
+                                                disabled>
+                                                <option value="">-- เลือกตำบล/แขวง --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">รหัสไปรษณีย์</label>
+                                            <input type="text" class="form-control" id="ship_postcode"
+                                                name="ship_postcode" readonly>
+                                        </div>
+                                        <input type="hidden" id="shipping_address" name="shipping_address">
+                                    </div>
                                 </div>
                             </div>
 
@@ -334,8 +370,8 @@
                                         <div class="col-md-6">
                                             <label class="form-label">จำนวนเงิน (บาท) <span
                                                     class="text-danger">*</span></label>
-                                            <input type="number" class="form-control" id="amount" name="amount" min="1"
-                                                required>
+                                            <input type="text" class="form-control" id="amount" name="amount"
+                                                oninput="handleAmountInput(this)" placeholder="0.00" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">วันที่บริจาค <span
@@ -435,15 +471,8 @@
     <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    <?php include 'partials/vendor-scripts.php'; ?>
-    <script src="assets/js/api-helper.js"></script>
 
-    <!-- Select2 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    
-    <!-- Select2 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    
+
     <!-- AutoProvince JS -->
     <?php autoprovinceJs(); ?>
 
@@ -453,56 +482,138 @@
 
         const JURISTIC_TITLES = ['บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
 
-        // ... toggleDonorType ... (keep)
+        // Toggle between บุคคลธรรมดา and นิติบุคคล modes based on Title
+        function toggleDonorType() {
+            const title = document.getElementById('title').value;
+            const juristicTitles = ['บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
+            const isJuristic = juristicTitles.includes(title);
+
+            const lastNameInput = document.getElementById('last_name');
+            const lastNameGroup = lastNameInput.closest('.col-md-6');
+            const firstNameLabel = document.querySelector('label[for="first_name"]') || document.getElementById('firstNameLabel');
+            const idCardInput = document.getElementById('id_card');
+            const idCardLabel = idCardInput.closest('.col-md-6').querySelector('label');
+
+            if (isJuristic) {
+                // นิติบุคคล mode
+                document.getElementById('first_name').placeholder = 'ชื่อองค์กร/บริษัท';
+                if (firstNameLabel) {
+                    firstNameLabel.innerHTML = 'ชื่อองค์กร <span class="text-danger">*</span>';
+                }
+
+                // Hide last name for juristic
+                if (lastNameGroup) {
+                    lastNameGroup.style.display = 'none';
+                }
+                // Remove required for last_name
+                lastNameInput.removeAttribute('required');
+
+                // Change ID card to Tax ID
+                if (idCardLabel) {
+                    idCardLabel.textContent = 'เลขประจำตัวผู้เสียภาษี';
+                }
+                idCardInput.placeholder = 'เลขประจำตัวผู้เสียภาษี 13 หลัก';
+                idCardInput.maxLength = 13;
+            } else {
+                // บุคคลธรรมดา mode
+                document.getElementById('first_name').placeholder = 'ชื่อจริง';
+                if (firstNameLabel) {
+                    firstNameLabel.innerHTML = 'ชื่อ <span class="text-danger">*</span>';
+                }
+
+                // Show last name for individual
+                if (lastNameGroup) {
+                    lastNameGroup.style.display = '';
+                }
+                // Add back required for last_name
+                lastNameInput.setAttribute('required', 'required');
+
+                // Change back to ID card
+                if (idCardLabel) {
+                    idCardLabel.textContent = 'เลขบัตรประชาชน / เลขผู้เสียภาษี';
+                }
+                idCardInput.placeholder = 'เลขบัตรประชาชน 13 หลัก';
+                idCardInput.maxLength = 13;
+            }
+        }
+
+        let receiptAutoAddr, shippingAutoAddr;
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Init AutoProvince with JS Function Callbacks
-            if (typeof AutoProvince !== 'undefined') {
-                AutoProvince.init({
-                    onAddressComplete: function(addr) {
-                        updateFullAddress();
-                    },
-                    onProvinceChange: function(p) {
-                         updateFullAddress();
-                    },
-                    onDistrictChange: function(d) {
-                         updateFullAddress();
-                    },
-                    onSubdistrictChange: function(s) {
-                         updateFullAddress();
-                    }
-                });
-            } else {
-                console.error("AutoProvince library not loaded!");
-            }
+            // Init AutoProvince for Receipt
+            receiptAutoAddr = new AutoProvince({
+                provinceSelector: '#province',
+                districtSelector: '#district',
+                subdistrictSelector: '#subdistrict',
+                postcodeSelector: '#postcode',
+                onAddressComplete: function (addr) {
+                    updateFullAddress();
+                }
+            });
+
+            // Init AutoProvince for Shipping
+            shippingAutoAddr = new AutoProvince({
+                provinceSelector: '#ship_province',
+                districtSelector: '#ship_district',
+                subdistrictSelector: '#ship_subdistrict',
+                postcodeSelector: '#ship_postcode',
+                onAddressComplete: function (addr) {
+                    updateShippingFullAddress();
+                }
+            });
 
             loadProjects();
             setDefaultDate();
-            // ... (rest of init)
+        });
 
         // ===== AUTOPROVINCE FUNCTIONS =====
-        // Removed manual implementation
 
         function updateFullAddress() {
-             // ... existing logic ...
+            if (receiptAutoAddr) {
+                $('#address').val(receiptAutoAddr.formatAddress());
+            }
         }
 
+        function updateShippingFullAddress() {
+            if (shippingAutoAddr) {
+                $('#shipping_address').val(shippingAutoAddr.formatAddress());
+            }
+        }
 
-        function updateFullAddress() {
-            const parts = [];
+        async function copyReceiptAddress() {
+            if (!receiptAutoAddr || !shippingAutoAddr) return;
+
+            const receiptData = receiptAutoAddr.getAddress();
             const addressLine = $('#address_line').val();
-            const subdistrict = $('#subdistrict option:selected').text();
-            const district = $('#district option:selected').text();
-            const province = $('#province option:selected').text();
-            const postcode = $('#postcode').val();
 
-            if (addressLine) parts.push(addressLine);
-            if (subdistrict && !subdistrict.includes('--')) parts.push('ต.' + subdistrict);
-            if (district && !district.includes('--')) parts.push('อ.' + district);
-            if (province && !province.includes('--')) parts.push('จ.' + province);
-            if (postcode) parts.push(postcode);
+            if (!addressLine && !receiptData.province.id) {
+                showError('กรุณากรอกที่อยู่ใบเสร็จก่อนสำเนา');
+                return;
+            }
 
-            $('#address').val(parts.join(' '));
+            // Copy Address Line
+            $('#ship_address_line').val(addressLine);
+
+            // Copy Province -> District -> Subdistrict (Cascading)
+            if (receiptData.province.id) {
+                $('#ship_province').val(receiptData.province.id).trigger('change');
+
+                // Wait for districts
+                setTimeout(() => {
+                    if (receiptData.district.id) {
+                        $('#ship_district').val(receiptData.district.id).trigger('change');
+
+                        // Wait for subdistricts
+                        setTimeout(() => {
+                            if (receiptData.subdistrict.id) {
+                                $('#ship_subdistrict').val(receiptData.subdistrict.id).trigger('change');
+                            }
+                        }, 500);
+                    }
+                }, 500);
+            }
+
+            showSuccess('คัดลอกที่อยู่เรียบร้อย');
         }
 
         // Helper to set address from search result
@@ -511,6 +622,17 @@
             // The dropdowns should be selected manually or via lookup
             $('#address_line').val(addressText);
             $('#address').val(addressText);
+        }
+
+        // Helper to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         async function loadProjects() {
@@ -524,6 +646,7 @@
                     option.value = p.project_number;
                     option.textContent = p.project_name;
                     option.dataset.name = p.project_name;
+                    option.dataset.receiptName = p.project_receipt_name || p.project_name;
                     select.appendChild(option);
                 });
             } catch (error) {
@@ -554,6 +677,18 @@
         function formatIdCard(id) {
             if (!id || id.length !== 13) return id;
             return `${id[0]}-${id.substring(1, 5)}-${id.substring(5, 10)}-${id.substring(10, 12)}-${id[12]}`;
+        }
+
+        function handleAmountInput(input) {
+            let value = input.value.replace(/[^0-9.]/g, '');
+            let parts = value.split('.');
+            let integerPart = parts[0];
+            let decimalPart = parts.length > 1 ? '.' + parts[1].substring(0, 2) : '';
+
+            if (integerPart !== '') {
+                integerPart = Number(integerPart).toLocaleString('en-US');
+            }
+            input.value = integerPart + decimalPart;
         }
 
         // ===== NEW SEARCH FUNCTIONS =====
@@ -662,72 +797,155 @@
         }
 
         function fillFormFromSearchResult(item) {
-            // Parse name
-            const name = item.name || '';
+            // Fill Title & Name first so toggleDonorType() can use it
+            if (item.title) document.getElementById('title').value = item.title;
+            if (item.first_name) document.getElementById('first_name').value = item.first_name;
+            if (item.last_name) document.getElementById('last_name').value = item.last_name;
+
+            // Trigger UI toggle based on title
+            toggleDonorType();
+
+            // Fill other fields
+            if (item.id_card) document.getElementById('id_card').value = item.id_card;
+            if (item.phone) document.getElementById('phone').value = item.phone;
+            if (item.email) document.getElementById('email').value = item.email;
+            if (item.occupation) document.getElementById('occupation').value = item.occupation;
+
+            // Handle address components
+            if (item.address_line) document.getElementById('address_line').value = item.address_line;
+            if (item.address) document.getElementById('address').value = item.address;
+
+            // Trigger AutoProvince if data available
+            if (item.province && receiptAutoAddr) {
+                const $prov = $('#province');
+                const provOption = $prov.find('option').filter(function () { return $(this).text() === item.province; });
+                if (provOption.length) {
+                    $prov.val(provOption.val()).trigger('change');
+
+                    // Delay for district and subdistrict
+                    setTimeout(() => {
+                        if (item.district || item.amphure) {
+                            const targetDist = item.amphure || item.district;
+                            const $dist = $('#district');
+                            const distOption = $dist.find('option').filter(function () { return $(this).text() === targetDist; });
+                            if (distOption.length) {
+                                $dist.val(distOption.val()).trigger('change');
+
+                                setTimeout(() => {
+                                    if (item.subdistrict || item.district) {
+                                        const targetSub = item.subdistrict || item.district;
+                                        const $sub = $('#subdistrict');
+                                        const subOption = $sub.find('option').filter(function () { return $(this).text() === targetSub; });
+                                        if (subOption.length) {
+                                            $sub.val(subOption.val()).trigger('change');
+                                            if (item.zip_code) document.getElementById('postcode').value = item.zip_code;
+                                        }
+                                    }
+                                }, 600);
+                            }
+                        }
+                    }, 600);
+                }
+            }
+        }
+
+        function selectDonation(donation) {
+            // Store selected donation
+            window.selectedDonation = donation;
+
+            // Fill donation ID
+            document.getElementById('donation_id').value = donation.id || donation.donation_id || '';
+
+            // Parse and fill name
+            const name = donation.payer_name || donation.name || '';
             const nameParts = name.split(' ');
             const titles = ['นาย', 'นาง', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
 
             if (nameParts.length > 0) {
                 if (titles.includes(nameParts[0])) {
                     document.getElementById('title').value = nameParts[0];
-                    if (item.first_name && item.last_name) {
-                        document.getElementById('first_name').value = item.first_name || '';
-                        document.getElementById('last_name').value = item.last_name || '';
-                    } else {
-                        document.getElementById('first_name').value = nameParts.slice(1, -1).join(' ') || nameParts[1] || '';
-                        document.getElementById('last_name').value = nameParts.length > 2 ? nameParts[nameParts.length - 1] : '';
-                    }
+                    document.getElementById('first_name').value = nameParts.slice(1, -1).join(' ') || nameParts[1] || '';
+                    document.getElementById('last_name').value = nameParts.length > 2 ? nameParts[nameParts.length - 1] : '';
                 } else {
-                    if (item.first_name && item.last_name) {
-                        document.getElementById('first_name').value = item.first_name || '';
-                        document.getElementById('last_name').value = item.last_name || '';
-                    } else {
-                        document.getElementById('first_name').value = nameParts[0] || '';
-                        document.getElementById('last_name').value = nameParts.slice(1).join(' ') || '';
-                    }
+                    document.getElementById('first_name').value = nameParts[0] || '';
+                    document.getElementById('last_name').value = nameParts.slice(1).join(' ') || '';
                 }
             }
 
             // Fill other fields
-            if (item.id_card) {
-                document.getElementById('id_card').value = item.id_card;
-            }
-            if (item.phone) {
-                document.getElementById('phone').value = item.phone;
-            }
-            if (item.occupation) {
-                document.getElementById('occupation').value = item.occupation;
-            }
-
-            // Handle address - support both string and object format from Members API
-            if (item.address) {
-                if (typeof item.address === 'object') {
-                    // Members API format: { full: "...", address_line: "...", province: "...", ... }
-                    document.getElementById('address').value = item.address.full || '';
-                    document.getElementById('address_line').value = item.address.address_line || item.address.full || '';
-                } else {
-                    // Legacy string format
-                    document.getElementById('address').value = item.address;
-                    document.getElementById('address_line').value = item.address;
-                }
-            }
-            // ... (fillFormFromSearchResult end)
-        }
-
-        function selectDonation(donation) {
-            // ... (existing code)
-            
+            document.getElementById('id_card').value = donation.id_card || '';
             document.getElementById('phone').value = donation.phone || '';
-            document.getElementById('occupation').value = donation.occupation || ''; // Add occupation
+            document.getElementById('occupation').value = donation.occupation || '';
+            document.getElementById('email').value = donation.email || '';
 
+            // Fill address
             const addrValue = donation.receipt_address || donation.shipping_address || donation.address || '';
-            // ... (rest of selectDonation)
+            document.getElementById('address').value = addrValue;
+            document.getElementById('address_line').value = addrValue;
+
+            // Fill amount
+            if (donation.amount) {
+                document.getElementById('amount').value = donation.amount;
+            }
+
+            // Fill project if available
+            if (donation.project_number) {
+                document.getElementById('project_number').value = donation.project_number;
+            }
+
+            // Fill donation date
+            if (donation.donation_date || donation.created_at) {
+                const dateStr = donation.donation_date || donation.created_at;
+                document.getElementById('donation_date').value = dateStr.split('T')[0];
+            }
+
+            // Highlight selected row
+            document.querySelectorAll('.donation-item').forEach(el => el.classList.remove('selected'));
+            event.target.closest('.donation-item')?.classList.add('selected');
+
+            showSuccess('เลือกรายการบริจาค: ' + name);
         }
 
         // ...
 
         async function handleSubmit(e) {
-            // ...
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('submitSpinner');
+
+            // Get form values
+            const title = document.getElementById('title').value;
+            const juristicTitles = ['บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
+            const donorType = juristicTitles.includes(title) ? 'juristic' : 'person';
+            const firstName = document.getElementById('first_name').value.trim();
+            const lastName = document.getElementById('last_name').value.trim();
+            const idCard = document.getElementById('id_card').value.trim();
+            const address = document.getElementById('address').value.trim();
+            const addressLine = document.getElementById('address_line').value.trim();
+            const projectSelect = document.getElementById('project_number');
+            const projectNumber = projectSelect.value;
+            const projectName = projectSelect.options[projectSelect.selectedIndex]?.dataset?.receiptName || projectSelect.options[projectSelect.selectedIndex]?.dataset?.name || projectSelect.options[projectSelect.selectedIndex]?.text || '';
+            const amount = document.getElementById('amount').value.replace(/,/g, '');
+            const donationDate = document.getElementById('donation_date').value;
+
+            // Validation
+            if (!firstName) {
+                showError('กรุณากรอกชื่อ');
+                return;
+            }
+            if (!amount || parseFloat(amount) <= 0) {
+                showError('กรุณากรอกจำนวนเงินที่ถูกต้อง');
+                return;
+            }
+            if (!donationDate) {
+                showError('กรุณาเลือกวันที่บริจาค');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+
             try {
                 const formData = {
                     donation_id: document.getElementById('donation_id').value || null,
@@ -742,10 +960,17 @@
                     email: document.getElementById('email').value,
                     address: address, // Or use specific parts
                     address_line: addressLine,
+                    shipping_address: document.getElementById('shipping_address').value.trim(),
                     province: $('#province option:selected').text(),
                     amphure: $('#district option:selected').text(),
                     district: $('#subdistrict option:selected').text(),
                     zip_code: document.getElementById('postcode').value,
+                    // Shipping components
+                    ship_address_line: document.getElementById('ship_address_line').value.trim(),
+                    ship_province: $('#ship_province option:selected').text(),
+                    ship_amphure: $('#ship_district option:selected').text(),
+                    ship_district: $('#ship_subdistrict option:selected').text(),
+                    ship_zip_code: document.getElementById('ship_postcode').value,
                     project_number: projectNumber,
                     project_name: projectName,
                     amount: parseFloat(amount),
@@ -757,10 +982,7 @@
                     notify_line: document.getElementById('notify_line').checked
                 };
                 // ...
-            } catch (error) {
-                // ...
-            }
-        }
+
 
                 // Call POST /donations/admin
                 const response = await apiPost('/donations/admin', formData);
@@ -796,6 +1018,7 @@
             selectedDonation = null;
             setDefaultDate();
             updatePreview();
+            handleAmountInput(document.getElementById('amount'));
 
             // Remove selection
             document.querySelectorAll('.donation-item').forEach(el => el.classList.remove('selected'));

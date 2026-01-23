@@ -231,8 +231,8 @@
         let donations = [];
         let monthlyChart, projectPieChart;
 
-        // Get fiscal year type from settings
-        const fiscalYearType = localStorage.getItem('fiscalYearType') || 'thai';
+        // Default to calendar year
+        const fiscalYearType = 'calendar';
 
         // Month names for display (standard order)
         const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
@@ -240,10 +240,8 @@
         const monthNamesFull = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
             'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
-        // Chart month names based on fiscal year type
-        const fiscalMonthNames = fiscalYearType === 'thai'
-            ? ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.']
-            : ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        // Chart month names for calendar year
+        const fiscalMonthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
         document.addEventListener('DOMContentLoaded', function () {
             initYearSelector();
@@ -255,15 +253,8 @@
             const select = document.getElementById('reportYear');
             const now = new Date();
             const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth(); // 0-11
 
-            // Calculate default year based on fiscal type
-            let defaultYear;
-            if (fiscalYearType === 'thai') {
-                defaultYear = currentMonth >= 9 ? currentYear + 1 : currentYear;
-            } else {
-                defaultYear = currentYear;
-            }
+            const defaultYear = currentYear;
 
             for (let y = defaultYear; y >= 2023; y--) {
                 const option = document.createElement('option');

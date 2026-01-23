@@ -56,9 +56,9 @@ $basePath = '';  // Relative to the current page in src/
     <!-- Reback Admin Custom Styles (CDN Version) -->
     <style>
         /* ============================================
-           Reback Admin Template - CDN Version
-           Primary Color: #1c84ee (Blue)
-           ============================================ */
+               Reback Admin Template - CDN Version
+               Primary Color: #1c84ee (Blue)
+               ============================================ */
 
         :root {
             --bs-primary: #1c84ee;
@@ -695,6 +695,7 @@ $basePath = '';  // Relative to the current page in src/
 
             .main-nav.show {
                 transform: translateX(0);
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
             }
 
             .page-content {

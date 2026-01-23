@@ -240,10 +240,32 @@ class PaymentController
                 // สร้างเลขที่ใบเสร็จ Format: YYYY-EXXXX
                 $fiscalYear = date('Y') + 543; // พ.ศ.
                 $prefix = $fiscalYear . '-E';
-                $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE receipt_no LIKE :prefix");
-                $countStmt->execute([':prefix' => $prefix . '%']);
-                $count = (int) $countStmt->fetchColumn() + 1;
-                $receiptNo = $prefix . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+                // Use MAX to get the highest receipt number (safer than COUNT)
+                $maxStmt = $this->pdo->prepare("SELECT MAX(receipt_no) as max_no FROM edonation_receipts WHERE receipt_no LIKE :prefix FOR UPDATE");
+                $maxStmt->execute([':prefix' => $prefix . '%']);
+                $maxRow = $maxStmt->fetch();
+
+                $nextNum = 1;
+                if ($maxRow && $maxRow['max_no']) {
+                    $numPart = preg_replace('/^\d{4}-E/', '', $maxRow['max_no']);
+                    $nextNum = intval($numPart) + 1;
+                }
+                $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+
+                // Check for duplicate receipt_no (safety check)
+                $checkDupe = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE receipt_no = :rno");
+                $checkDupe->execute([':rno' => $receiptNo]);
+                if ($checkDupe->fetchColumn() > 0) {
+                    // Find next available number
+                    $safetyLoop = 0;
+                    do {
+                        $nextNum++;
+                        $receiptNo = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+                        $checkDupe->execute([':rno' => $receiptNo]);
+                        $safetyLoop++;
+                    } while ($checkDupe->fetchColumn() > 0 && $safetyLoop < 100);
+                }
 
                 // ดึงชื่อผู้บริจาคและเลขบัตรจาก donat_user
                 $getDonorName = $this->pdo->prepare("SELECT first_name, last_name, id_card FROM edonation_donat_user WHERE id = :id");

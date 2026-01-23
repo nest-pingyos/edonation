@@ -89,7 +89,8 @@ class ReportController
                         bt.transactionDateandTime,
                         bt.sendingBankCode,
                         bt.billPaymentRef1,
-                        bt.billPaymentRef2
+                        bt.billPaymentRef2,
+                        r.status
                     FROM edonation_receipts r
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
@@ -139,20 +140,17 @@ class ReportController
     private function monthlyReport(): array
     {
         $month = intval($_GET['month'] ?? date('n'));
-        $fiscalYear = intval($_GET['year'] ?? (date('n') >= 10 ? date('Y') + 1 : date('Y')));
+        $year = intval($_GET['year'] ?? date('Y'));
 
         // Validate
         if ($month < 1 || $month > 12) {
             return Response::error('VALIDATION_ERROR', 'เดือนไม่ถูกต้อง');
         }
-        if ($fiscalYear < 2020 || $fiscalYear > 2100) {
+        if ($year < 2020 || $year > 2100) {
             return Response::error('VALIDATION_ERROR', 'ปีไม่ถูกต้อง');
         }
 
-        // Calculate actual calendar year based on fiscal year
-        // For months Oct-Dec (10-12), actual year = fiscalYear - 1
-        // For months Jan-Sep (1-9), actual year = fiscalYear
-        $actualYear = ($month >= 10) ? $fiscalYear - 1 : $fiscalYear;
+        $actualYear = $year;
 
         try {
             $startDate = sprintf('%04d-%02d-01', $actualYear, $month);
@@ -184,7 +182,8 @@ class ReportController
                         du.phone,
                         bt.transactionId,
                         bt.billPaymentRef1,
-                        bt.billPaymentRef2
+                        bt.billPaymentRef2,
+                        r.status
                     FROM edonation_receipts r
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
@@ -225,7 +224,7 @@ class ReportController
 
             return Response::success([
                 'month' => $month,
-                'year' => $fiscalYear,
+                'year' => $year,
                 'receipts' => $formatted,
                 'stats' => array_merge($stats, [
                     'best_day' => $bestDay,
@@ -249,22 +248,20 @@ class ReportController
      */
     private function yearlyReport(): array
     {
-        // current fiscal year: if month >= 10, fiscal year = current_year + 1
-        $currentFiscalYear = intval(date('n')) >= 10 ? intval(date('Y')) + 1 : intval(date('Y'));
-        $year = intval($_GET['year'] ?? $currentFiscalYear);
+        $year = intval($_GET['year'] ?? date('Y'));
 
         if ($year < 2020 || $year > 2100) {
             return Response::error('VALIDATION_ERROR', 'ปีไม่ถูกต้อง');
         }
 
         try {
-            // Fiscal Year Range: Oct (Y-1) to Sep (Y)
-            $startDate = ($year - 1) . "-10-01";
-            $endDate = $year . "-09-30";
+            // Calendar Year Range: Jan 1 to Dec 31
+            $startDate = $year . "-01-01";
+            $endDate = $year . "-12-31";
 
-            // Previous Fiscal Year Range for comparison
-            $prevStartDate = ($year - 2) . "-10-01";
-            $prevEndDate = ($year - 1) . "-09-30";
+            // Previous Calendar Year Range for comparison
+            $prevStartDate = ($year - 1) . "-01-01";
+            $prevEndDate = ($year - 1) . "-12-31";
 
             // Current year query
             $sql = "SELECT 
@@ -289,7 +286,8 @@ class ReportController
                         du.zip_code,
                         du.phone,
                         bt.billPaymentRef1,
-                        bt.billPaymentRef2
+                        bt.billPaymentRef2,
+                        r.status
                     FROM edonation_receipts r
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
@@ -301,7 +299,7 @@ class ReportController
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Previous year total for comparison
-            $prevSql = "SELECT SUM(amount) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end";
+            $prevSql = "SELECT SUM(amount) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end AND status = 1";
             $prevStmt = $this->pdo->prepare($prevSql);
             $prevStmt->execute([':start' => $prevStartDate, ':end' => $prevEndDate]);
             $prevTotal = floatval($prevStmt->fetchColumn() ?: 0);
@@ -309,10 +307,10 @@ class ReportController
             // Stats
             $stats = $this->calculateStats($results);
 
-            // Group by month for chart (Oct - Sep order)
-            $fiscalMonths = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            // Group by month for chart (Jan - Dec order)
+            $calendarMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             $monthlyData = [];
-            foreach ($fiscalMonths as $m)
+            foreach ($calendarMonths as $m)
                 $monthlyData[$m] = 0;
 
             foreach ($results as $row) {
@@ -322,12 +320,12 @@ class ReportController
 
             // Previous year monthly data
             $prevMonthlyData = [];
-            foreach ($fiscalMonths as $m)
+            foreach ($calendarMonths as $m)
                 $prevMonthlyData[$m] = 0;
 
             $prevMonthSql = "SELECT MONTH(issued_at) as month, SUM(amount) as total 
                              FROM edonation_receipts 
-                             WHERE issued_at BETWEEN :start AND :end 
+                             WHERE issued_at BETWEEN :start AND :end AND status = 1
                              GROUP BY MONTH(issued_at)";
             $prevMonthStmt = $this->pdo->prepare($prevMonthSql);
             $prevMonthStmt->execute([':start' => $prevStartDate, ':end' => $prevEndDate]);
@@ -386,68 +384,56 @@ class ReportController
     private function summary(): array
     {
         try {
-            // Fiscal type: 'thai' (Oct-Sep) or 'calendar' (Jan-Dec)
-            $fiscalType = $_GET['fiscal_type'] ?? 'thai';
+            // Default to calendar year
+            $fiscalType = $_GET['fiscal_type'] ?? 'calendar';
 
-            // Calculate current fiscal year based on type
-            if ($fiscalType === 'calendar') {
-                $currentFiscalYear = intval(date('Y'));
-            } else {
-                $currentFiscalYear = intval(date('n')) >= 10 ? intval(date('Y')) + 1 : intval(date('Y'));
-            }
+            // Calculate current year
+            $currentYear = intval(date('Y'));
 
-            $year = intval($_GET['year'] ?? $currentFiscalYear);
+            $year = intval($_GET['year'] ?? $currentYear);
             $today = date('Y-m-d');
 
-            // Calculate date range based on fiscal type
-            if ($fiscalType === 'calendar') {
-                // Calendar Year: Jan 1 - Dec 31
-                $startDate = $year . "-01-01";
-                $endDate = $year . "-12-31";
-                $fiscalMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-            } else {
-                // Thai Fiscal Year: Oct 1 (Y-1) - Sep 30 (Y)
-                $startDate = ($year - 1) . "-10-01";
-                $endDate = $year . "-09-30";
-                $fiscalMonths = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-            }
+            // Calendar Year: Jan 1 - Dec 31
+            $startDate = $year . "-01-01";
+            $endDate = $year . "-12-31";
+            $months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
             // Summary Stats for the selected fiscal year
-            $yearStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end");
+            $yearStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end AND status = 1");
             $yearStmt->execute([':start' => $startDate, ':end' => $endDate]);
             $yearStats = $yearStmt->fetch(PDO::FETCH_ASSOC);
 
             // Today's stats
-            $todayStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE DATE(issued_at) = :date");
+            $todayStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE DATE(issued_at) = :date AND status = 1");
             $todayStmt->execute([':date' => $today]);
             $todayStats = $todayStmt->fetch(PDO::FETCH_ASSOC);
 
             // All time stats
-            $allStmt = $this->pdo->query("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts");
+            $allStmt = $this->pdo->query("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE status = 1");
             $allStats = $allStmt->fetch(PDO::FETCH_ASSOC);
 
             // Unique donors count (All time)
             $memberStmt = $this->pdo->query("SELECT COUNT(DISTINCT id_card) FROM edonation_donat_user WHERE (status_donat = 'completed' OR status_donat = 'CONFIRMED') AND id_card IS NOT NULL AND id_card != ''");
             $memberCount = (int) $memberStmt->fetchColumn();
 
-            // Monthly data for selected fiscal year
+            // Monthly data for selected year
             $monthlyData = [];
-            foreach ($fiscalMonths as $m)
+            foreach ($months as $m)
                 $monthlyData[$m] = 0;
 
-            $monthlyStmt = $this->pdo->prepare("SELECT MONTH(issued_at) as month, SUM(amount) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end GROUP BY MONTH(issued_at)");
+            $monthlyStmt = $this->pdo->prepare("SELECT MONTH(issued_at) as month, SUM(amount) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end AND status = 1 GROUP BY MONTH(issued_at)");
             $monthlyStmt->execute([':start' => $startDate, ':end' => $endDate]);
             while ($row = $monthlyStmt->fetch()) {
                 $monthlyData[(int) $row['month']] = floatval($row['total']);
             }
 
             // Project distribution (Top 5) for selected fiscal year
-            $projectStmt = $this->pdo->prepare("SELECT du.project_name, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end GROUP BY du.project_name ORDER BY total DESC LIMIT 5");
+            $projectStmt = $this->pdo->prepare("SELECT du.project_name, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end AND r.status = 1 GROUP BY du.project_name ORDER BY total DESC LIMIT 5");
             $projectStmt->execute([':start' => $startDate, ':end' => $endDate]);
             $projects = $projectStmt->fetchAll();
 
             // Payment method distribution for selected fiscal year
-            $payStmt = $this->pdo->prepare("SELECT du.payby, COUNT(*) as count, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end GROUP BY du.payby");
+            $payStmt = $this->pdo->prepare("SELECT du.payby, COUNT(*) as count, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end AND r.status = 1 GROUP BY du.payby");
             $payStmt->execute([':start' => $startDate, ':end' => $endDate]);
             $payments = $payStmt->fetchAll();
 
@@ -482,27 +468,25 @@ class ReportController
         }
     }
 
-    /**
-     * Calculate basic statistics from results
-     */
     private function calculateStats(array $results): array
     {
-        $count = count($results);
         $total = 0;
         $confirmed = 0;
 
         foreach ($results as $row) {
-            $total += floatval($row['amount']);
-            if (($row['status_donat'] ?? '') === 'completed') {
+            // Only count if status is 1 (Issued)
+            if ((int) ($row['status'] ?? 1) === 1) {
+                $total += floatval($row['amount']);
                 $confirmed++;
             }
         }
 
         return [
-            'count' => $count,
+            'count' => $confirmed, // จำนวนที่ออกใบเสร็จจริง (ไม่รวมยกเลิก)
             'total_amount' => $total,
             'confirmed_count' => $confirmed,
-            'average' => $count > 0 ? round($total / $count, 2) : 0
+            'average' => $confirmed > 0 ? round($total / $confirmed, 2) : 0,
+            'total_records' => count($results) // รวมทั้งหมดรวมใบที่ยกเลิกด้วย
         ];
     }
 
@@ -515,13 +499,16 @@ class ReportController
         $total = 0;
 
         foreach ($results as $row) {
-            $key = $row['project_name'] ?: $row['project_number'] ?: 'ไม่ระบุโครงการ';
-            if (!isset($projects[$key])) {
-                $projects[$key] = ['count' => 0, 'amount' => 0];
+            // Only count if status is 1 (Issued)
+            if ((int) ($row['status'] ?? 1) === 1) {
+                $key = $row['project_name'] ?: $row['project_number'] ?: 'ไม่ระบุโครงการ';
+                if (!isset($projects[$key])) {
+                    $projects[$key] = ['count' => 0, 'amount' => 0];
+                }
+                $projects[$key]['count']++;
+                $projects[$key]['amount'] += floatval($row['amount']);
+                $total += floatval($row['amount']);
             }
-            $projects[$key]['count']++;
-            $projects[$key]['amount'] += floatval($row['amount']);
-            $total += floatval($row['amount']);
         }
 
         // Sort by amount descending
@@ -566,7 +553,7 @@ class ReportController
             'project_name' => $row['project_name'] ?? '',
             'project_number' => $row['project_number'] ?? '',
             'pay_by' => $row['payby'] ?? 'ไม่ระบุ',
-            'status' => ($row['status_donat'] ?? 'pending') === 'completed' ? 'CONFIRMED' : 'PENDING',
+            'status' => (int) ($row['status'] ?? 1) === 2 ? 'CANCELLED' : 'CONFIRMED',
             'donation_id' => (int) ($row['donation_id'] ?? 0),
             'bank_transaction_id' => $row['bank_transaction_id'] ? (int) $row['bank_transaction_id'] : null,
             'transaction_id' => $row['transactionId'] ?? null,

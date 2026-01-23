@@ -73,10 +73,29 @@
                         </button>
                     </div>
                     <div class="card-body">
-                        <!-- Search -->
-                        <div class="row mb-3">
+                        <!-- Filters -->
+                        <div class="row mb-3 g-2 align-items-center">
+                            <div class="col-md-2">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">แสดง</span>
+                                    <select id="limitSelector" class="form-select" onchange="changeLimit()">
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="250">250</option>
+                                        <option value="500">500</option>
+                                    </select>
+                                    <span class="input-group-text bg-light">แถว</span>
+                                </div>
+                            </div>
                             <div class="col-md-4">
-                                <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาโครงการ...">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        ค้นหา
+                                    </span>
+                                    <input type="text" id="searchInput" class="form-control"
+                                        placeholder="ค้นหาโครงการ...">
+                                </div>
                             </div>
                         </div>
 
@@ -88,6 +107,7 @@
                                         <th style="width: 60px;">#</th>
                                         <th style="width: 100px;">รหัส</th>
                                         <th>ชื่อโครงการ</th>
+                                        <th>ชื่อในใบเสร็จ</th>
                                         <th style="width: 120px;">สถานะ</th>
                                         <th style="width: 150px;" class="text-center">จัดการ</th>
                                     </tr>
@@ -105,7 +125,10 @@
                         </div>
 
                         <!-- Pagination -->
-                        <nav id="pagination" class="mt-3"></nav>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div id="pagination-info" class="text-muted small"></div>
+                            <nav id="pagination"></nav>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,8 +164,16 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">รายละเอียด</label>
-                            <textarea class="form-control" id="project_tex" name="project_tex" rows="4"></textarea>
+                            <label class="form-label">ชื่อที่แสดงในใบเสร็จ</label>
+                            <input type="text" class="form-control" id="project_receipt_name"
+                                name="project_receipt_name">
+                            <div class="form-text">ถ้าไม่ระบุจะใช้ชื่อโครงการเดียวกัน</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">รายละเอียดโครงการ</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            <div class="form-text">แสดงในหน้าเว็บสาธารณะ</div>
                         </div>
 
                         <div class="row">
@@ -175,6 +206,7 @@
         // Global state
         let projects = [];
         let currentPage = 1;
+        let perPage = 25;
         let editMode = false;
 
         // Load projects on page load
@@ -183,8 +215,9 @@
 
             // Search handler
             document.getElementById('searchInput').addEventListener('input', debounce(function (e) {
-                filterProjects(e.target.value);
-            }, 300));
+                currentPage = 1;
+                loadProjects();
+            }, 500));
 
             // Form submit handler
             document.getElementById('projectForm').addEventListener('submit', handleSubmit);
@@ -193,18 +226,35 @@
         // Load projects from API
         async function loadProjects() {
             try {
-                const response = await apiGet('/projects');
-                projects = response.data || [];
+                const search = document.getElementById('searchInput').value;
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('limit', perPage);
+                if (search) params.append('search', search);
 
-                // Update stats
-                document.getElementById('total-projects').textContent = projects.length;
-                document.getElementById('active-projects').textContent = projects.filter(p => p.status === 'active' || !p.status).length;
+                const response = await apiGet('/projects?' + params.toString());
+                projects = response.data || [];
+                const stats = response.meta || {};
+
+                // Update stats (only on first load or total change?)
+                document.getElementById('total-projects').textContent = stats.total || projects.length;
+                document.getElementById('active-projects').textContent = stats.total ? (stats.total - (stats.completed || 0)) : projects.filter(p => p.status === 'active' || !p.status).length;
 
                 renderTable(projects);
+
+                // Update pagination
+                const total = stats.total || projects.length;
+                const totalPages = stats.total_pages || Math.ceil(total / perPage);
+                renderPagination(totalPages, currentPage);
+
+                const from = total > 0 ? (currentPage - 1) * perPage + 1 : 0;
+                const to = Math.min(currentPage * perPage, total);
+                document.getElementById('pagination-info').textContent = `แสดง ${from}-${to} จาก ${total} รายการ`;
+
             } catch (error) {
                 showError('ไม่สามารถโหลดข้อมูลได้: ' + error.message);
                 document.getElementById('projectsTable').innerHTML = `
-            <tr><td colspan="5" class="text-center py-4 text-danger">เกิดข้อผิดพลาด: ${error.message}</td></tr>
+            <tr><td colspan="6" class="text-center py-4 text-danger">เกิดข้อผิดพลาด: ${error.message}</td></tr>
         `;
             }
         }
@@ -214,26 +264,16 @@
             const tbody = document.getElementById('projectsTable');
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">ไม่พบข้อมูลโครงการ</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">ไม่พบข้อมูลโครงการ</td></tr>';
                 return;
             }
 
             tbody.innerHTML = data.map((item, index) => `
         <tr>
-            <td>${index + 1}</td>
+            <td>${(currentPage - 1) * perPage + index + 1}</td>
             <td><span class="badge bg-light text-dark">${escapeHtml(item.project_number || '-')}</span></td>
-            <td>
-                <div class="d-flex align-items-center">
-                    <img src="${item.image_url || 'assets/images/placeholder.jpg'}" 
-                         class="rounded me-2" width="40" height="40" 
-                         style="object-fit: cover;"
-                         onerror="this.src='assets/images/placeholder.jpg'">
-                    <div>
-                        <span class="fw-medium">${escapeHtml(item.project_name)}</span>
-                        ${item.project_tex ? `<br><small class="text-muted">${escapeHtml(item.project_tex.substring(0, 50))}${item.project_tex.length > 50 ? '...' : ''}</small>` : ''}
-                    </div>
-                </div>
-            </td>
+            <td><span class="fw-medium">${escapeHtml(item.project_name)}</span></td>
+            <td><span class="text-muted">${escapeHtml(item.project_receipt_name || item.project_name || '-')}</span></td>
             <td>${getStatusBadge(item.status)}</td>
             <td class="text-center">
                 <button class="btn btn-sm btn-soft-primary me-1" onclick="openEditModal(${item.id})" title="แก้ไข">
@@ -247,18 +287,63 @@
     `).join('');
         }
 
-        // Filter projects
-        function filterProjects(query) {
-            if (!query) {
-                renderTable(projects);
+        function changeLimit() {
+            perPage = parseInt(document.getElementById('limitSelector').value);
+            currentPage = 1;
+            loadProjects();
+        }
+
+        function goToPage(page) {
+            if (page < 1) return;
+            currentPage = page;
+            loadProjects();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderPagination(totalPages, currentPage) {
+            const pagination = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
                 return;
             }
 
-            const filtered = projects.filter(p =>
-                p.project_name?.toLowerCase().includes(query.toLowerCase()) ||
-                p.project_number?.toLowerCase().includes(query.toLowerCase())
-            );
-            renderTable(filtered);
+            let html = '<ul class="pagination pagination-sm mb-0">';
+
+            // First & Previous
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" title="หน้าแรก">«</a>
+                </li>
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" title="ก่อนหน้า">‹</a>
+                </li>
+            `;
+
+            // Calculate range
+            let start = Math.max(1, currentPage - 2);
+            let end = Math.min(totalPages, start + 4);
+            if (end - start < 4) start = Math.max(1, end - 4);
+
+            for (let i = start; i <= end; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${i})">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next & Last
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" title="ถัดไป">›</a>
+                </li>
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" title="หน้าสุดท้าย">»</a>
+                </li>
+            `;
+
+            html += '</ul>';
+            pagination.innerHTML = html;
         }
 
         // Open create modal
@@ -279,7 +364,8 @@
             document.getElementById('projectId').value = project.id;
             document.getElementById('project_number').value = project.project_number || '';
             document.getElementById('project_name').value = project.project_name || '';
-            document.getElementById('project_tex').value = project.project_tex || '';
+            document.getElementById('project_receipt_name').value = project.project_receipt_name || '';
+            document.getElementById('description').value = project.description || '';
             document.getElementById('status').value = project.status || 'active';
 
             new bootstrap.Modal(document.getElementById('projectModal')).show();
@@ -299,7 +385,8 @@
                 const formData = {
                     project_number: document.getElementById('project_number').value,
                     project_name: document.getElementById('project_name').value,
-                    project_tex: document.getElementById('project_tex').value,
+                    project_receipt_name: document.getElementById('project_receipt_name').value,
+                    description: document.getElementById('description').value,
                     status: document.getElementById('status').value
                 };
 
