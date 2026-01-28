@@ -1,0 +1,127 @@
+# =============================================================================
+# eDonation - Docker Compose (Local Test - Mac)
+# =============================================================================
+# สำหรับทดสอบบน Mac ก่อน deploy ไป production
+# ใช้ image ที่ build มาแล้วจาก Dockerfile
+#
+# วิธีใช้:
+#   1. docker build -t edonation:dev .
+#   2. docker compose -f docker-compose.local.yml up -d
+#   3. เปิด http://localhost:8080
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # PHP/Apache Application
+  # ===========================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: edonation:dev
+    container_name: edonation-local-app
+
+    restart: unless-stopped
+
+    ports:
+      - "8080:80"
+
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - DB_HOST=db
+      - DB_NAME=donation
+      - DB_USER=edonation
+      - DB_PASS=edonate@FON
+      - APP_DOMAIN=http://localhost:8080
+      - API_DOMAIN=http://localhost:8080
+      - BASE_PATH=
+      - API_BASE_PATH=/api
+      - JWT_SECRET=dev-secret-key-not-for-production
+      - JWT_EXPIRE=86400
+      # CMU OAuth (Microsoft Entra)
+      - CMU_OAUTH_CLIENT_ID=9ff50902-00e4-482f-b3d0-f0d59d31c999
+      - CMU_OAUTH_CLIENT_SECRET=P4R8Q~8SGCFrHRbPCTMJ3OcAr6y9lNuF35PUTb-b
+      - CMU_OAUTH_TENANT_ID=cf81f1df-de59-4c29-91da-a2dfd04aa751
+      - TZ=Asia/Bangkok
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - edonation-local-network
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ===========================================================================
+  # MySQL Database
+  # ===========================================================================
+  db:
+    image: mysql:8.0
+    container_name: edonation-local-db
+
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: donation
+      MYSQL_USER: edonation
+      MYSQL_PASSWORD: edonate@FON
+      TZ: Asia/Bangkok
+
+    command: >
+      --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql_local_data:/var/lib/mysql
+
+    networks:
+      - edonation-local-network
+
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ===========================================================================
+  # phpMyAdmin (for easy database access)
+  # ===========================================================================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: edonation-local-pma
+
+    restart: unless-stopped
+
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+      UPLOAD_LIMIT: 100M
+
+    ports:
+      - "8081:80"
+
+    depends_on:
+      - db
+
+    networks:
+      - edonation-local-network
+
+volumes:
+  mysql_local_data:
+    driver: local
+
+networks:
+  edonation-local-network:
+    driver: bridge

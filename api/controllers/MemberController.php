@@ -214,6 +214,45 @@ class MemberController
     }
 
     /**
+     * ดึงข้อมูล Transaction รายละเอียดของสมาชิกที่เลือก (สำหรับ Internal Use / admin export_members.php)
+     */
+    public function getTransactionsForExport(array $ids): array
+    {
+        if (empty($ids))
+            return [];
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $sql = "SELECT 
+                r.issued_at,
+                r.receipt_no as receipt_number,
+                r.amount,
+                du.project_name,
+                r.id_members,
+                r.id_card,
+                r.payer_name as receipt_name,
+                du.first_name,
+                du.last_name,
+                du.title,
+                du.phone,
+                du.occupation,
+                du.receipt_address as address_full,
+                du.address_line,
+                du.province,
+                du.amphure,
+                du.district,
+                du.zip_code
+            FROM edonation_receipts r
+            LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
+            WHERE r.id_members IN ($placeholders)
+            ORDER BY r.id_members ASC, r.issued_at DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($ids);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * POST /members/sync
      * Sync ข้อมูลสมาชิกจากตาราง edonation_receipts (Full Sync)
      * เฉพาะผู้บริจาคที่มีใบเสร็จเท่านั้น
@@ -638,8 +677,13 @@ class MemberController
      */
     private function getMemberProfile(string $idMembers): array
     {
-        // ดึงข้อมูลจากตาราง edonation_members
-        $sql = "SELECT * FROM edonation_members WHERE id_members = :id_members AND is_active = 1";
+        // ดึงข้อมูลจากตาราง edonation_members (explicit columns)
+        $sql = "SELECT id, id_members, id_card, type, full_name, title, first_name, last_name, 
+                       phone, email, occupation, full_address, address_line, province, district, 
+                       subdistrict, zip_code, total_donated, donation_count, first_donation_date, 
+                       last_donation_date, benefactor_level, is_active, created_at, updated_at
+                FROM edonation_members 
+                WHERE id_members = :id_members AND is_active = 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id_members' => $idMembers]);

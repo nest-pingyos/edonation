@@ -57,19 +57,28 @@ if (!defined('API_DOMAIN'))
 
 // Base paths
 if (!defined('BASE_PATH')) {
-    // Detect BASE_PATH automatically (e.g., /appdev/edonation)
-    $script_path = str_replace('\\', '/', dirname(__DIR__, 2));
-    $root_path = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
-
-    if (empty($root_path)) {
-        // Fallback for CLI
-        $auto_base = $_ENV['BASE_PATH'] ?? '/edonation';
+    // Check if BASE_PATH is set in environment (Docker)
+    if (isset($_ENV['BASE_PATH'])) {
+        // Use environment variable directly (can be empty for root deployment)
+        $env_base = $_ENV['BASE_PATH'];
+        // Normalize: remove trailing slash, keep leading slash (or empty)
+        $env_base = rtrim($env_base, '/');
+        define('BASE_PATH', $env_base);
     } else {
-        $auto_base = str_replace($root_path, '', $script_path);
-        if ($auto_base && $auto_base[0] !== '/')
-            $auto_base = '/' . $auto_base;
+        // Detect BASE_PATH automatically (e.g., /appdev/edonation)
+        $script_path = str_replace('\\', '/', dirname(__DIR__, 2));
+        $root_path = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
+
+        if (empty($root_path)) {
+            // Fallback for CLI
+            $auto_base = '/edonation';
+        } else {
+            $auto_base = str_replace($root_path, '', $script_path);
+            if ($auto_base && $auto_base[0] !== '/')
+                $auto_base = '/' . $auto_base;
+        }
+        define('BASE_PATH', $auto_base ?: '/edonation');
     }
-    define('BASE_PATH', $auto_base ?: '/edonation');
 }
 if (!defined('API_BASE_PATH'))
     define('API_BASE_PATH', $_ENV['API_BASE_PATH'] ?? BASE_PATH . '/api');

@@ -1,13 +1,45 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * Services Controller
- * 
+ *
  * API for managing donation services (souvenirs)
+ *
+ * @package eDonation\API\Controllers
+ * @version 2.0.0 - Refactored for PSR-12, Security & Performance
  */
 
 class ServicesController
 {
-    private $db;
+    private const ALLOWED_TABLES = [
+        'service' => 'service',
+        'service_donat' => 'service_donat'
+    ];
+
+    private const SERVICE_COLUMNS = [
+        'id',
+        'name',
+        'description',
+        'price',
+        'img_file',
+        'is_active',
+        'created_at',
+        'updated_at'
+    ];
+
+    private const SERVICE_DONAT_COLUMNS = [
+        'id',
+        'name',
+        'description',
+        'amount',
+        'img_file',
+        'status',
+        'created_at'
+    ];
+
+    private PDO $db;
 
     public function __construct()
     {
@@ -17,18 +49,12 @@ class ServicesController
     /**
      * Handle API requests
      */
-    public function handle($method, $id = null, $action = null)
+    public function handle(string $method, ?string $id = null, ?string $action = null): array
     {
-        switch ($method) {
-            case 'GET':
-                if ($id) {
-                    return $this->show($id);
-                }
-                return $this->index();
-            default:
-                http_response_code(405);
-                return ['success' => false, 'error' => ['message' => 'Method not allowed']];
-        }
+        return match ($method) {
+            'GET' => $id ? $this->show($id) : $this->index(),
+            default => $this->methodNotAllowed()
+        };
     }
 
     /**
@@ -37,120 +63,199 @@ class ServicesController
     public function index(): array
     {
         try {
-            // Get query parameters
-            $type = $_GET['type'] ?? 'all'; // 'service' or 'service_donat' or 'all'
-            $active = $_GET['active'] ?? '1';
-
+            $type = $this->sanitizeType($_GET['type'] ?? 'all');
             $services = [];
 
-            // Get from 'service' table (souvenir)
             if ($type === 'all' || $type === 'service') {
-                $stmt = $this->db->prepare("SELECT * FROM `service` ORDER BY id DESC");
-                $stmt->execute();
-                $souvenirs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($souvenirs as &$item) {
-                    $item['type'] = 'souvenir';
-                    $item['image_url'] = $this->getImageUrl($item);
-                }
-                $services = array_merge($services, $souvenirs);
+                $services = array_merge(
+                    $services,
+                    $this->fetchServices('service')
+                );
             }
 
-            // Get from 'service_donat' table
             if ($type === 'all' || $type === 'service_donat') {
-                $stmt = $this->db->prepare("SELECT * FROM `service_donat` ORDER BY id DESC");
-                $stmt->execute();
-                $donatServices = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($donatServices as &$item) {
-                    $item['type'] = 'service_donat';
-                    $item['image_url'] = $this->getServiceDonatImageUrl($item);
-                }
-                $services = array_merge($services, $donatServices);
+                $services = array_merge(
+                    $services,
+                    $this->fetchServices('service_donat')
+                );
             }
 
-            return [
-                'success' => true,
-                'data' => $services,
-                'meta' => [
-                    'total' => count($services)
-                ]
-            ];
+            return $this->successResponse($services, [
+                'total' => count($services)
+            ]);
+        } catch (PDOException $e) {
+            error_log("Services Index Error: " . $e->getMessage());
+            return $this->errorResponse('ไม่สามารถดึงข้อมูลได้', 500);
         } catch (Exception $e) {
-            http_response_code(500);
-            return [
-                'success' => false,
-                'error' => ['message' => 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage()]
-            ];
+            error_log("Services Index Unexpected Error: " . $e->getMessage());
+            return $this->errorResponse('เกิดข้อผิดพลาดภายในระบบ', 500);
         }
     }
 
     /**
      * Get single service by ID
      */
-    public function show($id): array
+    public function show(string $id): array
     {
         try {
-            $type = $_GET['type'] ?? 'service';
-            $table = $type === 'service_donat' ? 'service_donat' : 'service';
+            if (!$this->isValidId($id)) {
+                return $this->errorResponse('รูปแบบ ID ไม่ถูกต้อง', 400);
+            }
 
-            $stmt = $this->db->prepare("SELECT * FROM `$table` WHERE id = :id LIMIT 1");
+            $type = $this->sanitizeType($_GET['type'] ?? 'service');
+            $tableName = self::ALLOWED_TABLES[$type];
+            $columns = $this->getColumnsForTable($tableName);
+
+            // SECURITY: Use whitelisted table name, never interpolate user input
+            $columnsList = implode(', ', $columns);
+            $sql = match ($tableName) {
+                'service' => "SELECT {$columnsList} FROM `service` WHERE id = :id LIMIT 1",
+                'service_donat' => "SELECT {$columnsList} FROM `service_donat` WHERE id = :id LIMIT 1",
+            };
+
+            $stmt = $this->db->prepare($sql);
             $stmt->execute([':id' => $id]);
             $service = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$service) {
-                http_response_code(404);
-                return [
-                    'success' => false,
-                    'error' => ['message' => 'ไม่พบข้อมูล']
-                ];
+                return $this->errorResponse('ไม่พบข้อมูล', 404);
             }
 
-            $service['type'] = $type === 'service_donat' ? 'service_donat' : 'souvenir';
-            $service['image_url'] = $type === 'service_donat'
+            $service['type'] = ($type === 'service_donat') ? 'service_donat' : 'souvenir';
+            $service['image_url'] = ($type === 'service_donat')
                 ? $this->getServiceDonatImageUrl($service)
                 : $this->getImageUrl($service);
 
-            return [
-                'success' => true,
-                'data' => $service
-            ];
+            return $this->successResponse($service);
+        } catch (PDOException $e) {
+            error_log("Services Show Error: " . $e->getMessage());
+            return $this->errorResponse('ไม่สามารถดึงข้อมูลได้', 500);
         } catch (Exception $e) {
-            http_response_code(500);
-            return [
-                'success' => false,
-                'error' => ['message' => 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage()]
-            ];
+            error_log("Services Show Unexpected Error: " . $e->getMessage());
+            return $this->errorResponse('เกิดข้อผิดพลาดภายในระบบ', 500);
         }
+    }
+
+    /**
+     * Fetch services from specific table
+     */
+    private function fetchServices(string $type): array
+    {
+        $tableName = self::ALLOWED_TABLES[$type];
+        $columns = $this->getColumnsForTable($tableName);
+        $columnsList = implode(', ', $columns);
+
+        $sql = match ($tableName) {
+            'service' => "SELECT {$columnsList} FROM `service` ORDER BY id DESC",
+            'service_donat' => "SELECT {$columnsList} FROM `service_donat` ORDER BY id DESC",
+        };
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($items as &$item) {
+            $item['type'] = ($type === 'service_donat') ? 'service_donat' : 'souvenir';
+            $item['image_url'] = ($type === 'service_donat')
+                ? $this->getServiceDonatImageUrl($item)
+                : $this->getImageUrl($item);
+        }
+
+        return $items;
+    }
+
+    /**
+     * Get columns for specific table
+     */
+    private function getColumnsForTable(string $tableName): array
+    {
+        return match ($tableName) {
+            'service' => self::SERVICE_COLUMNS,
+            'service_donat' => self::SERVICE_DONAT_COLUMNS,
+            default => []
+        };
+    }
+
+    /**
+     * Sanitize and validate type parameter
+     */
+    private function sanitizeType(string $type): string
+    {
+        $allowedTypes = ['all', 'service', 'service_donat'];
+        return in_array($type, $allowedTypes, true) ? $type : 'service';
+    }
+
+    /**
+     * Validate ID format
+     */
+    private function isValidId(string $id): bool
+    {
+        return ctype_digit($id) && (int) $id > 0;
     }
 
     /**
      * Get image URL for souvenir
      */
-    private function getImageUrl($item): string
+    private function getImageUrl(array $item): string
     {
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
 
         if (!empty($item['img_file'])) {
-            return $basePath . '/assets/images/products/' . $item['img_file'];
+            return $basePath . '/assets/images/products/' . basename($item['img_file']);
         }
 
-        // Default image based on ID (cycling 1-7)
-        $imageNumber = (($item['id'] - 1) % 7) + 1;
+        $imageNumber = ((int) $item['id'] - 1) % 7 + 1;
         return $basePath . '/assets/images/products/' . $imageNumber . '.jpg';
     }
 
     /**
      * Get image URL for service_donat
      */
-    private function getServiceDonatImageUrl($item): string
+    private function getServiceDonatImageUrl(array $item): string
     {
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
 
         if (!empty($item['img_file'])) {
-            return $basePath . '/assets/images/products/' . $item['img_file'];
+            return $basePath . '/assets/images/products/' . basename($item['img_file']);
         }
 
         return $basePath . '/assets/images/products/default.jpg';
+    }
+
+    /**
+     * Success response helper
+     */
+    private function successResponse(array|object $data, ?array $meta = null): array
+    {
+        $response = [
+            'success' => true,
+            'data' => $data
+        ];
+
+        if ($meta !== null) {
+            $response['meta'] = $meta;
+        }
+
+        return $response;
+    }
+
+    /**
+     * Error response helper
+     */
+    private function errorResponse(string $message, int $code = 400): array
+    {
+        http_response_code($code);
+        return [
+            'success' => false,
+            'error' => ['message' => $message]
+        ];
+    }
+
+    /**
+     * Method not allowed response
+     */
+    private function methodNotAllowed(): array
+    {
+        return $this->errorResponse('Method not allowed', 405);
     }
 }

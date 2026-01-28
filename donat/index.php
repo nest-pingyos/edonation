@@ -269,13 +269,7 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                                 </button>
                             </div>
 
-                            <!-- Test Button (Dev Only) -->
-                            <div class="text-center mt-3 mb-3">
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                    onclick="openTestPaymentModal()">
-                                    <i class="fas fa-bug"></i> Test Payment (JSON)
-                                </button>
-                            </div>
+
 
                             <input type="hidden" id="qrAmount" value="0">
                         </div>
@@ -623,105 +617,7 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
             document.getElementById('errorMessage').textContent = msg;
         }
 
-        // ==========================================
-        // TEST SIMULATION FUNCTION
-        // ==========================================
-        async function openTestPaymentModal() {
-            const data = window.currentData || {};
-            if (!data.billPaymentRef1) {
-                Swal.fire('Warning', 'No transaction data found. Please complete step 2 first.', 'warning');
-                return;
-            }
 
-            const { value: formValues } = await Swal.fire({
-                title: 'Test Payment Simulation',
-                html: `
-                    <div style="text-align: left; padding: 0 20px;">
-                        <div class="mb-2">
-                            <label class="small text-muted">Bill Payment Ref1</label>
-                            <input id="swal-ref1" class="swal2-input" style="margin: 0; width: 100%;" value="${data.billPaymentRef1 || ''}">
-                        </div>
-                        <div class="mb-2">
-                            <label class="small text-muted">Bill Payment Ref2</label>
-                            <input id="swal-ref2" class="swal2-input" style="margin: 0; width: 100%;" value="${data.billPaymentRef2 || ''}">
-                        </div>
-                        <div class="mb-2">
-                            <label class="small text-muted">Amount</label>
-                            <input id="swal-amount" class="swal2-input" style="margin: 0; width: 100%;" value="${data.amount || ''}">
-                        </div>
-                    </div>
-                `,
-                focusConfirm: false,
-                confirmButtonText: 'Send JSON',
-                showCancelButton: true,
-                preConfirm: () => {
-                    return {
-                        ref1: document.getElementById('swal-ref1').value,
-                        ref2: document.getElementById('swal-ref2').value,
-                        amount: document.getElementById('swal-amount').value
-                    }
-                }
-            });
-
-            if (formValues) {
-                simulatePayment(formValues.ref1, formValues.ref2, formValues.amount);
-            }
-        }
-
-        async function simulatePayment(ref1, ref2, amount) {
-            const payload = {
-                "payeeProxyId": "099400258783792",
-                "payeeProxyType": "BILLERID",
-                "payeeAccountNumber": "5663044095",
-                "payeeName": "FACULTY OF NURSING CMU",
-                "payerAccountNumber": "5662488652",
-                "payerAccountName": "พัชรพล ปิงยศ",
-                "payerName": "พัชรพล ปิงยศ",
-                "sendingBankCode": "014",
-                "receivingBankCode": "014",
-                "amount": parseFloat(amount).toFixed(2),
-                "transactionId": "TEST_" + new Date().getTime(),
-                "transactionDateandTime": new Date().toISOString(),
-                "billPaymentRef1": ref1,
-                "billPaymentRef2": ref2,
-                "currencyCode": "764",
-                "channelCode": "PMH",
-                "transactionType": "Domestic Transfers"
-            };
-
-            Swal.fire({
-                title: 'Sending...',
-                didOpen: () => Swal.showLoading()
-            });
-
-            try {
-                // Determine absolute URL for receive.php
-                // Assuming /edonation/recieve.php based on project structure
-                const response = await fetch('/edonation/recieve.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const resultText = await response.text();
-
-                let displayMsg = resultText;
-                try {
-                    const json = JSON.parse(resultText);
-                    displayMsg = JSON.stringify(json, null, 2);
-                } catch (e) { }
-
-                Swal.fire({
-                    icon: response.ok ? 'success' : 'error',
-                    title: 'Server Response',
-                    html: `<pre style="text-align:left; max-height: 200px; overflow:auto;">${displayMsg}</pre>`
-                });
-
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', error.message, 'error');
-            }
-        }
 
         function fmt(n) { return new Intl.NumberFormat('th-TH').format(n); }
 

@@ -54,8 +54,9 @@ define('APP_DOMAIN', getenv('APP_DOMAIN') ?: 'http://localhost');
 // API Domain (can be separate from App Domain)
 define('API_DOMAIN', getenv('API_DOMAIN') ?: APP_DOMAIN);
 
-// Base paths
-define('BASE_PATH', getenv('BASE_PATH') ?: '/edonation');
+// Base paths - handle empty BASE_PATH for Docker (getenv returns false if not set, empty string if set to "")
+$envBasePath = getenv('BASE_PATH');
+define('BASE_PATH', $envBasePath !== false ? $envBasePath : '/edonation');
 define('API_BASE_PATH', getenv('API_BASE_PATH') ?: BASE_PATH . '/api');
 
 // ===== Full URLs =====

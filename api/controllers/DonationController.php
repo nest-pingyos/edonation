@@ -156,7 +156,7 @@ class DonationController
 
         } catch (PDOException $e) {
             error_log("Donation create error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถบันทึกข้อมูลได้: ' . $e->getMessage(), 500);
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถบันทึกข้อมูลได้', 500);
         }
     }
 
@@ -407,7 +407,7 @@ class DonationController
         } catch (PDOException $e) {
             $this->pdo->rollBack();
             error_log("Admin donation create error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถบันทึกข้อมูลได้: ' . $e->getMessage(), 500);
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถบันทึกข้อมูลได้', 500);
         }
     }
 
@@ -416,7 +416,9 @@ class DonationController
     {
         try {
             $stmt = $this->pdo->prepare(
-                "SELECT * FROM edonation_donat_user WHERE id = :id"
+                "SELECT id, amount, billPaymentRef1, id_card, project_number, project_name, 
+                        type, phone, first_name, last_name, need_receipt, status_donat, created_at
+                 FROM edonation_donat_user WHERE id = :id"
             );
             $stmt->execute([':id' => $id]);
             $donation = $stmt->fetch();
@@ -441,7 +443,7 @@ class DonationController
             ]);
         } catch (PDOException $e) {
             error_log("Get QR error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้', 500);
         }
     }
 
@@ -772,7 +774,7 @@ class DonationController
             ]);
         } catch (PDOException $e) {
             error_log("Donations index error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้', 500);
         }
     }
 
@@ -780,7 +782,15 @@ class DonationController
     private function show(string $id): array
     {
         try {
-            $stmt = $this->pdo->prepare("SELECT * FROM edonation_donat_user WHERE id = :id OR billPaymentRef1 = :ref");
+            $stmt = $this->pdo->prepare(
+                "SELECT id, billPaymentRef1, project_number, project_name, type, phone, email, 
+                        occupation, amount, fiscal_year, status_donat, payby, receiptDate, 
+                        need_receipt, title, first_name, last_name, id_card, 
+                        receipt_address, shipping_address, address_line, province, amphure, district, zip_code,
+                        created_at, updated_at
+                 FROM edonation_donat_user 
+                 WHERE id = :id OR billPaymentRef1 = :ref"
+            );
             $stmt->execute([':id' => $id, ':ref' => $id]);
             $donation = $stmt->fetch();
 
@@ -794,7 +804,7 @@ class DonationController
             return Response::success($donation);
         } catch (PDOException $e) {
             error_log("Donation show error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้: ' . $e->getMessage(), 500);
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถดึงข้อมูลได้', 500);
         }
     }
 
@@ -826,7 +836,7 @@ class DonationController
             return Response::success(null, 'อัปเดตสำเร็จ');
         } catch (PDOException $e) {
             error_log("Donation update error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'ไม่สามารถอัปเดตได้: ' . $e->getMessage(), 500);
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถอัปเดตได้', 500);
         }
     }
 

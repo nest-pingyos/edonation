@@ -1,0 +1,124 @@
+# =============================================================================
+# eDonation - Docker Compose (Development)
+# =============================================================================
+# For LOCAL DEVELOPMENT on Mac
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # PHP/Apache Application (Development)
+  # ===========================================================================
+  app:
+    image: php:8.2-apache
+    container_name: edonation-dev-app
+
+    restart: unless-stopped
+
+    ports:
+      - "8080:80"
+
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - DB_HOST=db
+      - DB_NAME=donation
+      - DB_USER=edonation
+      - DB_PASS=edonate@FON
+      - APP_DOMAIN=http://localhost:8080
+      - API_DOMAIN=http://localhost:8080
+      - BASE_PATH=
+      - API_BASE_PATH=/api
+      - JWT_SECRET=dev-secret-key-not-for-production
+      - JWT_EXPIRE=86400
+      - TZ=Asia/Bangkok
+
+    # Install PHP extensions and configure Apache
+    command: >
+      bash -c "
+        apt-get update && 
+        apt-get install -y libpng-dev libjpeg62-turbo-dev libfreetype6-dev libzip-dev libicu-dev &&
+        docker-php-ext-configure gd --with-freetype --with-jpeg &&
+        docker-php-ext-install pdo pdo_mysql mysqli gd zip intl &&
+        a2enmod rewrite headers &&
+        sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf &&
+        apache2-foreground
+      "
+
+    working_dir: /var/www/html
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - edonation-dev-network
+
+  # ===========================================================================
+  # MySQL Database (Development)
+  # ===========================================================================
+  db:
+    image: mysql:8.0
+    container_name: edonation-dev-db
+
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: donation
+      MYSQL_USER: edonation
+      MYSQL_PASSWORD: edonate@FON
+      TZ: Asia/Bangkok
+
+    command: >
+      --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+
+    networks:
+      - edonation-dev-network
+
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ===========================================================================
+  # phpMyAdmin (Development Only)
+  # ===========================================================================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: edonation-dev-pma
+
+    restart: unless-stopped
+
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+      UPLOAD_LIMIT: 100M
+
+    ports:
+      - "8081:80"
+
+    depends_on:
+      - db
+
+    networks:
+      - edonation-dev-network
+
+volumes:
+  mysql_dev_data:
+    driver: local
+
+networks:
+  edonation-dev-network:
+    driver: bridge

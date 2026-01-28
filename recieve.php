@@ -17,7 +17,8 @@ header('Content-Type: application/json; charset=UTF-8');
 // Log file for debugging
 $logFile = __DIR__ . '/logs/bank_callback.log';
 
-function logCallback($message) {
+function logCallback($message)
+{
     global $logFile;
     $logDir = dirname($logFile);
     if (!is_dir($logDir)) {
@@ -46,7 +47,18 @@ if (!$data || !is_array($data)) {
 // Forward to API - use BASE_PATH from config
 require_once __DIR__ . '/config/env.php';
 $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-$apiUrl = 'http://' . $_SERVER['HTTP_HOST'] . $basePath . '/api/v1/payments/callback';
+
+// Determine API URL - inside Docker, use localhost:80 (internal Apache)
+// Outside Docker (with port 8080), the HTTP_HOST will include the port
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+// If running inside container, call internal API on port 80
+if (strpos($host, ':') !== false) {
+    // External call with port - use internal localhost
+    $apiUrl = 'http://localhost' . $basePath . '/api/v1/payments/callback';
+} else {
+    // Normal call without port
+    $apiUrl = 'http://' . $host . $basePath . '/api/v1/payments/callback';
+}
 
 $ch = curl_init($apiUrl);
 curl_setopt_array($ch, [

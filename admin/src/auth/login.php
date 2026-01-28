@@ -8,11 +8,14 @@ if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] =
     exit();
 }
 
-// Get error message if any
-$error = $_SESSION['auth_error'] ?? null;
+// Get error message
+$error = $_SESSION['auth_error'] ?? $_GET['error'] ?? null;
 unset($_SESSION['auth_error']);
-?>
 
+// API base URL - handle empty BASE_PATH for Docker
+$basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+$apiBase = ($basePath === '' ? '' : $basePath) . '/api/v1';
+?>
 <!doctype html>
 <html lang="th">
 
@@ -20,151 +23,126 @@ unset($_SESSION['auth_error']);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เข้าสู่ระบบ | eDonation Admin</title>
-
-    <!-- Favicon -->
-    <link rel="shortcut icon" href="../assets/images/favicon.ico">
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <link rel="shortcut icon" href="<?= $basePath ?>/assets/images/favicon/favicon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #4e73df;
-            --secondary-color: #667eea;
-            --accent-color: #764ba2;
-            --cmu-purple: #6d28d9;
-        }
-
         * {
-            font-family: 'Prompt', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Prompt', sans-serif;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: #f8fafc;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 400px;
             padding: 20px;
         }
 
-        .login-container {
-            width: 100%;
-            max-width: 1000px;
-        }
-
         .login-card {
-            background: #fff;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            overflow: hidden;
+            background: white;
+            border-radius: 16px;
+            padding: 48px 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
-        .login-sidebar {
-            background: linear-gradient(135deg, #1a3a5c 0%, #2c5282 100%);
-            padding: 60px 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+        .logo {
             text-align: center;
-            min-height: 500px;
+            margin-bottom: 32px;
         }
 
-        .login-sidebar img {
-            max-width: 200px;
-            margin-bottom: 30px;
-            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+        .logo img {
+            height: 48px;
         }
 
-        .login-sidebar h2 {
-            color: #fff;
-            font-weight: 700;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
+        .logo-text {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 12px;
         }
 
-        .login-sidebar p {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 1rem;
-            line-height: 1.7;
-        }
-
-        .login-content {
-            padding: 60px 50px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .login-logo {
+        .subtitle {
             text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .login-logo img {
-            height: 50px;
-        }
-
-        .login-title {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .login-title h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1a3a5c;
-        }
-
-        .login-subtitle {
-            text-align: center;
-            color: #6c757d;
-            margin-bottom: 40px;
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 32px;
         }
 
         .alert {
-            border-radius: 10px;
-            padding: 15px 20px;
-            margin-bottom: 25px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 24px;
         }
 
-        .btn-cmu-oauth {
-            background: linear-gradient(135deg, var(--cmu-purple) 0%, #8b5cf6 100%);
-            border: none;
-            color: #fff;
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 12px;
+        .btn-cmu {
+            width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
-            transition: all 0.3s ease;
-            width: 100%;
+            padding: 14px 24px;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .btn-cmu-oauth:hover {
-            background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(109, 40, 217, 0.4);
-            color: #fff;
+        .btn-cmu:hover {
+            background: #6d28d9;
+            transform: translateY(-1px);
         }
 
-        .btn-cmu-oauth svg {
-            width: 24px;
-            height: 24px;
+        .btn-cmu:disabled {
+            background: #a78bfa;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-cmu svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .divider {
             display: flex;
             align-items: center;
-            margin: 30px 0;
-            color: #adb5bd;
+            margin: 24px 0;
+            color: #94a3b8;
+            font-size: 13px;
         }
 
         .divider::before,
@@ -172,131 +150,140 @@ unset($_SESSION['auth_error']);
             content: '';
             flex: 1;
             height: 1px;
-            background: #dee2e6;
+            background: #e2e8f0;
         }
 
         .divider span {
-            padding: 0 15px;
-            font-size: 0.9rem;
+            padding: 0 12px;
         }
 
-        .login-info {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
+        .alt-login {
             text-align: center;
+            font-size: 14px;
+            color: #64748b;
         }
 
-        .login-info p {
-            margin: 0;
-            color: #6c757d;
-            font-size: 0.9rem;
+        .alt-login a {
+            color: #7c3aed;
+            text-decoration: none;
+            font-weight: 500;
         }
 
-        .login-info a {
-            color: var(--cmu-purple);
-            font-weight: 600;
+        .alt-login a:hover {
+            text-decoration: underline;
         }
 
-        .footer-text {
+        .footer {
             text-align: center;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 30px;
-            font-size: 0.9rem;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #94a3b8;
         }
 
-        @media (max-width: 991px) {
-            .login-sidebar {
-                display: none;
+        <?php if (defined('APP_ENV') && APP_ENV === 'development'): ?>
+            .dev-login {
+                margin-top: 16px;
             }
 
-            .login-content {
-                padding: 40px 30px;
+            .btn-dev {
+                width: 100%;
+                padding: 12px;
+                background: transparent;
+                border: 1px solid #e2e8f0;
+                color: #64748b;
+                border-radius: 8px;
+                font-family: inherit;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.2s;
             }
-        }
+
+            .btn-dev:hover {
+                background: #f8fafc;
+                border-color: #cbd5e1;
+            }
+
+        <?php endif; ?>
     </style>
 </head>
 
 <body>
-    <div class="login-container">
+    <div class="login-wrapper">
         <div class="login-card">
-            <div class="row g-0">
-                <!-- Sidebar -->
-                <div class="col-lg-5">
-                    <div class="login-sidebar">
-                        <img src="../assets/images/logo-light.png" alt="eDonation" onerror="this.style.display='none'">
-                        <h2>eDonation Admin</h2>
-                        <p>
-                            ระบบจัดการการบริจาค<br>
-                            คณะพยาบาลศาสตร์<br>
-                            มหาวิทยาลัยเชียงใหม่
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Login Form -->
-                <div class="col-lg-7">
-                    <div class="login-content">
-                        <div class="login-logo">
-                            <img src="../assets/images/logo-dark.png" alt="Logo"
-                                onerror="this.innerHTML='<h3>eDonation</h3>'">
-                        </div>
-
-                        <div class="login-title">
-                            <h1>เข้าสู่ระบบ</h1>
-                        </div>
-
-                        <p class="login-subtitle">
-                            เข้าสู่ระบบด้วยบัญชี CMU Account
-                        </p>
-
-                        <?php if ($error): ?>
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-circle me-2"></i>
-                                <?php echo htmlspecialchars($error); ?>
-                            </div>
-                        <?php endif; ?>
-
-                        <!-- CMU OAuth Login Button -->
-                        <a href="callback.php" class="btn btn-cmu-oauth">
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                                <path
-                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                            </svg>
-                            เข้าสู่ระบบด้วย CMU Account
-                        </a>
-
-                        <?php if (defined('APP_ENV') && APP_ENV === 'development'): ?>
-                            <div class="mt-3">
-                                <a href="callback.php?dev_login=1" class="btn btn-secondary w-100">
-                                    <i class="fas fa-code me-2"></i> Developer Login
-                                </a>
-                            </div>
-                        <?php endif; ?>
-
-                        <div class="divider">
-                            <span>หรือ</span>
-                        </div>
-
-                        <div class="login-info">
-                            <p>
-                                หากต้องการเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน<br>
-                                <a href="../auth-signin.php">คลิกที่นี่</a>
-                            </p>
-                        </div>
-                    </div>
-                </div>
+            <div class="logo">
+                <img src="<?= $basePath ?>/assets/images/logo/logo.svg" alt="eDonation"
+                    onerror="this.style.display='none'">
+                <div class="logo-text">eDonation</div>
             </div>
+
+            <p class="subtitle">ระบบจัดการการบริจาค คณะพยาบาลศาสตร์ มช.</p>
+
+            <?php if ($error): ?>
+                <div class="alert"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
+            <button type="button" id="btnLogin" class="btn-cmu" onclick="loginWithCmu()">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                </svg>
+                <span id="btnText">Sign in with CMU Account</span>
+            </button>
+
+
         </div>
 
-        <p class="footer-text">
-            ©
-            <?php echo date('Y'); ?> eDonation - คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่
+        <p class="footer">
+            © <?= date('Y') ?> Faculty of Nursing, Chiang Mai University
         </p>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '<?= $apiBase ?>';
+
+        async function loginWithCmu() {
+            const btn = document.getElementById('btnLogin');
+            const text = document.getElementById('btnText');
+
+            btn.disabled = true;
+            text.innerHTML = '<span class="spinner"></span> กำลังเชื่อมต่อ...';
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/oauth/login`);
+                const data = await res.json();
+
+                if (data.success && data.data?.auth_url) {
+                    window.location.href = data.data.auth_url;
+                } else {
+                    throw new Error(data.error?.message || 'Connection failed');
+                }
+            } catch (e) {
+                alert('เกิดข้อผิดพลาด: ' + e.message);
+                btn.disabled = false;
+                text.textContent = 'Sign in with CMU Account';
+            }
+        }
+
+        async function devLogin() {
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    localStorage.setItem('access_token', data.data.access_token);
+                    window.location.href = '../index.php';
+                } else {
+                    alert(data.error?.message || 'Login failed');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+    </script>
 </body>
 
 </html>

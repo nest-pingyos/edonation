@@ -1,11 +1,17 @@
+<?php
+// Get BASE_PATH from environment or config
+$basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+?>
 <div class="main-nav">
     <!-- Sidebar Logo -->
     <div class="logo-box">
         <a href="dashboard.php" class="logo-dark">
-            <img src="/edonation/assets/images/logo/logo.svg" class="h-auto" style="max-height: 40px;" alt="eDonation">
+            <img src="<?= $basePath ?>/assets/images/logo/logo.svg" class="h-auto" style="max-height: 40px;"
+                alt="eDonation">
         </a>
         <a href="dashboard.php" class="logo-light">
-            <img src="/edonation/assets/images/logo/logo.svg" class="h-auto" style="max-height: 40px;" alt="eDonation">
+            <img src="<?= $basePath ?>/assets/images/logo/logo.svg" class="h-auto" style="max-height: 40px;"
+                alt="eDonation">
         </a>
     </div>
 
@@ -133,7 +139,7 @@
                             <a class="sub-nav-link" href="settings-general.php">ตั้งค่าทั่วไป</a>
                         </li>
                         <li class="sub-nav-item">
-                            <a class="sub-nav-link" href="admin-users.php">ผู้ดูแลระบบ</a>
+                            <a class="sub-nav-link" href="admin-users-list.php">ผู้ดูแลระบบ</a>
                         </li>
                     </ul>
                 </div>

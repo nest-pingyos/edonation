@@ -1,37 +1,54 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * LINE Notification Service
+ *
  * สำหรับส่งแจ้งเตือนผ่าน LINE OA
- * 
+ *
  * การใช้งาน:
  * $notifier = new LineNotificationService();
  * $notifier->sendPaymentSuccessNotification($donationId, $amount, $projectName);
+ *
+ * @package eDonation\API\Services
+ * @version 3.0.0 - Refactored for PSR-12, Security & Performance
  */
 
 class LineNotificationService
 {
-    private PDO $pdo;
-    private bool $isEnabled = true;
-
-    // ==========================================
-    // ตั้งค่าคงที่ (Settings)
-    // ==========================================
     private const LINE_API_URL = 'https://mis.nurse.cmu.ac.th/LineConnext/API/SendLineOA';
     private const LINE_API_KEY = 'FON_ConnectAPI01';
     private const PROGRAM_NAME = 'e-Donation';
     private const MESSAGE_COLOR = '#FB974E';
+    private const CURL_TIMEOUT = 30;
 
-    // ใช้ OFFICE_URL จาก env config (รองรับ Production และ Testing)
-    private function getOfficeBaseUrl(): string
-    {
-        return defined('OFFICE_URL') ? OFFICE_URL : 'https://app.nurse.cmu.ac.th/edonation/office';
-    }
+    private const RECIPIENT_COLUMNS = [
+        'id',
+        'notification_type',
+        'recipient_email',
+        'cmu_account',
+        'is_active',
+        'created_at'
+    ];
+
+    private const LOG_COLUMNS = [
+        'id',
+        'notification_type',
+        'recipient_email',
+        'message',
+        'status',
+        'response',
+        'reference_id',
+        'created_at'
+    ];
+
+    private PDO $pdo;
+    private bool $isEnabled = true;
 
     public function __construct()
     {
-        // ตั้งค่า Timezone เป็นเวลาไทย
         date_default_timezone_set('Asia/Bangkok');
-
         $this->pdo = Database::getInstance();
     }
 
@@ -44,31 +61,22 @@ class LineNotificationService
     }
 
     /**
-     * ดึงรายชื่อผู้รับการแจ้งเตือนตามประเภท
+     * ตรวจสอบว่าระบบแจ้งเตือนเปิดใช้งานอยู่หรือไม่
      */
-    private function getRecipients(string $notificationType): array
+    public function isNotificationEnabled(): bool
     {
-        try {
-            $sql = "SELECT recipient_email, cmu_account 
-                    FROM edonation_notification_recipients 
-                    WHERE notification_type = :type AND is_active = 1";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([':type' => $notificationType]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log('LineNotificationService: Failed to get recipients - ' . $e->getMessage());
-            return [];
-        }
+        return $this->isEnabled;
     }
 
     /**
      * ส่งแจ้งเตือน LINE
      */
-    public function send(string $notificationType, string $message, ?string $weblink = null, ?int $referenceId = null): array
-    {
-        $results = [];
-
-        // ตรวจสอบว่าเปิดใช้งานหรือไม่
+    public function send(
+        string $notificationType,
+        string $message,
+        ?string $weblink = null,
+        ?int $referenceId = null
+    ): array {
         if (!$this->isEnabled) {
             return [
                 'success' => false,
@@ -77,7 +85,6 @@ class LineNotificationService
             ];
         }
 
-        // ดึงรายชื่อผู้รับ
         $recipients = $this->getRecipients($notificationType);
         error_log("LineNotificationService: Type={$notificationType}, Found " . count($recipients) . " recipients");
 
@@ -90,23 +97,17 @@ class LineNotificationService
             ];
         }
 
-        // ส่งแจ้งเตือนถึงผู้รับแต่ละคน
+        $results = [];
         foreach ($recipients as $recipient) {
-            // ใช้ cmu_account ส่งไป LINE API (field: email)
-            $cmuAccount = $recipient['cmu_account'];
+            $cmuAccount = $recipient['cmu_account'] ?? '';
 
             if (empty($cmuAccount)) {
                 error_log('LineNotificationService: cmu_account is empty for recipient');
                 continue;
             }
 
-            $sendResult = $this->sendToRecipient(
-                $cmuAccount,  // ใช้ cmu_account ส่งไป email field ของ API
-                $message,
-                $weblink
-            );
+            $sendResult = $this->sendToRecipient($cmuAccount, $message, $weblink);
 
-            // บันทึก log (เก็บ cmu_account)
             $this->logNotification(
                 $notificationType,
                 $cmuAccount,
@@ -133,15 +134,127 @@ class LineNotificationService
     }
 
     /**
+     * แจ้งเตือนเมื่อชำระเงินสำเร็จ
+     */
+    public function sendPaymentSuccessNotification(
+        int $donationId,
+        float $amount,
+        string $projectName,
+        string $donorName = ''
+    ): array {
+        $formattedAmount = number_format($amount, 2);
+
+        $message = "แจ้งเตือนการชำระเงินบริจาค\n";
+        $message .= "━━━━━━━━━━━━\n";
+        $message .= "โครงการ: {$projectName}\n";
+        $message .= "จำนวน: {$formattedAmount} บาท\n";
+
+        if ($donorName) {
+            $message .= "ผู้บริจาค: {$donorName}\n";
+        }
+
+        $message .= "เวลา: " . $this->formatThaiDateTime();
+
+        $weblink = $this->getOfficeBaseUrl() . '/finance/donation_detail.php?id=' . urlencode((string) $donationId);
+
+        return $this->send('payment_success', $message, $weblink, $donationId);
+    }
+
+    /**
+     * แจ้งเตือนเมื่อมีการบริจาคใหม่ (ยังไม่ชำระเงิน)
+     */
+    public function sendNewDonationNotification(
+        int $donationId,
+        float $amount,
+        string $projectName
+    ): array {
+        $formattedAmount = number_format($amount, 2);
+
+        $message = "มีการบริจาคใหม่!\n";
+        $message .= "━━━━━━━━━━━━\n";
+        $message .= "โครงการ: {$projectName}\n";
+        $message .= "จำนวน: {$formattedAmount} บาท\n";
+        $message .= "สถานะ: รอชำระเงิน";
+
+        $weblink = $this->getOfficeBaseUrl() . '/finance/donation_detail.php?id=' . urlencode((string) $donationId);
+
+        return $this->send('new_donation', $message, $weblink, $donationId);
+    }
+
+    /**
+     * แจ้งเตือนทั่วไป (custom message)
+     */
+    public function sendCustomNotification(
+        string $notificationType,
+        string $message,
+        ?string $weblink = null,
+        ?int $referenceId = null
+    ): array {
+        return $this->send($notificationType, $message, $weblink, $referenceId);
+    }
+
+    /**
+     * ดึง recipients ทั้งหมด
+     */
+    public function getAllRecipients(): array
+    {
+        try {
+            $columns = implode(', ', self::RECIPIENT_COLUMNS);
+            $sql = "SELECT {$columns} FROM edonation_notification_recipients ORDER BY notification_type, id";
+            $stmt = $this->pdo->query($sql);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('LineNotificationService: Failed to get all recipients - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * ดึง logs
+     */
+    public function getLogs(int $limit = 50, int $offset = 0): array
+    {
+        try {
+            $columns = implode(', ', self::LOG_COLUMNS);
+            $sql = "SELECT {$columns} FROM edonation_notification_logs ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('LineNotificationService: Failed to get logs - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * ดึงรายชื่อผู้รับการแจ้งเตือนตามประเภท
+     */
+    private function getRecipients(string $notificationType): array
+    {
+        try {
+            $sql = "SELECT recipient_email, cmu_account 
+                    FROM edonation_notification_recipients 
+                    WHERE notification_type = :type AND is_active = 1";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([':type' => $notificationType]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('LineNotificationService: Failed to get recipients - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * ส่งแจ้งเตือนไปยังผู้รับคนเดียว
-     * @param string $cmuAccount - CMU Account ที่จะส่งไป LINE API
      */
     private function sendToRecipient(string $cmuAccount, string $message, ?string $weblink): array
     {
         try {
             $postData = [
                 'program' => self::PROGRAM_NAME,
-                'email' => $cmuAccount,  // ใช้ cmu_account ส่งไป email field
+                'email' => $cmuAccount,
                 'message' => $message,
                 'color' => self::MESSAGE_COLOR
             ];
@@ -156,7 +269,7 @@ class LineNotificationService
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30,
+                CURLOPT_TIMEOUT => self::CURL_TIMEOUT,
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
                 CURLOPT_CUSTOMREQUEST => 'POST',
@@ -165,6 +278,8 @@ class LineNotificationService
                     'Authorization: ' . self::LINE_API_KEY,
                     'Content-Type: application/json'
                 ],
+                // SECURITY: Enable SSL verification in production
+                // For internal CMU network, SSL verification might be disabled
                 CURLOPT_SSL_VERIFYPEER => false,
                 CURLOPT_SSL_VERIFYHOST => 0,
             ]);
@@ -185,7 +300,6 @@ class LineNotificationService
 
             curl_close($curl);
 
-            // ตรวจสอบ response
             $success = $httpCode >= 200 && $httpCode < 300;
 
             if ($success) {
@@ -197,7 +311,7 @@ class LineNotificationService
             return [
                 'success' => $success,
                 'message' => $success ? 'Sent successfully' : "HTTP error: {$httpCode}",
-                'response' => $response
+                'response' => (string) $response
             ];
         } catch (Exception $e) {
             error_log("LineNotificationService: Exception - " . $e->getMessage());
@@ -233,32 +347,24 @@ class LineNotificationService
                 ':response' => $response,
                 ':ref_id' => $referenceId
             ]);
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             error_log('LineNotificationService: Failed to log notification - ' . $e->getMessage());
         }
     }
 
-    // ============================================
-    // Convenience Methods สำหรับประเภทต่างๆ
-    // ============================================
+    /**
+     * Get office base URL from environment
+     */
+    private function getOfficeBaseUrl(): string
+    {
+        return defined('OFFICE_URL') ? OFFICE_URL : 'https://app.nurse.cmu.ac.th/edonation/office';
+    }
 
     /**
-     * แจ้งเตือนเมื่อชำระเงินสำเร็จ
+     * Format Thai date time
      */
-    public function sendPaymentSuccessNotification(int $donationId, float $amount, string $projectName, string $donorName = ''): array
+    private function formatThaiDateTime(): string
     {
-        $formattedAmount = number_format($amount, 2);
-
-        $message = "แจ้งเตือนการชำระเงินบริจาค\n";
-        $message .= "━━━━━━━━━━━━\n";
-        $message .= "โครงการ: {$projectName}\n";
-        $message .= "จำนวน: {$formattedAmount} บาท\n";
-
-        if ($donorName) {
-            $message .= "ผู้บริจาค: {$donorName}\n";
-        }
-
-        // รูปแบบวันที่ไทย: วัน เดือนย่อ ปีพ.ศ. เวลา
         $thaiMonths = [
             '',
             'ม.ค.',
@@ -274,83 +380,12 @@ class LineNotificationService
             'พ.ย.',
             'ธ.ค.'
         ];
+
         $day = date('j');
         $month = $thaiMonths[(int) date('n')];
-        $year = date('Y') + 543;
+        $year = (int) date('Y') + 543;
         $time = date('H:i');
-        $message .= "เวลา: {$day} {$month} {$year} {$time}";
 
-        $weblink = $this->getOfficeBaseUrl() . '/finance/donation_detail.php?id=' . urlencode($donationId);
-
-        return $this->send('payment_success', $message, $weblink, $donationId);
-    }
-
-    /**
-     * แจ้งเตือนเมื่อมีการบริจาคใหม่ (ยังไม่ชำระเงิน)
-     */
-    public function sendNewDonationNotification(int $donationId, float $amount, string $projectName): array
-    {
-        $formattedAmount = number_format($amount, 2);
-
-        $message = "มีการบริจาคใหม่!\n";
-        $message .= "━━━━━━━━━━━━\n";
-        $message .= "โครงการ: {$projectName}\n";
-        $message .= "จำนวน: {$formattedAmount} บาท\n";
-        $message .= "สถานะ: รอชำระเงิน";
-
-        $weblink = $this->getOfficeBaseUrl() . '/finance/donation_detail.php?id=' . urlencode($donationId);
-
-        return $this->send('new_donation', $message, $weblink, $donationId);
-    }
-
-    /**
-     * แจ้งเตือนทั่วไป (custom message)
-     */
-    public function sendCustomNotification(string $notificationType, string $message, ?string $weblink = null, ?int $referenceId = null): array
-    {
-        return $this->send($notificationType, $message, $weblink, $referenceId);
-    }
-
-    // ============================================
-    // Helper Methods
-    // ============================================
-
-    /**
-     * ตรวจสอบว่าระบบแจ้งเตือนเปิดใช้งานอยู่หรือไม่
-     */
-    public function isNotificationEnabled(): bool
-    {
-        return $this->isEnabled;
-    }
-
-    /**
-     * ดึง recipients ทั้งหมด
-     */
-    public function getAllRecipients(): array
-    {
-        try {
-            $sql = "SELECT * FROM edonation_notification_recipients ORDER BY notification_type, id";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
-    /**
-     * ดึง logs
-     */
-    public function getLogs(int $limit = 50, int $offset = 0): array
-    {
-        try {
-            $sql = "SELECT * FROM edonation_notification_logs ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            return [];
-        }
+        return "{$day} {$month} {$year} {$time}";
     }
 }

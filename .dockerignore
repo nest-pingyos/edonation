@@ -1,0 +1,70 @@
+# =============================================================================
+# Docker Ignore File - eDonation
+# =============================================================================
+# Excludes files from Docker build context to reduce image size and build time
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker files (not needed inside container)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Development files
+*.md
+README*
+CHANGELOG*
+LICENSE*
+
+# Environment files (will be generated at runtime)
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+tests/
+phpunit.xml
+.phpunit.result.cache
+coverage/
+
+# Logs (should be generated at runtime)
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+cache/
+
+# Node.js (if any frontend build tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup SQL files (keep only donation.sql)
+database/*.backup
+database/*_backup.sql
+database/edonation*.sql
+!database/donation.sql
+!database/migrations/

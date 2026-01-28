@@ -81,20 +81,24 @@ class DatabaseService
     {
         $pdo = self::getInstance();
         $stmt = $pdo->prepare("
-            SELECT id, email, name, role 
+            SELECT id, email, name, role, status 
             FROM edonation_admin_users 
-            WHERE email = :email AND status = 'active'
+            WHERE email = :email
         ");
         $stmt->execute([':email' => $email]);
         $user = $stmt->fetch();
 
-        if ($user) {
-            // Update last login
-            $updateStmt = $pdo->prepare("UPDATE edonation_admin_users SET last_login = NOW() WHERE id = :id");
-            $updateStmt->execute([':id' => $user['id']]);
-            return $user;
-        }
-        return null;
+        return $user ?: null;
+    }
+
+    /**
+     * Update last login timestamp
+     */
+    public static function updateLastLogin(int $userId): bool
+    {
+        $pdo = self::getInstance();
+        $stmt = $pdo->prepare("UPDATE edonation_admin_users SET last_login = NOW() WHERE id = :id");
+        return $stmt->execute([':id' => $userId]);
     }
 
     /**
