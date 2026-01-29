@@ -47,14 +47,16 @@ foreach ($envVars as $key => $value) {
 // ===========================================
 // Domain & URL Configuration
 // ===========================================
-define('APP_DOMAIN', $_ENV['APP_DOMAIN'] ?? 'http://localhost');
-define('API_DOMAIN', $_ENV['API_DOMAIN'] ?? APP_DOMAIN);
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$isDocker = isset($_ENV['BASE_PATH']) && $_ENV['BASE_PATH'] === '';
+
+define('APP_DOMAIN', $_ENV['APP_DOMAIN'] ?? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://') . $host);
 define('BASE_PATH', $_ENV['BASE_PATH'] ?? '/edonation');
 define('API_BASE_PATH', $_ENV['API_BASE_PATH'] ?? BASE_PATH . '/api');
 
 // Full URLs
 define('APP_URL', APP_DOMAIN . BASE_PATH);
-define('API_URL', API_DOMAIN . API_BASE_PATH);
+define('API_URL', APP_DOMAIN . API_BASE_PATH);
 define('WEB_URL', APP_URL);
 define('ADMIN_URL', APP_URL . '/admin');
 

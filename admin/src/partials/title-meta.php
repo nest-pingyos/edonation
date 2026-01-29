@@ -7,4 +7,5 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
 <!-- App favicon -->
-<link rel="shortcut icon" href="/edonation/assets/images/favicon/favicon.png" type="image/png" />
+<link rel="shortcut icon"
+    href="<?php echo (defined('BASE_PATH') ? BASE_PATH : ''); ?>/assets/images/favicon/favicon.png" type="image/png" />

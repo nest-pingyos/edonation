@@ -281,6 +281,7 @@ class ReceiptController
             ], 'ยืนยันตัวตนสำเร็จ');
         }
 
+        error_log("Verify FAILED for receipt {$id}: input={$inputClean}, correct={$correctClean}");
         return Response::error('VERIFICATION_FAILED', 'เลขประจำตัวผู้เสียภาษีไม่ถูกต้อง', 401);
     }
 

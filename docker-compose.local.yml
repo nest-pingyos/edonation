@@ -37,7 +37,8 @@ services:
       - API_DOMAIN=http://localhost:8080
       - BASE_PATH=
       - API_BASE_PATH=/api
-      - JWT_SECRET=dev-secret-key-not-for-production
+      # JWT_SECRET must be at least 32 characters for security validation
+      - JWT_SECRET=dev-local-secret-key-32chars-minimum-for-testing-only
       - JWT_EXPIRE=86400
       # CMU OAuth (Microsoft Entra)
       - CMU_OAUTH_CLIENT_ID=9ff50902-00e4-482f-b3d0-f0d59d31c999
@@ -83,6 +84,9 @@ services:
 
     volumes:
       - mysql_local_data:/var/lib/mysql
+      # NOTE: If Docker can't access this path, add it in Docker Desktop > Settings > Resources > File Sharing
+      # Or manually import: docker exec -i edonation-local-db mysql -u root -prootpassword donation < database/donation.sql
+      # - ./database/donation.sql:/docker-entrypoint-initdb.d/01-donation.sql:ro
 
     networks:
       - edonation-local-network

@@ -43,7 +43,7 @@ class ServicesController
 
     public function __construct()
     {
-        $this->db = require_once __DIR__ . '/../../config/database.php';
+        $this->db = Database::getInstance();
     }
 
     /**

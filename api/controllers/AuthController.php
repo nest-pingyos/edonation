@@ -60,6 +60,9 @@ class AuthController
             case 'oauth/login':
                 return $this->oauthLogin();
 
+            case 'session-token':
+                return $this->getSessionToken();
+
             case 'oauth/callback':
                 return $this->oauthCallback();
 
@@ -213,59 +216,65 @@ class AuthController
         }
 
         $code = $data['code'];
-        $redirectUri = $data['redirect_uri'] ?? $this->getRedirectUri();
+        $passedRedirectUri = $data['redirect_uri'] ?? null;
 
-        // Exchange code for access token
+        // If on Port 8080, we must match the registered URI exactly
+        if (strpos($_SERVER['HTTP_HOST'] ?? '', ':8080') !== false) {
+            $redirectUri = 'http://localhost:8080/admin/src/auth-callback.php';
+        } else {
+            $redirectUri = $passedRedirectUri ?? $this->getRedirectUri();
+        }
+
+        // 1. Exchange code for access token with Microsoft
         $tokenResult = $this->exchangeCodeForToken($code, $redirectUri);
 
         if (!$tokenResult['success']) {
-            return Response::error('OAUTH_ERROR', $tokenResult['error'], 401);
+            error_log("Exchange Token Failure: " . $tokenResult['error']);
+            return Response::error('OAUTH_ERROR', "Microsoft Error: " . $tokenResult['error'], 401);
         }
 
         $accessToken = $tokenResult['access_token'];
 
-        // Get user info from CMU API
+        // 2. Get user info from CMU API
         $userInfo = $this->getCmuUserInfo($accessToken);
 
         if (!$userInfo || !isset($userInfo['cmuitaccount'])) {
             error_log("CMU User Info Error: " . json_encode($userInfo));
-            return Response::error('OAUTH_ERROR', 'ไม่สามารถดึงข้อมูลผู้ใช้จาก CMU Account ได้', 401);
+            return Response::error('OAUTH_ERROR', 'ไม่สามารถดึงข้อมูลผู้ใช้จาก CMU IT Account ได้', 401);
         }
 
         $email = $userInfo['cmuitaccount'];
 
-        // Check if user is authorized
+        // 3. Check if user is authorized in our database
         $authorizedUser = $this->getAdminUser($email);
 
         if (!$authorizedUser) {
-            return Response::error('UNAUTHORIZED', "คุณไม่มีสิทธิ์เข้าใช้งานระบบ Admin ({$email})", 403);
+            error_log("Access Denied: User $email not found in edonation_admin_users");
+            return Response::error('UNAUTHORIZED', "บัญชี {$email} ไม่มีสิทธิ์เข้าใช้งานระบบ Admin กรุณาติดต่อผู้ดูแลระบบ", 403);
         }
 
         if ($authorizedUser['status'] !== 'active') {
             return Response::error('ACCOUNT_DISABLED', 'บัญชีของคุณถูกระงับการใช้งาน', 403);
         }
 
-        // Update last login
+        // 4. Update last login
         $this->updateLastLogin($authorizedUser['id']);
 
-        // Build user data
-        $userData = [
+        // 5. Generate JWT Token
+        $tokenData = [
             'id' => $authorizedUser['id'],
-            'name' => trim(($userInfo['firstname_TH'] ?? '') . ' ' . ($userInfo['lastname_TH'] ?? '')),
-            'name_en' => trim(($userInfo['firstname_EN'] ?? '') . ' ' . ($userInfo['lastname_EN'] ?? '')),
+            'name' => ($userInfo['firstname_TH'] ?? $authorizedUser['name']) . ' ' . ($userInfo['lastname_TH'] ?? ''),
             'email' => $email,
-            'role' => $authorizedUser['role'],
-            'organization' => $userInfo['organization_name_TH'] ?? ''
+            'role' => $authorizedUser['role']
         ];
 
-        // Generate JWT token
-        $token = AuthMiddleware::generateToken($userData);
+        $jwt = AuthMiddleware::generateToken($tokenData);
 
         return Response::success([
-            'access_token' => $token,
+            'access_token' => $jwt,
             'token_type' => 'Bearer',
             'expires_in' => JWT_EXPIRE,
-            'user' => $userData
+            'user' => $tokenData
         ], 'เข้าสู่ระบบสำเร็จ');
     }
 
@@ -363,6 +372,36 @@ class AuthController
     }
 
     /**
+     * GET /auth/session-token
+     * Generate JWT token from PHP session (Bridge for Admin Panel)
+     */
+    private function getSessionToken(): array
+    {
+        $user = $_SESSION['backend_user'] ?? $_SESSION['user'] ?? null;
+
+        if (!$user || (isset($user['logged_in']) && $user['logged_in'] === false)) {
+            return Response::error('UNAUTHORIZED', 'Session not found', 401);
+        }
+
+        // Bridge session data to JWT format
+        $tokenData = [
+            'id' => $user['id'],
+            'name' => $user['name'] ?? $user['name_th'] ?? 'Admin',
+            'email' => $user['email'],
+            'role' => $user['role']
+        ];
+
+        $token = AuthMiddleware::generateToken($tokenData);
+
+        return Response::success([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => JWT_EXPIRE,
+            'user' => $tokenData
+        ], 'Token generated from session');
+    }
+
+    /**
      * GET /auth/me
      */
     private function me(): array
@@ -385,9 +424,13 @@ class AuthController
     {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
 
-        // Use auth-callback.php as registered in Azure AD
+        // Match logic in admin/src/config/oauth.php
+        if (strpos($host, ':8080') !== false) {
+            return $protocol . '://localhost:8080/admin/src/auth-callback.php';
+        }
+
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return $protocol . '://' . $host . $basePath . '/admin/src/auth-callback.php';
     }
 
@@ -395,8 +438,12 @@ class AuthController
     {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
 
+        if (strpos($host, ':8080') !== false) {
+            return $protocol . '://' . $host . '/admin/src';
+        }
+
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
         return $protocol . '://' . $host . $basePath . '/admin/src';
     }
 

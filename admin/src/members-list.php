@@ -1,5 +1,6 @@
 <?php include 'partials/main.php'; ?>
 <?php requireAuth(); ?>
+<?php require_once __DIR__ . '/../../config/autoprovince.php'; ?>
 
 <!doctype html>
 <html lang="th">
@@ -10,6 +11,7 @@
     include 'partials/title-meta.php'; ?>
 
     <?php include 'partials/head-css.php'; ?>
+    <?php autoprovinceCss(); ?>
     <style>
         /* Custom UI Tweaks */
         .card-flush {
@@ -332,26 +334,82 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">ที่อยู่</label>
-                            <input type="text" class="form-control mb-2" name="address_line" id="edit_address_line"
-                                placeholder="บ้านเลขที่, ถนน">
+                            <label class="form-label fw-bold">ที่อยู่สำหรับใบเสร็จ</label>
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <input type="text" class="form-control" name="address_line" id="edit_address_line"
+                                        placeholder="บ้านเลขที่, ซอย, ถนน">
+                                </div>
+                            </div>
                             <div class="row g-2">
-                                <div class="col-md-3">
-                                    <input type="text" class="form-control" name="district" id="edit_district"
-                                        placeholder="ตำบล">
+                                <div class="col-md-6">
+                                    <label class="form-label">จังหวัด</label>
+                                    <select class="form-select" id="edit_province" name="province">
+                                        <option value="">-- เลือกจังหวัด --</option>
+                                    </select>
                                 </div>
-                                <div class="col-md-3">
-                                    <input type="text" class="form-control" name="amphure" id="edit_amphure"
-                                        placeholder="อำเภอ">
+                                <div class="col-md-6">
+                                    <label class="form-label">อำเภอ/เขต</label>
+                                    <select class="form-select" id="edit_amphure" name="amphure" disabled>
+                                        <option value="">-- เลือกอำเภอ/เขต --</option>
+                                    </select>
                                 </div>
-                                <div class="col-md-3">
-                                    <input type="text" class="form-control" name="province" id="edit_province"
-                                        placeholder="จังหวัด">
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำบล/แขวง</label>
+                                    <select class="form-select" id="edit_district" name="district" disabled>
+                                        <option value="">-- เลือกตำบล/แขวง --</option>
+                                    </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">รหัสไปรษณีย์</label>
                                     <input type="text" class="form-control" name="zip_code" id="edit_zip_code"
-                                        placeholder="รหัสไปรษณีย์">
+                                        placeholder="รหัสไปรษณีย์" readonly>
                                 </div>
+                                <input type="hidden" name="address" id="edit_address">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold mb-0">ที่อยู่จัดส่งใบเสร็จ</label>
+                                <button type="button" class="btn btn-sm btn-outline-info"
+                                    onclick="copyReceiptAddressEdit()">
+                                    ใช้ที่อยู่เดียวกับใบเสร็จ
+                                </button>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <input type="text" class="form-control" name="ship_address_line"
+                                        id="edit_ship_address_line" placeholder="บ้านเลขที่, ซอย, ถนน">
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">จังหวัด</label>
+                                    <select class="form-select" id="edit_ship_province" name="ship_province">
+                                        <option value="">-- เลือกจังหวัด --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">อำเภอ/เขต</label>
+                                    <select class="form-select" id="edit_ship_district" name="ship_district" disabled>
+                                        <option value="">-- เลือกอำเภอ/เขต --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำบล/แขวง</label>
+                                    <select class="form-select" id="edit_ship_subdistrict" name="ship_subdistrict"
+                                        disabled>
+                                        <option value="">-- เลือกตำบล/แขวง --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">รหัสไปรษณีย์</label>
+                                    <input type="text" class="form-control" name="ship_zip_code" id="edit_ship_zip_code"
+                                        placeholder="รหัสไปรษณีย์" readonly>
+                                </div>
+                                <input type="hidden" name="shipping_address" id="edit_shipping_address">
                             </div>
                         </div>
                     </div>
@@ -365,17 +423,108 @@
     </div>
 
     <?php include 'partials/vendor-scripts.php'; ?>
+
+    <!-- Explicitly Include Select2 (Fix for missing dependency in partials) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet" />
+
+    <script>
+        // Hack to force Select2 to attach to global jQuery if an AMD loader is present
+        var _oldDefine = window.define;
+        window.define = undefined;
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script>
+        window.define = _oldDefine;
+    </script>
+
     <script src="assets/js/api-helper.js"></script>
+    <?php autoprovinceJs(); ?>
 
     <script>
         let members = [];
         let currentPage = 1;
         let totalPages = 1;
         let perPage = 25;
+        let apReceipt, apShipping;
 
         document.addEventListener('DOMContentLoaded', function () {
             loadMembers();
+            initAutoProvince();
         });
+
+        function initAutoProvince() {
+            apReceipt = new AutoProvince({
+                province: '#edit_province',
+                amphure: '#edit_amphure',
+                subdistrict: '#edit_district',
+                postcode: '#edit_zip_code',
+                arrange: 'p-a-d-z',
+                onDistrictChange: function () {
+                    updateFullAddressEdit();
+                }
+            });
+
+            apShipping = new AutoProvince({
+                province: '#edit_ship_province',
+                amphure: '#edit_ship_district',
+                subdistrict: '#edit_ship_subdistrict',
+                postcode: '#edit_ship_zip_code',
+                arrange: 'p-a-d-z',
+                onDistrictChange: function () {
+                    updateShippingFullAddressEdit();
+                }
+            });
+
+            // Re-init when province/amphure/district changed manually to update full address
+            $('#edit_province, #edit_amphure, #edit_district, #edit_address_line').on('change', updateFullAddressEdit);
+            $('#edit_ship_province, #edit_ship_district, #edit_ship_subdistrict, #edit_ship_address_line').on('change', updateShippingFullAddressEdit);
+        }
+
+        function buildFullAddress(lineSelector, districtSelector, amphureSelector, provinceSelector, zipSelector) {
+            const line = $(lineSelector).val().trim();
+            const d = $(districtSelector + ' option:selected').text();
+            const a = $(amphureSelector + ' option:selected').text();
+            const p = $(provinceSelector + ' option:selected').text();
+            const z = $(zipSelector).val();
+
+            const clean = (s) => (s && !s.includes('--')) ? s.replace(/^(จ\.|อ\.|ต\.|จังหวัด|อำเภอ|ตำบล|เขต|แขวง)\s*/, '').trim() : '';
+            const sClean = clean(d), aClean = clean(a), pClean = clean(p);
+
+            if (!pClean) return line;
+
+            let parts = [line];
+            if (sClean) parts.push('ต.' + sClean);
+            if (aClean) parts.push('อ.' + aClean);
+            if (pClean) parts.push('จ.' + pClean);
+            if (z) parts.push(z);
+
+            return parts.filter(x => x).join(' ');
+        }
+
+        function updateFullAddressEdit() {
+            $('#edit_address').val(buildFullAddress('#edit_address_line', '#edit_district', '#edit_amphure', '#edit_province', '#edit_zip_code'));
+        }
+
+        function updateShippingFullAddressEdit() {
+            $('#edit_shipping_address').val(buildFullAddress('#edit_ship_address_line', '#edit_ship_subdistrict', '#edit_ship_district', '#edit_ship_province', '#edit_ship_zip_code'));
+        }
+
+        async function copyReceiptAddressEdit() {
+            $('#edit_ship_address_line').val($('#edit_address_line').val());
+
+            const p = $('#edit_province').val();
+            const a = $('#edit_amphure').val();
+            const d = $('#edit_district').val();
+            const z = $('#edit_zip_code').val();
+
+            if (p) {
+                // Show loading state or block UI if needed
+                await apShipping.set(p, a, d);
+                updateShippingFullAddressEdit();
+            }
+        }
 
         function handleSearch(e) {
             if (e.key === 'Enter') {
@@ -567,8 +716,11 @@
             // body has loading spinner initally
 
             document.getElementById('btn-edit-modal').onclick = () => {
+                const el = document.getElementById('memberModal');
+                el.addEventListener('hidden.bs.modal', () => {
+                    editMember(idMembers);
+                }, { once: true });
                 modal.hide();
-                editMember(idMembers);
             };
 
             try {
@@ -665,12 +817,24 @@
                 document.getElementById('edit_occupation').value = data.occupation || '';
 
                 if (data.address) {
-                    document.getElementById('edit_address_line').value = data.address.address_line || '';
-                    document.getElementById('edit_district').value = data.address.district || '';
-                    document.getElementById('edit_amphure').value = data.address.amphure || '';
-                    document.getElementById('edit_province').value = data.address.province || '';
-                    document.getElementById('edit_zip_code').value = data.address.zip_code || '';
+                    $('#edit_address_line').val(data.address.address_line || '');
+                    if (data.address.province) {
+                        await apReceipt.set(data.address.province, data.address.district, data.address.subdistrict);
+                    }
                 }
+
+                if (data.shipping_address_data) {
+                    const sa = data.shipping_address_data;
+                    $('#edit_ship_address_line').val(sa.address_line || '');
+                    if (sa.province) {
+                        await apShipping.set(sa.province, sa.district, sa.subdistrict);
+                    }
+                } else if (data.shipping_address) {
+                    $('#edit_ship_address_line').val(data.shipping_address);
+                }
+                
+                updateFullAddressEdit();
+                updateShippingFullAddressEdit();
 
                 modal.show();
             } catch (e) {
@@ -681,10 +845,14 @@
         async function updateMember(e) {
             e.preventDefault();
             const idMembers = document.getElementById('edit_id_members').value;
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
-
             try {
+                // Ensure full addresses are updated before submit
+                updateFullAddressEdit();
+                updateShippingFullAddressEdit();
+
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+
                 await apiPost(`/members/${encodeURIComponent(idMembers)}/update`, data);
                 showSuccess('อัพเดทข้อมูลเรียบร้อยแล้ว');
                 bootstrap.Modal.getInstance(document.getElementById('editMemberModal')).hide();

@@ -83,7 +83,7 @@ class SignatureController
     private function index(): array
     {
         $columns = implode(', ', self::SELECT_COLUMNS);
-        $sql = "SELECT {$columns} FROM signature_config ORDER BY fiscal_year DESC";
+        $sql = "SELECT {$columns} FROM edonation_signature_config ORDER BY fiscal_year DESC";
 
         $stmt = $this->pdo->query($sql);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -104,7 +104,7 @@ class SignatureController
         }
 
         $columns = implode(', ', self::SELECT_COLUMNS);
-        $sql = "SELECT {$columns} FROM signature_config WHERE fiscal_year = :year LIMIT 1";
+        $sql = "SELECT {$columns} FROM edonation_signature_config WHERE fiscal_year = :year LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':year' => $year]);
@@ -157,7 +157,7 @@ class SignatureController
         }
 
         // Insert
-        $sql = "INSERT INTO signature_config 
+        $sql = "INSERT INTO edonation_signature_config 
                 (fiscal_year, dean_signature, dean_name, collector_signature, collector_name, is_active)
                 VALUES (:fiscal_year, :dean_signature, :dean_name, :collector_signature, :collector_name, :is_active)";
 
@@ -210,7 +210,7 @@ class SignatureController
             return Response::error('VALIDATION_ERROR', 'ไม่มีข้อมูลที่ต้องอัปเดต');
         }
 
-        $sql = "UPDATE signature_config SET " . implode(', ', $updates) . " WHERE fiscal_year = :year";
+        $sql = "UPDATE edonation_signature_config SET " . implode(', ', $updates) . " WHERE fiscal_year = :year";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
 
@@ -233,7 +233,7 @@ class SignatureController
             return Response::notFound('ไม่พบข้อมูลลายเซ็นสำหรับปี ' . $year);
         }
 
-        $sql = "DELETE FROM signature_config WHERE fiscal_year = :year";
+        $sql = "DELETE FROM edonation_signature_config WHERE fiscal_year = :year";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':year' => $year]);
 
@@ -249,7 +249,7 @@ class SignatureController
     {
         $columns = implode(', ', self::SELECT_COLUMNS);
         $sql = "SELECT {$columns}
-                FROM signature_config 
+                FROM edonation_signature_config 
                 WHERE fiscal_year <= :year AND is_active = 1 
                 ORDER BY fiscal_year DESC 
                 LIMIT 1";
@@ -266,7 +266,7 @@ class SignatureController
     private function fiscalYearExists(string $year): bool
     {
         $stmt = $this->pdo->prepare(
-            "SELECT 1 FROM signature_config WHERE fiscal_year = :year LIMIT 1"
+            "SELECT 1 FROM edonation_signature_config WHERE fiscal_year = :year LIMIT 1"
         );
         $stmt->execute([':year' => $year]);
 

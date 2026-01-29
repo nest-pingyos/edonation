@@ -382,11 +382,8 @@ class MemberController
     private function update(string $idMembers): array
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
-
-        // Validation
-        if (empty($data['first_name'])) {
+        if (empty($data['first_name']))
             return Response::error('VALIDATION_ERROR', 'กรุณาระบุชื่อ');
-        }
 
         try {
             $this->pdo->beginTransaction();
@@ -395,71 +392,101 @@ class MemberController
             $firstName = $data['first_name'];
             $lastName = $data['last_name'] ?? '';
             $fullName = trim("$title $firstName $lastName");
+            $idCard = preg_replace('/\D/', '', $data['id_card'] ?? '');
 
-            // 1. Update Receipts (payer_name, id_card)
-            $sqlReceipts = "UPDATE edonation_receipts 
-                            SET payer_name = :name, 
-                                id_card = :id_card
-                            WHERE id_members = :id_members";
-            $stmtReceipts = $this->pdo->prepare($sqlReceipts);
-            $stmtReceipts->execute([
-                ':name' => $fullName,
-                ':id_card' => preg_replace('/\D/', '', $data['id_card'] ?? ''),
-                ':id_members' => $idMembers
-            ]);
+            // Shared address common values
+            $addr = [
+                'line' => $data['address_line'] ?? '',
+                'prov' => $data['province'] ?? '',
+                'amp' => $data['amphure'] ?? '',
+                'dist' => $data['district'] ?? '', // Form district is Tambon
+                'zip' => $data['zip_code'] ?? $data['postcode'] ?? '',
+                'full' => $data['address'] ?? ''
+            ];
 
-            // 2. Update Donat Users (Name, Address, Phone) linked to this member
-            // ต้องหา donation_id ทั้งหมดก่อน หรือใช้ Join Update (MySQL supports Multi-table update but simple approach is better compatible)
+            $ship = [
+                'line' => $data['ship_address_line'] ?? '',
+                'prov' => $data['ship_province'] ?? '',
+                'amp' => $data['ship_district'] ?? '',
+                'dist' => $data['ship_subdistrict'] ?? '',
+                'zip' => $data['ship_zip_code'] ?? '',
+                'full' => $data['shipping_address'] ?? ''
+            ];
 
-            // Get all donation IDs
-            $stmtIds = $this->pdo->prepare("SELECT donation_id FROM edonation_receipts WHERE id_members = :id_members");
-            $stmtIds->execute([':id_members' => $idMembers]);
-            $donationIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+            // 1. Update Receipts
+            $stmt = $this->pdo->prepare("UPDATE edonation_receipts SET payer_name = ?, id_card = ? WHERE id_members = ?");
+            $stmt->execute([$fullName, $idCard, $idMembers]);
 
-            if (!empty($donationIds)) {
-                $idsParams = implode(',', array_fill(0, count($donationIds), '?'));
-                $sqlDonat = "UPDATE edonation_donat_user 
-                             SET title = ?, 
-                                 first_name = ?, 
-                                 last_name = ?, 
-                                 phone = ?, 
-                                 occupation = ?,
-                                 id_card = ?, 
-                                 receipt_address = ?,
-                                 address_line = ?,
-                                 district = ?, 
-                                 amphure = ?,
-                                 province = ?,
-                                 zip_code = ?
-                             WHERE id IN ($idsParams)";
+            // 2. Cascade to donat_user
+            $donationIds = $this->pdo->prepare("SELECT donation_id FROM edonation_receipts WHERE id_members = ?");
+            $donationIds->execute([$idMembers]);
+            $ids = $donationIds->fetchAll(PDO::FETCH_COLUMN);
 
-                $stmtDonat = $this->pdo->prepare($sqlDonat);
-                // เรียง params ตามลำดับ ?
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $sqlDonat = "UPDATE edonation_donat_user SET 
+                    title=?, first_name=?, last_name=?, phone=?, occupation=?, id_card=?, 
+                    receipt_address=?, address_line=?, district=?, amphure=?, province=?, zip_code=?,
+                    shipping_address=?, ship_address_line=?, ship_district=?, ship_amphure=?, ship_province=?, ship_zip_code=?
+                    WHERE id IN ($placeholders)";
+
                 $params = [
                     $title,
                     $firstName,
                     $lastName,
                     $data['phone'] ?? '',
-                    $data['occupation'] ?? '', // เพิ่มอาชีพ
-                    preg_replace('/\D/', '', $data['id_card'] ?? ''),
-                    $data['address'] ?? '',
-                    $data['address_line'] ?? '',
-                    $data['district'] ?? '', // ตำบล
-                    $data['amphure'] ?? '',  // อำเภอ
-                    $data['province'] ?? '',
-                    $data['zip_code'] ?? ''
+                    $data['occupation'] ?? '',
+                    $idCard,
+                    $addr['full'],
+                    $addr['line'],
+                    $addr['dist'],
+                    $addr['amp'],
+                    $addr['prov'],
+                    $addr['zip'],
+                    $ship['full'],
+                    $ship['line'],
+                    $ship['dist'],
+                    $ship['amp'],
+                    $ship['prov'],
+                    $ship['zip']
                 ];
-
-                // Append donation IDs to params
-                $params = array_merge($params, $donationIds);
-                $stmtDonat->execute($params);
+                $this->pdo->prepare($sqlDonat)->execute(array_merge($params, $ids));
             }
+
+            // 3. Update members table
+            $sqlMember = "UPDATE edonation_members SET 
+                title=?, first_name=?, last_name=?, id_card=?, phone=?, occupation=?, 
+                address_line=?, province=?, district=?, subdistrict=?, zip_code=?, full_address=?,
+                ship_address_line=?, ship_province=?, ship_district=?, ship_subdistrict=?, ship_zip_code=?, shipping_address=?
+                WHERE id_members = ?";
+
+            $this->pdo->prepare($sqlMember)->execute([
+                $title,
+                $firstName,
+                $lastName,
+                $idCard,
+                $data['phone'] ?? '',
+                $data['occupation'] ?? '',
+                $addr['line'],
+                $addr['prov'],
+                $addr['amp'],
+                $addr['dist'],
+                $addr['zip'],
+                $addr['full'],
+                $ship['line'],
+                $ship['prov'],
+                $ship['amp'],
+                $ship['dist'],
+                $ship['zip'],
+                $ship['full'],
+                $idMembers
+            ]);
 
             $this->pdo->commit();
             return Response::success(['id_members' => $idMembers], 'บันทึกข้อมูลเรียบร้อย');
-
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction())
+                $this->pdo->rollBack();
             return Response::error('DATABASE_ERROR', 'เกิดข้อผิดพลาด: ' . $e->getMessage());
         }
     }
@@ -680,8 +707,10 @@ class MemberController
         // ดึงข้อมูลจากตาราง edonation_members (explicit columns)
         $sql = "SELECT id, id_members, id_card, type, full_name, title, first_name, last_name, 
                        phone, email, occupation, full_address, address_line, province, district, 
-                       subdistrict, zip_code, total_donated, donation_count, first_donation_date, 
-                       last_donation_date, benefactor_level, is_active, created_at, updated_at
+                       subdistrict, zip_code, shipping_address, ship_address_line, ship_province, 
+                       ship_district, ship_subdistrict, ship_zip_code, total_donated, donation_count, 
+                       first_donation_date, last_donation_date, benefactor_level, is_active, 
+                       created_at, updated_at
                 FROM edonation_members 
                 WHERE id_members = :id_members AND is_active = 1";
 
@@ -757,6 +786,15 @@ class MemberController
                 'subdistrict' => $member['subdistrict'],
                 'zip_code' => $member['zip_code']
             ],
+            'shipping_address_data' => [
+                'full' => $member['shipping_address'],
+                'address_line' => $member['ship_address_line'],
+                'province' => $member['ship_province'],
+                'district' => $member['ship_district'],
+                'subdistrict' => $member['ship_subdistrict'],
+                'zip_code' => $member['ship_zip_code']
+            ],
+            'shipping_address' => $member['shipping_address'],
             'statistics' => [
                 'receipt_count' => $receiptCount,
                 'total_amount' => $totalAmount,

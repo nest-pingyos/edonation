@@ -20,13 +20,8 @@ define('CMU_BASICINFO_URL', 'https://api.cmu.ac.th/mis/cmuaccount/prod/v3/me/bas
 // Determine redirect URI based on environment
 function getCmuOAuthRedirectUri(): string
 {
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-    // Get BASE_PATH from config if available
-    $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-
-    return $protocol . '://' . $host . $basePath . '/admin/src/auth-callback.php';
+    $baseUrl = defined('APP_URL') ? APP_URL : '';
+    return $baseUrl . '/admin/src/auth-callback.php';
 }
 
 /**

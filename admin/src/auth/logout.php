@@ -1,11 +1,9 @@
 <?php
-session_start();
+// Include session service (this handles session_start and session_name)
+require_once __DIR__ . '/../services/session.php';
 
-// Clear CMU OAuth session
-unset($_SESSION['backend_user']);
-
-// Destroy entire session
-session_destroy();
+// Securely logout and destroy session
+logoutSession();
 
 // Redirect to login page
 header("Location: login.php");

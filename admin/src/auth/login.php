@@ -1,9 +1,9 @@
 <?php
-session_start();
-require_once __DIR__ . '/../config/config.php';
+// Include session service (this handles session_start and session_name)
+require_once __DIR__ . '/../services/session.php';
 
-// Redirect if already logged in
-if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true) {
+// Redirect if already logged in using unified check
+if (isLoggedIn()) {
     header('Location: ../index.php');
     exit();
 }
@@ -12,9 +12,10 @@ if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] =
 $error = $_SESSION['auth_error'] ?? $_GET['error'] ?? null;
 unset($_SESSION['auth_error']);
 
-// API base URL - handle empty BASE_PATH for Docker
-$basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-$apiBase = ($basePath === '' ? '' : $basePath) . '/api/v1';
+// Use constants from config.php (already included via session.php)
+$basePath = defined('BASE_PATH') ? BASE_PATH : '';
+$apiBase = defined('API_BASE_PATH') ? API_BASE_PATH : '/api';
+$apiBaseV1 = $apiBase . '/v1';
 ?>
 <!doctype html>
 <html lang="th">
@@ -230,60 +231,62 @@ $apiBase = ($basePath === '' ? '' : $basePath) . '/api/v1';
                 <span id="btnText">Sign in with CMU Account</span>
             </button>
 
-
+            <div class="dev-login">
+                <button type="button" class="btn-dev" onclick="devLogin()">
+                    Developer Login (admin / admin123)
+                </button>
+            </div>
+        </div>
+                © <?= date('Y') ?> Faculty of Nursing, Chiang Mai University
+            </p>
         </div>
 
-        <p class="footer">
-            © <?= date('Y') ?> Faculty of Nursing, Chiang Mai University
-        </p>
-    </div>
+        <script>
+            const API_BASE = '<?= $apiBaseV1 ?>';
 
-    <script>
-        const API_BASE = '<?= $apiBase ?>';
+            async function loginWithCmu() {
+                const btn = document.getElementById('btnLogin');
+                const text = document.getElementById('btnText');
 
-        async function loginWithCmu() {
-            const btn = document.getElementById('btnLogin');
-            const text = document.getElementById('btnText');
+                btn.disabled = true;
+                text.innerHTML = '<span class="spinner"></span> กำลังเชื่อมต่อ...';
 
-            btn.disabled = true;
-            text.innerHTML = '<span class="spinner"></span> กำลังเชื่อมต่อ...';
+                try {
+                    const res = await fetch(`${API_BASE}/auth/oauth/login`);
+                    const data = await res.json();
 
-            try {
-                const res = await fetch(`${API_BASE}/auth/oauth/login`);
-                const data = await res.json();
-
-                if (data.success && data.data?.auth_url) {
-                    window.location.href = data.data.auth_url;
-                } else {
-                    throw new Error(data.error?.message || 'Connection failed');
+                    if (data.success && data.data?.auth_url) {
+                        window.location.href = data.data.auth_url;
+                    } else {
+                        throw new Error(data.error?.message || 'Connection failed');
+                    }
+                } catch (e) {
+                    alert('เกิดข้อผิดพลาด: ' + e.message);
+                    btn.disabled = false;
+                    text.textContent = 'Sign in with CMU Account';
                 }
-            } catch (e) {
-                alert('เกิดข้อผิดพลาด: ' + e.message);
-                btn.disabled = false;
-                text.textContent = 'Sign in with CMU Account';
             }
-        }
 
-        async function devLogin() {
-            try {
-                const res = await fetch(`${API_BASE}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
-                });
-                const data = await res.json();
+            async function devLogin() {
+                try {
+                    const res = await fetch(`${API_BASE}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                    });
+                    const data = await res.json();
 
-                if (data.success) {
-                    localStorage.setItem('access_token', data.data.access_token);
-                    window.location.href = '../index.php';
-                } else {
-                    alert(data.error?.message || 'Login failed');
+                    if (data.success) {
+                        localStorage.setItem('access_token', data.data.access_token);
+                        window.location.href = '../index.php';
+                    } else {
+                        alert(data.error?.message || 'Login failed');
+                    }
+                } catch (e) {
+                    alert('Error: ' + e.message);
                 }
-            } catch (e) {
-                alert('Error: ' + e.message);
             }
-        }
-    </script>
+        </script>
 </body>
 
 </html>

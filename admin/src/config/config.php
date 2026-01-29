@@ -48,28 +48,44 @@ foreach ($envVars as $key => $value) {
 }
 
 // ===== Domain & URL Configuration =====
-// App Domain (Web & Admin)
-define('APP_DOMAIN', getenv('APP_DOMAIN') ?: 'http://localhost');
+$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-// API Domain (can be separate from App Domain)
-define('API_DOMAIN', getenv('API_DOMAIN') ?: APP_DOMAIN);
-
-// Base paths - handle empty BASE_PATH for Docker (getenv returns false if not set, empty string if set to "")
+// Determine BASE_PATH
 $envBasePath = getenv('BASE_PATH');
-define('BASE_PATH', $envBasePath !== false ? $envBasePath : '/edonation');
-define('API_BASE_PATH', getenv('API_BASE_PATH') ?: BASE_PATH . '/api');
+if ($envBasePath === false) {
+    // Auto-detect BASE_PATH if not set in .env
+    // If localhost:8080 (Docker), we usually expect root
+    if (strpos($host, ':8080') !== false) {
+        $envBasePath = '';
+    } else if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
+        $envBasePath = '/edonation';
+    } else {
+        $envBasePath = '/edonation'; // Default fallback for production /edonation
+    }
+}
+define('BASE_PATH', rtrim($envBasePath, '/'));
 
-// ===== Full URLs =====
-define('APP_URL', APP_DOMAIN . BASE_PATH);
-define('API_URL', API_DOMAIN . API_BASE_PATH . '/v1');
+// Full URLs
+define('APP_URL', "{$protocol}://{$host}" . BASE_PATH);
+define('API_URL', APP_URL . '/api/v1');
+
+// Deprecated constants (keep for compatibility if needed, but aim to use APP_URL/API_URL)
+define('APP_DOMAIN', "{$protocol}://{$host}");
+define('API_DOMAIN', APP_DOMAIN);
+define('API_BASE_PATH', BASE_PATH . '/api');
 
 // Admin paths
-define('ADMIN_PATH', BASE_PATH . '/admin/src');
-define('WEB_PATH', BASE_PATH);
+if (!defined('ADMIN_PATH'))
+    define('ADMIN_PATH', BASE_PATH . '/admin/src');
+if (!defined('WEB_PATH'))
+    define('WEB_PATH', BASE_PATH);
 
 // Relative paths (for same-domain navigation)
-define('ADMIN_URL_RELATIVE', ADMIN_PATH);
-define('API_URL_RELATIVE', BASE_PATH . '/api/v1');
+if (!defined('ADMIN_URL_RELATIVE'))
+    define('ADMIN_URL_RELATIVE', ADMIN_PATH);
+if (!defined('API_URL_RELATIVE'))
+    define('API_URL_RELATIVE', BASE_PATH . '/api/v1');
 
 // Application Config
 define('APP_ENV', getenv('APP_ENV') ?: 'production');
@@ -85,11 +101,52 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_CHARSET', 'utf8mb4');
 
 // Session Config
-define('SESSION_LIFETIME', 3600); // 1 hour
-define('SESSION_NAME', 'edonation_admin');
+if (!defined('SESSION_LIFETIME')) {
+    define('SESSION_LIFETIME', (int) (getenv('SESSION_LIFETIME') ?: 28800)); // 8 hours default
+}
+if (!defined('SESSION_NAME')) {
+    define('SESSION_NAME', 'edonation_admin');
+}
 
 // Security
 define('CSRF_TOKEN_NAME', 'csrf_token');
+
+// ===== JWT Configuration (CRITICAL SECURITY) =====
+// JWT_SECRET must be a strong random string (32+ bytes / 64+ hex characters)
+$jwtSecret = getenv('JWT_SECRET');
+
+// Validate JWT_SECRET in production
+if (APP_ENV === 'production') {
+    if (empty($jwtSecret) || strlen($jwtSecret) < 32) {
+        error_log('SECURITY ERROR: JWT_SECRET is missing or too short! Generate with: php -r "echo bin2hex(random_bytes(32));"');
+        die('Security configuration error. Please contact administrator.');
+    }
+
+    // Check for default/weak secrets
+    $weakSecrets = [
+        'your-dev-secret-key-for-edonation-2025',
+        'secret',
+        'password',
+        'changeme',
+        'GENERATE_NEW_SECRET_WITH_COMMAND_ABOVE'
+    ];
+    if (in_array($jwtSecret, $weakSecrets, true)) {
+        error_log('SECURITY ERROR: JWT_SECRET is using a weak default value!');
+        die('Security configuration error. Please contact administrator.');
+    }
+}
+
+define('JWT_SECRET', $jwtSecret ?: 'dev-only-secret-' . md5(__FILE__));
+define('JWT_EXPIRE', (int) (getenv('JWT_EXPIRE') ?: 28800)); // 8 hours default
+
+// ===== Secure Cookie Configuration =====
+// Force HTTPS cookies in production
+$isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+$forceSecureCookie = getenv('COOKIE_SECURE') === 'true' || (APP_ENV === 'production' && $isHttps);
+
+define('COOKIE_SECURE', $forceSecureCookie);
+define('COOKIE_HTTPONLY', true);
+define('COOKIE_SAMESITE', getenv('COOKIE_SAMESITE') ?: 'Lax');
 
 // Thai Buddhist Year offset
 define('BE_OFFSET', 543);

@@ -542,28 +542,30 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Init AutoProvince for Receipt
             receiptAutoAddr = new AutoProvince({
-                provinceSelector: '#province',
-                districtSelector: '#district',
-                subdistrictSelector: '#subdistrict',
-                postcodeSelector: '#postcode',
-                onAddressComplete: function (addr) {
-                    updateFullAddress();
-                }
-            });
+            apiPath: '<?php echo AUTOPROVINCE_API_PATH; ?>',
+            provinceSelector: '#province',
+            districtSelector: '#district',
+            subdistrictSelector: '#subdistrict',
+            postcodeSelector: '#postcode',
+            onAddressComplete: function (addr) {
+                updateFullAddress();
+            }
+        });
 
-            // Init AutoProvince for Shipping
-            shippingAutoAddr = new AutoProvince({
-                provinceSelector: '#ship_province',
-                districtSelector: '#ship_district',
-                subdistrictSelector: '#ship_subdistrict',
-                postcodeSelector: '#ship_postcode',
-                onAddressComplete: function (addr) {
-                    updateShippingFullAddress();
-                }
-            });
+        // Init AutoProvince for Shipping
+        shippingAutoAddr = new AutoProvince({
+            apiPath: '<?php echo AUTOPROVINCE_API_PATH; ?>',
+            provinceSelector: '#ship_province',
+            districtSelector: '#ship_district',
+            subdistrictSelector: '#ship_subdistrict',
+            postcodeSelector: '#ship_postcode',
+            onAddressComplete: function (addr) {
+                updateShippingFullAddress();
+            }
+        });
 
-            loadProjects();
-            setDefaultDate();
+        loadProjects();
+        setDefaultDate();
         });
 
         // ===== AUTOPROVINCE FUNCTIONS =====

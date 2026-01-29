@@ -43,18 +43,18 @@
     font-size: 0.9rem;
 }
 
-.address-section .form-select,
-.address-section .form-control {
+.form-select,
+.form-control {
     border-radius: 8px;
     border: 1px solid #d1d5db;
     padding: 10px 14px;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     transition: all 0.2s ease;
     background-color: #f9fafb;
 }
 
-.address-section .form-select:focus,
-.address-section .form-control:focus {
+.form-select:focus,
+.form-control:focus {
     border-color: #4f46e5;
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
     background-color: #fff;
@@ -77,25 +77,31 @@
 }
 
 /* Select2 customization for address fields */
-.address-section .select2-container--bootstrap-5 .select2-selection {
+.select2-container--bootstrap-5 .select2-selection {
     border-radius: 8px !important;
     border: 1px solid #d1d5db !important;
     min-height: 42px !important;
     padding: 4px 8px !important;
+    font-size: 0.9rem !important;
 }
 
-.address-section .select2-container--bootstrap-5 .select2-selection:focus,
-.address-section .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+.select2-container--bootstrap-5 .select2-selection:focus,
+.select2-container--bootstrap-5.select2-container--focus .select2-selection {
     border-color: #4f46e5 !important;
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
 }
 
-.address-section .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
     padding-left: 8px !important;
     color: #374151 !important;
+    line-height: 32px !important;
 }
 
-.address-section .select2-container--bootstrap-5 .select2-selection__placeholder {
+.select2-container--bootstrap-5 .select2-dropdown .select2-results__option {
+    font-size: 0.9rem !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection__placeholder {
     color: #9ca3af !important;
 }
 

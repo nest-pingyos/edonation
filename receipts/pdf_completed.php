@@ -261,34 +261,51 @@ function convertToEnglish($thb)
 /**
  * เรียกข้อมูลผ่าน API
  */
+/**
+ * เรียกข้อมูลใบเสร็จจากฐานข้อมูลโดยตรง
+ */
 function fetchReceiptData($receiptId)
 {
-    // Use BASE_PATH from config
-    $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-    $apiUrl = "http://" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "{$basePath}/api/v1/receipts/{$receiptId}/details";
+    global $pdo;
 
-    // สร้าง context สำหรับ HTTP request
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => 'Content-Type: application/json',
-            'timeout' => 10
-        ]
-    ]);
+    try {
+        $sql = "SELECT 
+                    r.id,
+                    r.receipt_no,
+                    r.payer_name,
+                    r.amount,
+                    r.issued_at AS receipt_date,
+                    r.donation_id,
+                    r.id_card,
+                    r.id_members,
+                    du.project_name,
+                    du.project_number,
+                    du.payby AS pay_by,
+                    du.fiscal_year,
+                    du.first_name,
+                    du.last_name,
+                    du.receipt_address AS address,
+                    du.address_line,
+                    du.province,
+                    du.amphure,
+                    du.district,
+                    du.zip_code,
+                    bt.billPaymentRef2,
+                    bt.billPaymentRef1,
+                    bt.payerAccountName,
+                    r.status
+                FROM edonation_receipts r
+                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
+                LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
+                WHERE r.id = :id";
 
-    $response = @file_get_contents($apiUrl, false, $context);
-
-    if ($response === false) {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':id' => $receiptId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (PDOException $e) {
+        error_log("PDF Maker DB Error (Receipt): " . $e->getMessage());
         return null;
     }
-
-    $data = json_decode($response, true);
-
-    if (!$data || !$data['success']) {
-        return null;
-    }
-
-    return $data['data'];
 }
 
 /**
@@ -499,33 +516,26 @@ $fiscalYear = intval($data['fiscal_year']);
 /**
  * ดึง config ลายเซ็นจาก API
  */
+/**
+ * ดึง config ลายเซ็นจากฐานข้อมูลโดยตรง
+ */
 function fetchSignatureConfig($year)
 {
-    // Use BASE_PATH from config
-    $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
-    $apiUrl = "http://" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "{$basePath}/api/v1/signatures/{$year}";
+    global $pdo;
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => 'Content-Type: application/json',
-            'timeout' => 5
-        ]
-    ]);
+    try {
+        // หาปีที่ระบุ หรือหาปีที่ใกล้ที่สุดที่ active
+        $sql = "SELECT * FROM edonation_signature_config 
+                WHERE fiscal_year <= :year AND is_active = 1 
+                ORDER BY fiscal_year DESC LIMIT 1";
 
-    $response = @file_get_contents($apiUrl, false, $context);
-
-    if ($response === false) {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':year' => (int) $year]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (PDOException $e) {
+        error_log("PDF Maker DB Error (Signature): " . $e->getMessage());
         return null;
     }
-
-    $data = json_decode($response, true);
-
-    if (!$data || !$data['success']) {
-        return null;
-    }
-
-    return $data['data'];
 }
 
 // ดึงจาก API

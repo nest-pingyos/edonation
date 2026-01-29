@@ -8,32 +8,79 @@
 // API Base URL - detect from current location
 if (typeof API_BASE === 'undefined') {
     var API_BASE = (() => {
-        // Get base path from current URL (handles /appdev/edonation, /edonation or root)
         const path = window.location.pathname;
-        // Look for /edonation or /appdev/edonation pattern
-        const match = path.match(/^(.*?\/edonation)/);
-        if (match) {
-            return match[1] + '/api/v1';
+        const adminIndex = path.indexOf('/admin/');
+        if (adminIndex !== -1) {
+            return path.substring(0, adminIndex) + '/api/v1';
         }
-        // If no /edonation pattern found (Docker root deployment), use /api/v1
+        // Fallback for root or other structures
         return '/api/v1';
     })();
 }
 
 /**
- * HTTP Request Functions
+ * HTTP Request Functions with Self-Healing Auth
  */
-async function apiGet(endpoint, params = {}) {
-    const url = new URL(API_BASE + endpoint, window.location.origin);
-    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+// Pre-emptive check: If no token, try to bridge once before any requests
+(async function initAuth() {
+    if (!localStorage.getItem('access_token')) {
+        try {
+            const bridgeRes = await fetch(API_BASE + '/auth/session-token', { credentials: 'include' });
+            const bridgeData = await bridgeRes.json();
+            if (bridgeData.success && bridgeData.data?.access_token) {
+                localStorage.setItem('access_token', bridgeData.data.access_token);
+                console.log('Auth: Access token initialized from session');
+            }
+        } catch (e) {
+            // Ignore initial failure, fallback to lazy healing
         }
-    });
+    }
+})();
+
+async function apiRequest(method, endpoint, options = {}) {
+    let token = localStorage.getItem('access_token');
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...options.headers
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = new URL(API_BASE + endpoint, window.location.origin);
+    if (options.params) {
+        Object.keys(options.params).forEach(key => url.searchParams.append(key, options.params[key]));
+    }
+
+    // Use same-origin credentials by default for API calls
+    const fetchOptions = {
+        method: method,
+        headers: headers,
+        credentials: 'include', // Important to send cookies for session bridge
+        body: options.body ? JSON.stringify(options.body) : null
+    };
+
+    let response = await fetch(url, fetchOptions);
+
+    // If 401 Unauthorized, try to bridge from PHP Session once
+    if (response.status === 401 && !options._retry) {
+        try {
+            const bridgeRes = await fetch(API_BASE + '/auth/session-token', { credentials: 'include' });
+            const bridgeData = await bridgeRes.json();
+
+            if (bridgeData.success && bridgeData.data?.access_token) {
+                localStorage.setItem('access_token', bridgeData.data.access_token);
+                // Retry original request with new token
+                return apiRequest(method, endpoint, { ...options, _retry: true });
+            }
+        } catch (e) {
+            console.error('Session bridge failed:', e);
+        }
+    }
 
     const data = await response.json();
 
@@ -42,61 +89,41 @@ async function apiGet(endpoint, params = {}) {
     }
 
     return data;
+}
+
+async function apiGet(endpoint, params = {}) {
+    return apiRequest('GET', endpoint, { params });
 }
 
 async function apiPost(endpoint, body = {}) {
-    const response = await fetch(API_BASE + endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.success === false) {
-        throw new Error(data.error?.message || data.message || 'เกิดข้อผิดพลาด');
-    }
-
-    return data;
+    return apiRequest('POST', endpoint, { body });
 }
 
 async function apiPut(endpoint, body = {}) {
-    const response = await fetch(API_BASE + endpoint, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.success === false) {
-        throw new Error(data.error?.message || data.message || 'เกิดข้อผิดพลาด');
-    }
-
-    return data;
+    return apiRequest('PUT', endpoint, { body });
 }
 
 async function apiDelete(endpoint) {
-    const response = await fetch(API_BASE + endpoint, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
+    return apiRequest('DELETE', endpoint);
+}
+
+async function apiUpload(endpoint, formData) {
+    let token = localStorage.getItem('access_token');
+    const headers = { 'Accept': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const url = new URL(API_BASE + endpoint, window.location.origin);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'include',
+        body: formData
     });
 
     const data = await response.json();
-
     if (!response.ok || data.success === false) {
-        throw new Error(data.error?.message || data.message || 'เกิดข้อผิดพลาด');
+        throw new Error(data.error?.message || data.message || 'เกิดข้อผิดพลาดในการอัพโหลด');
     }
-
     return data;
 }
 
@@ -219,6 +246,30 @@ function formatThaiDateShort(dateStr) {
     } catch {
         return dateStr;
     }
+}
+
+function formatThaiDateTimeShort(dateStr) {
+    if (!dateStr) return '-';
+    try {
+        const date = new Date(dateStr);
+        const datePart = date.toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        const timePart = date.toLocaleTimeString('th-TH', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        return `${datePart} ${timePart} น.`;
+    } catch {
+        return dateStr;
+    }
+}
+
+function getThaiYear(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    return d.getFullYear() + 543;
 }
 
 function formatDateInput(dateStr) {
@@ -415,9 +466,9 @@ function showTableError(tableId, colspan = 5, error = 'เกิดข้อผ�
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        apiGet, apiPost, apiPut, apiDelete,
+        apiGet, apiPost, apiPut, apiDelete, apiUpload,
         showSuccess, showError, showWarning, confirmDelete, confirmAction,
-        formatCurrency, formatNumber, formatThaiDate, formatThaiDateShort,
+        formatCurrency, formatNumber, formatThaiDate, formatThaiDateShort, formatThaiDateTimeShort, getThaiYear,
         formatIdCard, maskIdCard, formatPhone,
         escapeHtml, debounce, truncateText,
         getDonationStatusBadge, getProjectStatusBadge, getReceiptStatusBadge,

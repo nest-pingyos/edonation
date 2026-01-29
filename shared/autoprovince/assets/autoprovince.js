@@ -19,9 +19,16 @@
 
 class AutoProvince {
     constructor(options = {}) {
+        // Detect base path (handles /edonation, /appdev/edonation or root)
+        const basePath = (() => {
+            const path = window.location.pathname;
+            const match = path.match(/^(.*?\/edonation)/);
+            return match ? match[1] : '';
+        })();
+
         // Default configuration
         this.config = {
-            apiPath: '/edonation/shared/autoprovince/api.php',
+            apiPath: basePath + '/shared/autoprovince/api.php',
             provinceSelector: '#province',
             districtSelector: '#district',
             subdistrictSelector: '#subdistrict',
@@ -42,6 +49,15 @@ class AutoProvince {
 
         // Merge options
         Object.assign(this.config, options);
+
+        // Support short keys
+        if (options.province) this.config.provinceSelector = options.province;
+        if (options.district) this.config.districtSelector = options.district;
+        if (options.subdistrict) this.config.subdistrictSelector = options.subdistrict;
+        if (options.amphure) this.config.districtSelector = options.amphure; // Alias for Thai context
+        if (options.postcode) this.config.postcodeSelector = options.postcode;
+        if (options.arrange) this.config.arrange = options.arrange;
+
         this.isInitialized = false;
 
         // Auto setup if DOM is ready
@@ -280,44 +296,83 @@ class AutoProvince {
     }
 
     /**
-     * Set values programmatically
-     * @param {Object} values - { provinceId, districtId, subdistrictId }
+     * set(province, district, subdistrict)
+     * Supports both IDs and Names
      */
-    setValues(values) {
-        return new Promise((resolve) => {
-            const $province = $(this.config.provinceSelector);
+    async set(p, d, s) {
+        if (!p && !d && !s) return;
+        return this.setValues({ province: p, district: d, subdistrict: s });
+    }
 
-            if (values.provinceId) {
-                $province.val(values.provinceId);
-                if (this.config.useSelect2) $province.trigger('change.select2');
-                $province.trigger('change');
+    /**
+     * Set values programmatically
+     * @param {Object} values - { province, district, subdistrict } (Can be ID or Name)
+     */
+    async setValues(values) {
+        const setSelectValue = ($el, val) => {
+            if (!val) return false;
 
-                // Wait for districts to load (using a delay since we don't have explicit callbacks for internal loads yet)
-                setTimeout(() => {
-                    const $district = $(this.config.districtSelector);
-                    if (values.districtId) {
-                        $district.val(values.districtId);
-                        if (this.config.useSelect2) $district.trigger('change.select2');
-                        $district.trigger('change');
-
-                        // Wait for subdistricts to load
-                        setTimeout(() => {
-                            const $subdistrict = $(this.config.subdistrictSelector);
-                            if (values.subdistrictId) {
-                                $subdistrict.val(values.subdistrictId);
-                                if (this.config.useSelect2) $subdistrict.trigger('change.select2');
-                                $subdistrict.trigger('change');
-                            }
-                            resolve();
-                        }, 600);
-                    } else {
-                        resolve();
-                    }
-                }, 600);
-            } else {
-                resolve();
+            // Try ID first
+            $el.val(val);
+            if ($el.val() === val) {
+                if (this.config.useSelect2) $el.trigger('change.select2');
+                $el.trigger('change');
+                return true;
             }
-        });
+
+            // Try Name matching
+            let foundVal = null;
+            const cleanPrefix = (s) => s.replace(/^(จ\.|อ\.|ต\.|จังหวัด|อำเภอ|ตำบล|เขต|แขวง)\s*/, '').trim();
+            const targetClean = cleanPrefix(val);
+
+            $el.find('option').each(function () {
+                const optText = $(this).text().trim();
+                // Match exact or cleaned name
+                if (optText === val.trim() || (targetClean && cleanPrefix(optText) === targetClean)) {
+                    foundVal = $(this).val();
+                    return false;
+                }
+            });
+
+            if (foundVal) {
+                $el.val(foundVal);
+                if (this.config.useSelect2) $el.trigger('change.select2');
+                $el.trigger('change');
+                return true;
+            }
+            return false;
+        };
+
+        const waitForOptions = ($el) => {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const check = () => {
+                    if ($el.find('option').length > 1 || attempts > 20) {
+                        resolve();
+                    } else {
+                        attempts++;
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        };
+
+        const $province = $(this.config.provinceSelector);
+        await waitForOptions($province);
+        if (setSelectValue($province, values.province)) {
+            const $district = $(this.config.districtSelector);
+            if ($district.length) {
+                await waitForOptions($district);
+                if (setSelectValue($district, values.district)) {
+                    const $subdistrict = $(this.config.subdistrictSelector);
+                    if ($subdistrict.length) {
+                        await waitForOptions($subdistrict);
+                        setSelectValue($subdistrict, values.subdistrict);
+                    }
+                }
+            }
+        }
     }
 
     /**

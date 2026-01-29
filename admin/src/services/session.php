@@ -1,43 +1,84 @@
 <?php
 /**
- * Session Management Service
- * 
- * จัดการ session สำหรับ admin
+ * eDonation Admin - Session Management Service
  */
 
+declare(strict_types=1);
+
+// 1. Set Session Name FIRST (Must be before session_start)
+if (!defined('SESSION_NAME')) {
+    define('SESSION_NAME', 'edonation_admin');
+}
+session_name(SESSION_NAME);
+
+// 2. Configure Session Cookies (Override system defaults)
+$isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+$isLocal = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1' || strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost:') === 0);
+
+$sessionConfig = [
+    'cookie_httponly' => true,
+    'cookie_secure' => $isHttps && !$isLocal, // Secure only if HTTPS and NOT localhost
+    'cookie_samesite' => 'Lax',                // Use Lax to prevent redirect issues
+    'use_strict_mode' => true,
+    'use_only_cookies' => true,
+    'gc_maxlifetime' => 28800,
+];
+
+foreach ($sessionConfig as $key => $value) {
+    ini_set("session.{$key}", is_bool($value) ? ($value ? '1' : '0') : (string) $value);
+}
+
+// 3. Start Session
+if (session_status() === PHP_SESSION_NONE) {
+    if (!session_start()) {
+        error_log("SESSION ERROR: Failed to start session.");
+    }
+}
+
+// 4. Load Database (Now that session is safe)
 require_once __DIR__ . '/database.php';
 
-// Configure session
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_strict_mode', 1);
-session_name(SESSION_NAME);
-session_start();
+/**
+ * Get Security Fingerprint
+ */
+function getSessionFingerprint(): string
+{
+    return hash('sha256', ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown'));
+}
 
 /**
  * Check if user is logged in
  */
 function isLoggedIn(): bool
 {
-    // Bypass auth for development if needed
+    // Development Bypass
     if (defined('APP_ENV') && APP_ENV === 'development') {
         if (!isset($_SESSION['user'])) {
             $_SESSION['user'] = [
                 'id' => 1,
                 'email' => 'dev@edonation.internal',
-                'name' => 'Developer Admin',
+                'name' => 'Developer Super Admin',
                 'role' => 'super_admin'
             ];
+            $_SESSION['_fingerprint'] = getSessionFingerprint();
         }
         return true;
     }
 
-    // Check traditional login
-    if (isset($_SESSION['user']) && $_SESSION['user'] !== null && isset($_SESSION['user']['id'])) {
+    // Check Fingerprint (Session Hijacking protection)
+    if (isset($_SESSION['_fingerprint']) && $_SESSION['_fingerprint'] !== getSessionFingerprint()) {
+        error_log("SESSION SECURITY: Fingerprint mismatch for session " . session_id());
+        logoutSession();
+        return false;
+    }
+
+    // Check Traditional Session
+    if (isset($_SESSION['user']['id'])) {
         return true;
     }
 
-    // Check CMU OAuth login
-    if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true) {
+    // Check CMU OAuth Session
+    if (isset($_SESSION['backend_user']) && ($_SESSION['backend_user']['logged_in'] ?? false) === true) {
         return true;
     }
 
@@ -45,92 +86,24 @@ function isLoggedIn(): bool
 }
 
 /**
- * Get current user
+ * Get current user data
  */
 function getCurrentUser(): ?array
 {
-    // Return traditional user session
-    if (isset($_SESSION['user']) && $_SESSION['user'] !== null) {
+    if (isset($_SESSION['user'])) {
         return $_SESSION['user'];
     }
 
-    // Return CMU OAuth user session
-    if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true) {
+    if (isset($_SESSION['backend_user']) && ($_SESSION['backend_user']['logged_in'] ?? false) === true) {
         return [
             'id' => $_SESSION['backend_user']['id'] ?? 0,
             'email' => $_SESSION['backend_user']['email'],
-            'name' => $_SESSION['backend_user']['name_th'],
+            'name' => $_SESSION['backend_user']['name_th'] ?? $_SESSION['backend_user']['name_en'] ?? 'Admin',
             'role' => $_SESSION['backend_user']['role']
         ];
     }
 
     return null;
-}
-
-/**
- * Check authentication with email and password
- */
-function checkAuth(string $email, string $password = ''): bool|string
-{
-    // If password provided, use full authentication
-    if (!empty($password)) {
-        $user = DatabaseService::authenticateUser($email, $password);
-        if ($user) {
-            setSession($user);
-            return true;
-        }
-        return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-    }
-
-    // Legacy: check if email exists (for demo)
-    if (DatabaseService::checkUser($email)) {
-        // For demo purposes only - should not use in production without password
-        $pdo = DatabaseService::getInstance();
-        $stmt = $pdo->prepare("SELECT id, email, name, role FROM edonation_admin_users WHERE email = :email AND status = 'active'");
-        $stmt->execute([':email' => $email]);
-        $user = $stmt->fetch();
-        if ($user) {
-            setSession($user);
-            return true;
-        }
-    }
-    return "อีเมลไม่ถูกต้อง";
-}
-
-/**
- * Set session with user data
- */
-function setSession(array $user): void
-{
-    $_SESSION['user'] = $user;
-    $_SESSION['login_time'] = time();
-
-    // Regenerate session ID to prevent session fixation
-    session_regenerate_id(true);
-}
-
-/**
- * Logout and destroy session
- */
-function logoutSession(): void
-{
-    $_SESSION = [];
-
-    // Destroy session cookie
-    if (ini_get("session.use_cookies")) {
-        $params = session_get_cookie_params();
-        setcookie(
-            session_name(),
-            '',
-            time() - 42000,
-            $params["path"],
-            $params["domain"],
-            $params["secure"],
-            $params["httponly"]
-        );
-    }
-
-    session_destroy();
 }
 
 /**
@@ -141,43 +114,83 @@ function isSessionExpired(): bool
     if (defined('APP_ENV') && APP_ENV === 'development')
         return false;
 
-    // Check traditional login time
-    if (isset($_SESSION['login_time'])) {
-        return (time() - $_SESSION['login_time']) > SESSION_LIFETIME;
-    }
+    if (isLoggedIn()) {
+        $timeout = 28800; // 8 hours
+        $lastActivity = $_SESSION['last_activity'] ?? time();
+        $loginTime = $_SESSION['login_time'] ?? (isset($_SESSION['backend_user']['login_time']) ? strtotime($_SESSION['backend_user']['login_time']) : time());
 
-    // Check CMU OAuth login time
-    if (isset($_SESSION['backend_user']['login_time'])) {
-        $loginTime = strtotime($_SESSION['backend_user']['login_time']);
-        return (time() - $loginTime) > SESSION_LIFETIME;
+        if (time() - $lastActivity > 3600)
+            return true; // 1h idle
+        if (time() - $loginTime > $timeout)
+            return true; // 8h absolute
     }
-
-    return true;
+    return false;
 }
 
 /**
- * Require authentication - redirect if not logged in
+ * Logout securely
+ */
+function logoutSession(): void
+{
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+    }
+    session_destroy();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+}
+
+/**
+ * Require Authentication (Unified Guard)
  */
 function requireAuth(): void
 {
-    if (defined('APP_ENV') && APP_ENV === 'development')
+    if (defined('APP_ENV') && APP_ENV === 'development') {
+        isLoggedIn(); // Set mock session
         return;
+    }
+
+    $currentPath = $_SERVER['PHP_SELF'] ?? '';
+    $isLoginPage = (strpos($currentPath, 'login.php') !== false);
+
     if (!isLoggedIn() || isSessionExpired()) {
+        if ($isLoginPage) {
+            return;
+        }
+
+        error_log("AUTH REDIRECT: Redirecting to login because not logged in. Path: $currentPath");
         logoutSession();
 
-        // Redirect to CMU OAuth login if in auth folder context, otherwise traditional login
-        $currentPath = $_SERVER['PHP_SELF'] ?? '';
-        if (strpos($currentPath, '/auth/') !== false) {
-            header('Location: login.php');
+        $loginBase = defined('BASE_PATH') ? BASE_PATH . '/admin/src/auth/login.php' : 'auth/login.php';
+
+        // If we are already in the auth folder, use simple login.php
+        if (strpos($currentPath, '/admin/src/auth/') !== false) {
+            $redirectUrl = 'login.php';
         } else {
-            header('Location: auth/login.php');
+            $redirectUrl = $loginBase;
         }
+
+        header("Location: $redirectUrl");
         exit();
     }
+
+    // Refresh last activity
+    $_SESSION['last_activity'] = time();
 }
 
 /**
- * Check user role
+ * Authentication check for CMU OAuth (Used by middleware.php)
+ */
+function isAuthenticated(): bool
+{
+    return isLoggedIn();
+}
+
+/**
+ * Role Check
  */
 function hasRole(string $role): bool
 {
@@ -185,34 +198,31 @@ function hasRole(string $role): bool
     if (!$user)
         return false;
 
-    $roleHierarchy = [
-        'super_admin' => 100,
-        'admin' => 50,
-        'editor' => 25,
-        'viewer' => 10
-    ];
-
+    $roleHierarchy = ['super_admin' => 100, 'admin' => 50, 'editor' => 25, 'viewer' => 10];
     $userLevel = $roleHierarchy[$user['role']] ?? 0;
     $requiredLevel = $roleHierarchy[$role] ?? 0;
 
     return $userLevel >= $requiredLevel;
 }
 
-/**
- * Generate CSRF token
- */
-function generateCSRFToken(): string
+function hasExactRole(string $role): bool
 {
-    if (!isset($_SESSION[CSRF_TOKEN_NAME])) {
-        $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION[CSRF_TOKEN_NAME];
+    $user = getCurrentUser();
+    return $user && $user['role'] === $role;
 }
 
 /**
- * Verify CSRF token
+ * CSRF Protection
  */
+function generateCSRFToken(): string
+{
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
 function verifyCSRFToken(string $token): bool
 {
-    return isset($_SESSION[CSRF_TOKEN_NAME]) && hash_equals($_SESSION[CSRF_TOKEN_NAME], $token);
+    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }

@@ -1,152 +1,95 @@
 <?php
 /**
- * CMU OAuth Callback Handler
+ * CMU Microsoft Entra ID Auth Callback Handler
  * 
- * This file handles the OAuth callback from Microsoft Entra
- * Redirect URI: http://localhost:8080/admin/src/auth-callback.php (dev)
- *               https://app.nurse.cmu.ac.th/edonation/admin/src/auth-callback.php (prod)
+ * This file handles the redirect back from Microsoft Entra ID (Azure AD),
+ * exchanges the authorization code for tokens, and verifies user authorization
+ * against the local database.
  */
 
-session_start();
-
-// Include required files
-require_once __DIR__ . '/config/config.php';
+// 1. Initial configuration and services
+require_once __DIR__ . '/services/session.php';
 require_once __DIR__ . '/config/oauth.php';
 require_once __DIR__ . '/services/database.php';
 
-/**
- * Redirect with error message
- */
-function redirectWithError(string $message): void
+// Safe redirect helper
+function redirectError($message)
 {
     $_SESSION['auth_error'] = $message;
     header('Location: auth/login.php');
     exit;
 }
 
-// =============================================
-// Handle OAuth Error
-// =============================================
-if (isset($_GET['error'])) {
-    $error = htmlspecialchars($_GET['error']);
-    $errorDesc = htmlspecialchars($_GET['error_description'] ?? 'ไม่ทราบสาเหตุ');
-    error_log("CMU OAuth Error: $error - $errorDesc");
-    redirectWithError("การเข้าสู่ระบบถูกยกเลิก: $error");
-}
+// 2. Extract Authorization Code from query string
+$code = $_GET['code'] ?? null;
+$error = $_GET['error'] ?? null;
 
-// =============================================
-// Handle Dev Login (Development Mode Only)
-// =============================================
-if (isset($_GET['dev_login']) && defined('APP_ENV') && APP_ENV === 'development') {
-    $email = 'dev@localhost';
-    $authorizedUser = DatabaseService::authenticateCMUUser($email);
+if ($error)
+    redirectError("Microsoft Error: " . htmlspecialchars($error));
+if (!$code)
+    redirectError("ไม่ได้รับรหัสยืนยันตัวตน (No code provided)");
 
-    if (!$authorizedUser) {
-        // Create Dev user if not exists
-        if (DatabaseService::createUser($email, 'Developer', 'admin')) {
-            $authorizedUser = DatabaseService::authenticateCMUUser($email);
-        }
-    }
-
-    if ($authorizedUser) {
-        $_SESSION['backend_user'] = [
-            'id' => $authorizedUser['id'],
-            'email' => $authorizedUser['email'],
-            'name_th' => 'ผู้ดูแล (Dev)',
-            'name_en' => 'Developer',
-            'organization' => 'Local Development',
-            'role' => $authorizedUser['role'],
-            'logged_in' => true,
-            'login_time' => date('Y-m-d H:i:s')
-        ];
-
-        // Update last login
-        DatabaseService::updateLastLogin($authorizedUser['id']);
-
-        header('Location: index.php');
-        exit;
-    } else {
-        redirectWithError('ไม่สามารถสร้างบัญชี Dev ได้');
-    }
-}
-
-// =============================================
-// Handle OAuth Callback with Authorization Code
-// =============================================
-if (isset($_GET['code'])) {
-    $code = $_GET['code'];
-
-    // Verify state parameter (CSRF protection)
-    $state = $_GET['state'] ?? '';
-    $expectedState = $_SESSION['oauth_state'] ?? '';
-
-    if (empty($state) || $state !== $expectedState) {
-        error_log("OAuth State Mismatch: received=$state, expected=$expectedState");
-        // Don't block in case state wasn't set properly
-        // redirectWithError('การเชื่อมต่อไม่ปลอดภัย กรุณาลองใหม่อีกครั้ง');
-    }
-
-    // Clear state
-    unset($_SESSION['oauth_state']);
-
-    // Exchange code for access token
+try {
+    // 3. Exchange Authorization Code for Access Token
+    // USES: getCmuOAuthAccessToken() in config/oauth.php
     $accessToken = getCmuOAuthAccessToken($code);
-
     if (!$accessToken) {
-        redirectWithError('ไม่สามารถรับ access token ได้ กรุณาลองใหม่อีกครั้ง');
+        throw new Exception("ยืนยันตัวตนกับ Microsoft ไม่สำเร็จกรุณาลองใหม่อีกครั้ง");
     }
 
-    // Get user info from CMU API
+    // 4. Retrieve User Basic Information from CMU API
+    // USES: getCmuUserInfo() in config/oauth.php
     $userInfo = getCmuUserInfo($accessToken);
+    $email = $userInfo['cmuitaccount_email'] ?? null;
+    $displayName = $userInfo['cmuitaccount_name'] ?? 'CMU User';
 
-    if (!$userInfo || !isset($userInfo['cmuitaccount'])) {
-        error_log("CMU User Info Error: " . json_encode($userInfo));
-        redirectWithError('ไม่สามารถดึงข้อมูลผู้ใช้จาก CMU Account ได้');
+    if (!$email) {
+        throw new Exception("ไม่พบข้อมูลอีเมล (cmuitaccount_email) ในบัญชีของคุณ");
     }
 
-    // Extract email (CMU IT Account)
-    $email = $userInfo['cmuitaccount'];
+    // 5. Query Local Database for Authorized Admins
+    // REQUIREMENTS: Only 'active' status users can login
+    $pdo = DatabaseService::getInstance();
+    $stmt = $pdo->prepare("
+        SELECT id, name, role, status 
+        FROM edonation_admin_users 
+        WHERE email = :email AND status = 'active'
+        LIMIT 1
+    ");
+    $stmt->execute([':email' => $email]);
+    $admin = $stmt->fetch();
 
-    // Check if user is authorized in database
-    $authorizedUser = DatabaseService::authenticateCMUUser($email);
-
-    if (!$authorizedUser) {
-        // User not in admin list
-        error_log("Unauthorized CMU User: $email");
-        redirectWithError("คุณไม่มีสิทธิ์เข้าใช้งานระบบ Admin ($email) กรุณาติดต่อผู้ดูแลระบบ");
+    if (!$admin) {
+        error_log("AUTH DENIED: User $email not found in edonation_admin_users or is inactive.");
+        throw new Exception("คุณไม่มีสิทธิ์เข้าใช้งานระบบจัดการนี้ หรือบัญชีถูกระงับ");
     }
 
-    // Check if user is active
-    if ($authorizedUser['status'] !== 'active') {
-        redirectWithError('บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
-    }
-
-    // Build user session
+    // 6. Authorization Success - Setup Session
+    // We store minimal required info to avoid stale data
     $_SESSION['backend_user'] = [
-        'id' => $authorizedUser['id'],
+        'id' => (int) $admin['id'],
         'email' => $email,
-        'name_th' => ($userInfo['firstname_TH'] ?? '') . ' ' . ($userInfo['lastname_TH'] ?? ''),
-        'name_en' => ($userInfo['firstname_EN'] ?? '') . ' ' . ($userInfo['lastname_EN'] ?? ''),
-        'organization' => $userInfo['organization_name_TH'] ?? $userInfo['organization_name_EN'] ?? '',
-        'role' => $authorizedUser['role'],
+        'name' => $admin['name'] ?: $displayName,
+        'role' => $admin['role'],
         'logged_in' => true,
         'login_time' => date('Y-m-d H:i:s')
     ];
 
-    // Update last login timestamp
-    DatabaseService::updateLastLogin($authorizedUser['id']);
+    // For compatibility with getCurrentUser() helper
+    $_SESSION['user'] = $_SESSION['backend_user'];
 
-    // Clear any previous errors
-    unset($_SESSION['auth_error']);
+    // 7. Update Last Login Activity
+    DatabaseService::updateLastLogin((int) $admin['id']);
 
-    // Redirect to dashboard
+    // Log success
+    error_log("AUTH SUCCESS: $email (ID: {$admin['id']}) logged in as {$admin['role']}");
+
+    // 8. Redirect to internal landing page
     header('Location: index.php');
     exit;
-}
 
-// =============================================
-// No code received - Initiate OAuth Login
-// =============================================
-$loginUrl = getCmuOAuthLoginUrl();
-header("Location: $loginUrl");
-exit;
+} catch (Exception $e) {
+    // Clear any partial session and redirect with error
+    logoutSession();
+    redirectError($e->getMessage());
+}
