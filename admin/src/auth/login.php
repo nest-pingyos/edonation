@@ -237,56 +237,40 @@ $apiBaseV1 = $apiBase . '/v1';
                 </button>
             </div>
         </div>
-                © <?= date('Y') ?> Faculty of Nursing, Chiang Mai University
-            </p>
-        </div>
+        © <?= date('Y') ?> Faculty of Nursing, Chiang Mai University
+        </p>
+    </div>
 
-        <script>
-            const API_BASE = '<?= $apiBaseV1 ?>';
+    <script>
+        const API_BASE = '<?= $apiBaseV1 ?>';
 
-            async function loginWithCmu() {
-                const btn = document.getElementById('btnLogin');
-                const text = document.getElementById('btnText');
+        async function loginWithCmu() {
+            const btn = document.getElementById('btnLogin');
+            const text = document.getElementById('btnText');
 
-                btn.disabled = true;
-                text.innerHTML = '<span class="spinner"></span> กำลังเชื่อมต่อ...';
+            btn.disabled = true;
+            text.innerHTML = '<span class="spinner"></span> กำลังเชื่อมต่อ...';
 
-                try {
-                    const res = await fetch(`${API_BASE}/auth/oauth/login`);
-                    const data = await res.json();
+            try {
+                const res = await fetch(`${API_BASE}/auth/oauth/login`);
+                const data = await res.json();
 
-                    if (data.success && data.data?.auth_url) {
-                        window.location.href = data.data.auth_url;
-                    } else {
-                        throw new Error(data.error?.message || 'Connection failed');
-                    }
-                } catch (e) {
-                    alert('เกิดข้อผิดพลาด: ' + e.message);
-                    btn.disabled = false;
-                    text.textContent = 'Sign in with CMU Account';
+                if (data.success && data.data?.auth_url) {
+                    window.location.href = data.data.auth_url;
+                } else {
+                    throw new Error(data.error?.message || 'Connection failed');
                 }
+            } catch (e) {
+                alert('เกิดข้อผิดพลาด: ' + e.message);
+                btn.disabled = false;
+                text.textContent = 'Sign in with CMU Account';
             }
+        }
 
-            async function devLogin() {
-                try {
-                    const res = await fetch(`${API_BASE}/auth/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: 'admin', password: 'admin123' })
-                    });
-                    const data = await res.json();
-
-                    if (data.success) {
-                        localStorage.setItem('access_token', data.data.access_token);
-                        window.location.href = '../index.php';
-                    } else {
-                        alert(data.error?.message || 'Login failed');
-                    }
-                } catch (e) {
-                    alert('Error: ' + e.message);
-                }
-            }
-        </script>
+        function devLogin() {
+            window.location.href = 'dev-login.php';
+        }
+    </script>
 </body>
 
 </html>

@@ -11,9 +11,9 @@ require_once __DIR__ . '/session.php';
 
 function authGuard(): void
 {
-    // Development bypass
-    if (defined('APP_ENV') && APP_ENV === 'development')
-        return;
+    // Development bypass (REMOVE or comment out to enable login page)
+    // if (defined('APP_ENV') && APP_ENV === 'development')
+    //     return;
 
     // Pages that don't need authentication
     $bypassPages = [

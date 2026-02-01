@@ -1,140 +1,111 @@
-# =============================================================================
-# eDonation - Docker Compose (Production)
-# =============================================================================
-# CROSS-PLATFORM DEPLOYMENT:
-# - Developed on: macOS (Apple Silicon / ARM64)
-# - Deployed to:  Windows Server with Docker Desktop (WSL2 / AMD64)
+# eDonation - Docker Compose
 #
-# CRITICAL: The "platform: linux/amd64" flag forces AMD64 architecture
-# This ensures images built on Mac M1/M2/M3 will run on Intel/AMD Windows
+# Usage:
+#   Development: docker compose up -d
+#   Production:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# Usage on Windows Server:
-#   docker compose up -d
-# =============================================================================
+# Access: http://localhost:8080
 
 services:
-  # ===========================================================================
-  # PHP/Apache Application Container
-  # ===========================================================================
+  # PHP Application
   app:
-    # IMPORTANT: Force AMD64 platform for Windows compatibility
-    platform: linux/amd64
-    
-    image: edonation:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: edonation-app
-    
-    # If building locally, uncomment this:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
-    #   platforms:
-    #     - linux/amd64
-    
     restart: unless-stopped
-    
-    # Port mapping: Host:Container
     ports:
-      - "80:80"
-    
-    # Environment variables for database connection
-    # The DB_HOST should match the database service name
+      - "8080:80"
+    volumes:
+      # Mount source code for development
+      - .:/var/www/html
+      # Persist receipts
+      - receipts_data:/var/www/html/receipts/uploads
     environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
-      - DB_HOST=db
-      - DB_NAME=donation
-      - DB_USER=edonation
-      - DB_PASS=edonate@FON
-      - APP_DOMAIN=http://localhost
-      - API_DOMAIN=http://localhost
+      - APP_ENV=${APP_ENV:-production}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_DOMAIN=http://localhost:8080
+      - API_DOMAIN=http://localhost:8080
       - BASE_PATH=
       - API_BASE_PATH=/api
-      - JWT_SECRET=${JWT_SECRET:-your-production-secret-key-change-me}
-      - JWT_EXPIRE=86400
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME:-edonation}
+      - DB_USER=${DB_USER:-edonation}
+      - DB_PASS=${DB_PASS:-edonation_secret}
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-key}
+      - JWT_EXPIRE=${JWT_EXPIRE:-86400}
       - LINE_TOKEN=${LINE_TOKEN:-}
       - GMAIL_USER=${GMAIL_USER:-}
       - GMAIL_PASS=${GMAIL_PASS:-}
-      - TZ=Asia/Bangkok
-    
-    # Wait for database to be ready
+      - SCB_BILLER_ID=${SCB_BILLER_ID:-}
+      - SCB_API_KEY=${SCB_API_KEY:-}
+      - SCB_API_SECRET=${SCB_API_SECRET:-}
+      - CMU_OAUTH_CLIENT_ID=${CMU_OAUTH_CLIENT_ID:-}
+      - CMU_OAUTH_CLIENT_SECRET=${CMU_OAUTH_CLIENT_SECRET:-}
+      - CMU_OAUTH_TENANT_ID=${CMU_OAUTH_TENANT_ID:-}
     depends_on:
       db:
         condition: service_healthy
-    
-    # Network configuration
     networks:
       - edonation-network
-    
-    # Health check
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: [ "CMD", "curl", "-f", "http://localhost/" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
 
-  # ===========================================================================
-  # MySQL Database Container
-  # ===========================================================================
+  # MySQL Database
   db:
-    # IMPORTANT: Force AMD64 platform for Windows compatibility
-    platform: linux/amd64
-    
-    # MySQL 8.0 with native password authentication
     image: mysql:8.0
     container_name: edonation-db
-    
     restart: unless-stopped
-    
-    # Environment variables
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: donation
-      MYSQL_USER: edonation
-      MYSQL_PASSWORD: edonate@FON
-      TZ: Asia/Bangkok
-    
-    # MySQL configuration for better compatibility
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --sql-mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO
-    
-    # Port mapping (optional - only expose if needed for external access)
     ports:
-      - "3306:3306"
-    
-    # VOLUME MOUNTING - WINDOWS COMPATIBLE PATHS
-    # Using relative paths (./) works on both Mac and Windows
-    # Avoid absolute paths like /Users/... or C:\Users\...
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_secret}
+      - MYSQL_DATABASE=${DB_NAME:-edonation}
+      - MYSQL_USER=${DB_USER:-edonation}
+      - MYSQL_PASSWORD=${DB_PASS:-edonation_secret}
     volumes:
-      # Persist database data
-      - mysql_data:/var/lib/mysql
-      # Auto-import SQL on first run (relative path)
-      - ./database/donation.sql:/docker-entrypoint-initdb.d/01-donation.sql:ro
-    
+      - db_data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d:ro
     networks:
       - edonation-network
-    
-    # Health check for MySQL
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_secret}" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
 
-# =============================================================================
-# Volumes - Named volumes for data persistence
-# =============================================================================
-volumes:
-  mysql_data:
-    driver: local
+  # phpMyAdmin (optional, for database management)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: edonation-pma
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - UPLOAD_LIMIT=50M
+    depends_on:
+      - db
+    networks:
+      - edonation-network
+    profiles:
+      - tools
 
-# =============================================================================
-# Networks - Custom bridge network for container communication
-# =============================================================================
+# Networks
 networks:
   edonation-network:
     driver: bridge
+
+# Volumes
+volumes:
+  db_data:
+    driver: local
+  receipts_data:
+    driver: local

@@ -146,7 +146,7 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
             </li>
 
             <li class="nav-item">
-                <a class="nav-link text-danger" href="logout.php">
+                <a class="nav-link text-danger" href="<?= defined('ADMIN_PATH') ? ADMIN_PATH : 'auth' ?>/logout.php">
                     <span class="nav-icon">
                         <iconify-icon icon="iconamoon:exit-duotone" class="text-danger"></iconify-icon>
                     </span>

@@ -1,15 +1,12 @@
-# eDonation - Docker Image
-# PHP 8.2 with Apache
+# eDonation - Development Docker Image
+# PHP 8.2 with Apache + Xdebug
 #
-# Build: docker build -t edonation .
-# Run:   docker run -p 8080:80 edonation
+# For development use only
 
 FROM php:8.2-apache
 
-# Set labels
 LABEL maintainer="eDonation Team"
-LABEL description="eDonation - Donation Management System"
-LABEL version="1.0"
+LABEL description="eDonation Development Image"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     git \
+    vim \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure and install PHP extensions
@@ -34,8 +32,11 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     gd \
     zip \
     intl \
-    mbstring \
-    opcache
+    mbstring
+
+# Install Xdebug for debugging
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
 
 # Enable Apache modules
 RUN a2enmod rewrite headers expires
@@ -48,39 +49,29 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Configure PHP
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+# Use development PHP config
+RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
 
-# Custom PHP settings
+# Custom PHP settings for development
 RUN echo "memory_limit = 256M" >> "$PHP_INI_DIR/conf.d/custom.ini" \
     && echo "upload_max_filesize = 50M" >> "$PHP_INI_DIR/conf.d/custom.ini" \
     && echo "post_max_size = 50M" >> "$PHP_INI_DIR/conf.d/custom.ini" \
     && echo "max_execution_time = 300" >> "$PHP_INI_DIR/conf.d/custom.ini" \
-    && echo "date.timezone = Asia/Bangkok" >> "$PHP_INI_DIR/conf.d/custom.ini"
+    && echo "date.timezone = Asia/Bangkok" >> "$PHP_INI_DIR/conf.d/custom.ini" \
+    && echo "display_errors = On" >> "$PHP_INI_DIR/conf.d/custom.ini" \
+    && echo "error_reporting = E_ALL" >> "$PHP_INI_DIR/conf.d/custom.ini"
 
-# OPcache settings for production
-RUN echo "opcache.enable=1" >> "$PHP_INI_DIR/conf.d/opcache.ini" \
-    && echo "opcache.memory_consumption=128" >> "$PHP_INI_DIR/conf.d/opcache.ini" \
-    && echo "opcache.max_accelerated_files=10000" >> "$PHP_INI_DIR/conf.d/opcache.ini" \
-    && echo "opcache.validate_timestamps=0" >> "$PHP_INI_DIR/conf.d/opcache.ini"
+# Xdebug configuration
+RUN echo "xdebug.mode=debug" >> "$PHP_INI_DIR/conf.d/xdebug.ini" \
+    && echo "xdebug.start_with_request=yes" >> "$PHP_INI_DIR/conf.d/xdebug.ini" \
+    && echo "xdebug.client_host=host.docker.internal" >> "$PHP_INI_DIR/conf.d/xdebug.ini" \
+    && echo "xdebug.client_port=9003" >> "$PHP_INI_DIR/conf.d/xdebug.ini"
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
-COPY --chown=www-data:www-data . .
-
-# Set proper permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && chmod -R 775 /var/www/html/receipts 2>/dev/null || true
-
 # Expose port
 EXPOSE 80
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/ || exit 1
 
 # Start Apache
 CMD ["apache2-foreground"]

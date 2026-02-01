@@ -51,17 +51,8 @@ function getSessionFingerprint(): string
  */
 function isLoggedIn(): bool
 {
-    // Development Bypass
-    if (defined('APP_ENV') && APP_ENV === 'development') {
-        if (!isset($_SESSION['user'])) {
-            $_SESSION['user'] = [
-                'id' => 1,
-                'email' => 'dev@edonation.internal',
-                'name' => 'Developer Super Admin',
-                'role' => 'super_admin'
-            ];
-            $_SESSION['_fingerprint'] = getSessionFingerprint();
-        }
+    // Development Mock Check (ONLY if explicitly set, not automatic)
+    if (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'super_admin' && ($_SESSION['user']['email'] ?? '') === 'dev@edonation.internal') {
         return true;
     }
 
@@ -111,9 +102,6 @@ function getCurrentUser(): ?array
  */
 function isSessionExpired(): bool
 {
-    if (defined('APP_ENV') && APP_ENV === 'development')
-        return false;
-
     if (isLoggedIn()) {
         $timeout = 28800; // 8 hours
         $lastActivity = $_SESSION['last_activity'] ?? time();
@@ -148,10 +136,7 @@ function logoutSession(): void
  */
 function requireAuth(): void
 {
-    if (defined('APP_ENV') && APP_ENV === 'development') {
-        isLoggedIn(); // Set mock session
-        return;
-    }
+    isLoggedIn();
 
     $currentPath = $_SERVER['PHP_SELF'] ?? '';
     $isLoginPage = (strpos($currentPath, 'login.php') !== false);

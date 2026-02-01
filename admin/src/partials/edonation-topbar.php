@@ -44,7 +44,8 @@ $userInitial = strtoupper(substr($userName, 0, 1));
                             ตั้งค่า
                         </a>
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-danger" href="logout.php">
+                        <a class="dropdown-item text-danger"
+                            href="<?= defined('ADMIN_PATH') ? ADMIN_PATH : 'auth' ?>/logout.php">
                             <iconify-icon icon="iconamoon:sign-out-duotone" class="me-2"></iconify-icon>
                             ออกจากระบบ
                         </a>

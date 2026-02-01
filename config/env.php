@@ -46,14 +46,29 @@ if (file_exists($envFile)) {
     }
 }
 
-// ===== Domain & URL Configuration =====
 // App Domain (Web & Admin)
-if (!defined('APP_DOMAIN'))
-    define('APP_DOMAIN', $_ENV['APP_DOMAIN'] ?? 'http://localhost');
+$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+if (!defined('APP_DOMAIN')) {
+    $env_domain = $_ENV['APP_DOMAIN'] ?? null;
+    if ($env_domain && strpos($env_domain, 'http') === 0) {
+        define('APP_DOMAIN', $env_domain);
+    } else {
+        // Dynamic detection for local/docker
+        define('APP_DOMAIN', "{$protocol}://{$host}");
+    }
+}
 
 // API Domain (can be separate from App Domain)
-if (!defined('API_DOMAIN'))
-    define('API_DOMAIN', $_ENV['API_DOMAIN'] ?? APP_DOMAIN);
+if (!defined('API_DOMAIN')) {
+    $env_api_domain = $_ENV['API_DOMAIN'] ?? null;
+    if ($env_api_domain && strpos($env_api_domain, 'http') === 0) {
+        define('API_DOMAIN', $env_api_domain);
+    } else {
+        define('API_DOMAIN', APP_DOMAIN);
+    }
+}
 
 // Base paths
 if (!defined('BASE_PATH')) {
