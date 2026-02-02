@@ -6,10 +6,24 @@
  * SECURITY: Credentials are loaded from environment variables
  */
 
+// Load env if not already loaded (Using the same pattern as API)
+if (!isset($_ENV['CMU_OAUTH_CLIENT_ID'])) {
+    $envFile = dirname(__DIR__, 3) . '/.env';
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos(trim($line), '#') === 0 || strpos($line, '=') === false)
+                continue;
+            list($key, $value) = explode('=', $line, 2);
+            $_ENV[trim($key)] = trim($value);
+        }
+    }
+}
+
 // Application credentials from environment
-define('CMU_OAUTH_CLIENT_ID', getenv('CMU_OAUTH_CLIENT_ID') ?: '');
-define('CMU_OAUTH_CLIENT_SECRET', getenv('CMU_OAUTH_CLIENT_SECRET') ?: '');
-define('CMU_OAUTH_TENANT_ID', getenv('CMU_OAUTH_TENANT_ID') ?: 'cf81f1df-de59-4c29-91da-a2dfd04aa751');
+define('CMU_OAUTH_CLIENT_ID', $_ENV['CMU_OAUTH_CLIENT_ID'] ?? '');
+define('CMU_OAUTH_CLIENT_SECRET', $_ENV['CMU_OAUTH_CLIENT_SECRET'] ?? '');
+define('CMU_OAUTH_TENANT_ID', $_ENV['CMU_OAUTH_TENANT_ID'] ?? 'cf81f1df-de59-4c29-91da-a2dfd04aa751');
 
 // OAuth URLs
 define('CMU_OAUTH_SCOPE', 'api://cmu/Mis.Account.Read.Me.Basicinfo');

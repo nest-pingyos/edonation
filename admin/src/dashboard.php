@@ -26,43 +26,54 @@
                 include 'partials/page-title.php'; ?>
 
                 <!-- Year Filter & Stats Row -->
-                <div class="row align-items-center mb-4">
-                    <div class="col-md-5">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white">เลือกปี</span>
-                            <select class="form-select" id="dashboardYear" onchange="loadDashboardData()">
-                                <?php
-                                $curYear = intval(date('Y'));
-                                for ($y = $curYear; $y >= 2023; $y--) {
-                                    $thaiYear = $y + 543;
-                                    $selected = ($y == $curYear) ? 'selected' : '';
-                                    echo "<option value='$y' $selected>ปี $thaiYear</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
+                <!-- Filters Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small fw-bold">เลือกปี</label>
+                        <select class="form-select" id="dashboardYear" onchange="loadDashboardData()">
+                            <?php
+                            $curYear = intval(date('Y'));
+                            for ($y = $curYear; $y >= 2023; $y--) {
+                                $thaiYear = $y + 543;
+                                $selected = ($y == $curYear) ? 'selected' : '';
+                                echo "<option value='$y' $selected>ปี $thaiYear</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small fw-bold">เลือกเดือน</label>
+                        <select class="form-select" id="dashboardMonth" onchange="loadDashboardData()">
+                            <option value="">ทุกเดือน</option>
+                            <option value="1">มกราคม</option>
+                            <option value="2">กุมภาพันธ์</option>
+                            <option value="3">มีนาคม</option>
+                            <option value="4">เมษายน</option>
+                            <option value="5">พฤษภาคม</option>
+                            <option value="6">มิถุนายน</option>
+                            <option value="7">กรกฎาคม</option>
+                            <option value="8">สิงหาคม</option>
+                            <option value="9">กันยายน</option>
+                            <option value="10">ตุลาคม</option>
+                            <option value="11">พฤศจิกายน</option>
+                            <option value="12">ธันวาคม</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small fw-bold">เลือกโครงการ</label>
+                        <select class="form-select" id="dashboardProject" onchange="loadDashboardData()">
+                            <option value="">ทุกโครงการ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="loadDashboardData()">
+                            <iconify-icon icon="solar:refresh-bold" class="me-1"></iconify-icon> อัปเดต
+                        </button>
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6 col-xl-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-soft-primary rounded">
-                                        <iconify-icon icon="iconamoon:heart-duotone"
-                                            class="avatar-title text-primary fs-32"></iconify-icon>
-                                    </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <h3 class="mb-0" id="stat-donations">-</h3>
-                                        <p class="text-muted mb-0">การบริจาควันนี้</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 col-xl-3">
+                    <div class="col-md-4">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -72,14 +83,14 @@
                                     </div>
                                     <div class="flex-grow-1 ms-3">
                                         <h3 class="mb-0 text-white" id="stat-amount-year">-</h3>
-                                        <p class="mb-0 opacity-75">ยอดบริจาคปีที่เลือก (บาท)</p>
+                                        <p class="mb-0 opacity-75">ยอดบริจาคตามตัวกรอง (บาท)</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-6 col-xl-3">
+                    <div class="col-md-4">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -96,7 +107,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6 col-xl-3">
+                    <div class="col-md-4">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -106,7 +117,7 @@
                                     </div>
                                     <div class="flex-grow-1 ms-3">
                                         <h3 class="mb-0" id="stat-total-all">-</h3>
-                                        <p class="text-muted mb-0">ยอดบริจาครวมทุกปี</p>
+                                        <p class="text-muted mb-0">ยอดบริจาครวมทุกปี (บาท)</p>
                                     </div>
                                 </div>
                             </div>
@@ -249,19 +260,46 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             initCharts();
+            loadProjects();
             loadDashboardData();
         });
+
+        async function loadProjects() {
+            try {
+                const res = await apiGet('/projects?limit=500&status=active');
+                const select = document.getElementById('dashboardProject');
+                if (res.data) {
+                    res.data.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.project_number;
+                        opt.textContent = `[${p.project_number}] ${p.project_name}`;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error('Load projects failed', e); }
+        }
 
         async function loadDashboardData() {
             try {
                 const year = document.getElementById('dashboardYear').value;
+                const month = document.getElementById('dashboardMonth').value;
+                const project = document.getElementById('dashboardProject').value;
+
                 document.getElementById('monthlyChartYearBadge').textContent = 'ปี ' + (parseInt(year) + 543);
+
                 // 1. Fetch Summary & Analytics Data with Year Filter and Fiscal Type
-                const summaryRes = await apiGet(`/reports/summary?year=${year}&fiscal_type=${fiscalYearType}`);
+                const summaryRes = await apiGet(`/reports/summary`, {
+                    year: year,
+                    month: month,
+                    project: project,
+                    fiscal_type: fiscalYearType
+                });
                 const summary = summaryRes.data || {};
 
                 // Update Stats (Original UI IDs)
-                document.getElementById('stat-donations').textContent = formatNumber(summary.today?.count || 0);
+                if (document.getElementById('stat-donations')) {
+                    document.getElementById('stat-donations').textContent = formatNumber(summary.today?.count || 0);
+                }
                 document.getElementById('stat-amount-year').textContent = formatNumber(summary.selected_year?.total || 0);
                 document.getElementById('stat-donors').textContent = formatNumber(summary.all_time?.members || 0);
                 document.getElementById('stat-total-all').textContent = '฿' + formatNumber(summary.all_time?.total || 0);
@@ -293,8 +331,16 @@
                     }
                 }
 
-                // 2. Fetch Recent Donations
-                const donationsRes = await apiGet('/donations?limit=5');
+                // 2. Fetch Recent Donations (Pull from actual Receipts as requested)
+                const receiptParams = { limit: 5 };
+                if (project) receiptParams.project = project;
+                if (month) {
+                    const fromDate = `${year}-${String(month).padStart(2, '0')}-01`;
+                    const toDate = new Date(year, month, 0).toISOString().split('T')[0];
+                    receiptParams.from = fromDate;
+                    receiptParams.to = toDate;
+                }
+                const donationsRes = await apiGet('/receipts', receiptParams);
                 renderRecentDonations(donationsRes.data || []);
 
             } catch (error) {
@@ -352,24 +398,14 @@
             tbody.innerHTML = donations.map(d => `
                 <tr>
                     <td>
-                        <div class="d-flex align-items-center">
-                            <div class="avatar-sm bg-soft-primary rounded-circle me-2 d-flex align-items-center justify-content-center">
-                                <span class="text-primary fw-bold">${(d.donor_name || 'N')[0]}</span>
-                            </div>
-                            <span>${escapeHtml(d.donor_name || 'ไม่ระบุชื่อ')}</span>
-                        </div>
+                        <span>${escapeHtml(d.payer_name || 'ไม่ระบุชื่อ')}</span>
                     </td>
                     <td><div class="text-truncate" style="max-width: 200px;">${escapeHtml(d.project_name || '-')}</div></td>
                     <td class="text-end fw-semibold text-primary">฿${formatNumber(d.amount)}</td>
-                    <td>${formatTimeAgo(d.created_at)}</td>
-                    <td>${getStatusBadge(d.status)}</td>
+                    <td>${formatTimeAgo(d.issued_at)}</td>
+                    <td>${getReceiptStatusBadge(d.status == 'CANCELLED' ? 'cancelled' : 'issued')}</td>
                 </tr>
             `).join('');
-        }
-
-        function getStatusBadge(status) {
-            if (status === 'CONFIRMED') return '<span class="badge badge-soft-success">ยืนยัน</span>';
-            return '<span class="badge badge-soft-warning">รอยืนยัน</span>';
         }
 
         function formatTimeAgo(dateStr) {

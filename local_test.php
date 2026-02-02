@@ -123,7 +123,57 @@ addTest('security', 'JWT Secret', $jwtOk, $jwtOk ? 'กำหนดแล้ว'
 $cmuOk = isset($_ENV['CMU_OAUTH_CLIENT_ID']) && !empty($_ENV['CMU_OAUTH_CLIENT_ID']);
 addTest('security', 'CMU OAuth', $cmuOk, $cmuOk ? 'กำหนดแล้ว' : 'ไม่ได้กำหนด');
 
-// 6. PHP
+// 6. Admin Auth
+$authFiles = [
+    __DIR__ . '/admin/src/login.php' => 'Login Page',
+    __DIR__ . '/admin/src/logout.php' => 'Logout Page',
+    __DIR__ . '/admin/src/dev-login.php' => 'Dev Login',
+    __DIR__ . '/admin/src/auth-callback.php' => 'Auth Callback',
+    __DIR__ . '/admin/src/services/session.php' => 'Session Service',
+    __DIR__ . '/admin/src/services/auth_guard.php' => 'Auth Guard',
+    __DIR__ . '/admin/src/config/oauth.php' => 'OAuth Config'
+];
+foreach ($authFiles as $path => $name) {
+    addTest('auth', $name . ' (File)', file_exists($path), file_exists($path) ? 'พบ' : 'ไม่พบ');
+}
+
+// Test HTTP response for auth pages (catch 500 errors)
+$appBase = defined('APP_URL') ? APP_URL : 'http://localhost/edonation';
+$authPages = [
+    '/admin/src/login.php' => 'Login Page',
+    '/admin/src/logout.php' => 'Logout Page',
+    '/admin/src/dev-login.php' => 'Dev Login'
+];
+foreach ($authPages as $url => $name) {
+    $result = testApi($appBase . $url);
+    // 200, 302 (redirect) are OK; 500 is error
+    $isOk = $result['success'] || strpos($result['message'], '302') !== false;
+    addTest('auth', $name . ' (HTTP)', $isOk, $result['message']);
+}
+
+// Test OAuth Configuration
+$oauthConfigured = false;
+if (file_exists(__DIR__ . '/admin/src/config/oauth.php')) {
+    require_once __DIR__ . '/admin/src/config/oauth.php';
+    $oauthConfigured = defined('CMU_OAUTH_CLIENT_ID') && !empty(CMU_OAUTH_CLIENT_ID);
+}
+addTest('auth', 'OAuth Client ID', $oauthConfigured, $oauthConfigured ? 'กำหนดแล้ว' : 'ไม่ได้กำหนด');
+
+// Test Login API endpoint
+$loginApiTest = testApi($apiBase . '/v1/auth/oauth/login');
+addTest('auth', 'Login API', $loginApiTest['success'], $loginApiTest['message']);
+
+// Test Admin Users Table
+if ($dbConnected) {
+    try {
+        $adminCount = $pdo->query("SELECT COUNT(*) FROM edonation_admin_users WHERE status = 'active'")->fetchColumn();
+        addTest('auth', 'Active Admins', $adminCount > 0, "{$adminCount} คน");
+    } catch (Exception $e) {
+        addTest('auth', 'Active Admins', false, 'Error');
+    }
+}
+
+// 7. PHP
 $phpOk = version_compare(phpversion(), '7.4', '>=');
 addTest('php', 'PHP Version', $phpOk, 'PHP ' . phpversion());
 $exts = ['pdo', 'pdo_mysql', 'curl', 'json', 'mbstring', 'gd'];
@@ -131,7 +181,7 @@ foreach ($exts as $ext) {
     addTest('php', "ext-{$ext}", extension_loaded($ext), extension_loaded($ext) ? 'Loaded' : 'Missing');
 }
 
-// 7. Files
+// 8. Files
 $files = [
     __DIR__ . '/admin/src/index.php' => 'Admin Dashboard',
     __DIR__ . '/config/database.php' => 'Database Config',
@@ -140,6 +190,26 @@ $files = [
 foreach ($files as $path => $name) {
     addTest('files', $name, file_exists($path), file_exists($path) ? 'พบ' : 'ไม่พบ');
 }
+
+// 9. Error Pages
+$errorPages = [
+    __DIR__ . '/admin/src/pages-400.php' => ['name' => '400 Bad Request', 'code' => 400],
+    __DIR__ . '/admin/src/pages-403.php' => ['name' => '403 Forbidden', 'code' => 403],
+    __DIR__ . '/admin/src/pages-404.php' => ['name' => '404 Not Found', 'code' => 404],
+    __DIR__ . '/admin/src/pages-500.php' => ['name' => '500 Server Error', 'code' => 500],
+    __DIR__ . '/error/index.php' => ['name' => 'Public Error Page', 'code' => 0]
+];
+
+foreach ($errorPages as $path => $info) {
+    $exists = file_exists($path);
+    addTest('errors', $info['name'], $exists, $exists ? 'พบ' : 'ไม่พบ');
+}
+
+// Test error page accessibility (Admin 404)
+$adminBase = defined('APP_URL') ? APP_URL : 'http://localhost/edonation';
+$error404Url = $adminBase . '/admin/src/pages-404.php';
+$error404Test = testApi($error404Url);
+addTest('errors', 'Error Page Access', $error404Test['success'], $error404Test['message']);
 
 $total = $passed + $failed;
 $percentage = $total > 0 ? round(($passed / $total) * 100) : 0;
@@ -150,8 +220,10 @@ $categoryNames = [
     'tables' => 'Tables',
     'api' => 'API',
     'security' => 'Security',
+    'auth' => 'Admin Auth',
     'php' => 'PHP',
-    'files' => 'Files'
+    'files' => 'Files',
+    'errors' => 'Error Pages'
 ];
 ?>
 <!DOCTYPE html>

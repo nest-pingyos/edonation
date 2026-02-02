@@ -3,16 +3,21 @@
  * Project Controller
  * 
  * Endpoints:
- * GET    /projects          - รายการโครงการ
- * GET    /projects/:id      - รายละเอียดโครงการ
- * POST   /projects          - สร้างโครงการ (Admin)
- * PUT    /projects/:id      - แก้ไขโครงการ (Admin)
- * DELETE /projects/:id      - ลบโครงการ (Admin)
+ * GET    /projects              - รายการโครงการ
+ * GET    /projects/:id          - รายละเอียดโครงการ
+ * POST   /projects              - สร้างโครงการ (Admin)
+ * POST   /projects/upload-image - อัปโหลดรูปภาพโครงการ (Admin)
+ * PUT    /projects/:id          - แก้ไขโครงการ (Admin)
+ * DELETE /projects/:id          - ลบโครงการ (Admin)
  */
 
 class ProjectController
 {
-    const VERSION = '2.1';
+    const VERSION = '2.2';
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const UPLOAD_PATH = __DIR__ . '/../../assets/images/projects';
+
     private PDO $pdo;
 
     public function __construct()
@@ -27,6 +32,10 @@ class ProjectController
                 return $id ? $this->show($id) : $this->index();
             case 'POST':
                 AuthMiddleware::requireAdmin();
+                // Check for upload-image action
+                if ($id === 'upload-image') {
+                    return $this->uploadImage();
+                }
                 return $this->create();
             case 'PUT':
                 AuthMiddleware::requireAdmin();
@@ -155,8 +164,8 @@ class ProjectController
             return Response::validation($v->errors());
         }
 
-        $sql = "INSERT INTO edonation_projects (project_number, project_name, project_receipt_name, description, status) 
-                VALUES (:number, :name, :receipt_name, :description, :status)";
+        $sql = "INSERT INTO edonation_projects (project_number, project_name, project_receipt_name, description, image_url, status) 
+                VALUES (:number, :name, :receipt_name, :description, :image_url, :status)";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
@@ -164,6 +173,7 @@ class ProjectController
             ':name' => $data['project_name'],
             ':receipt_name' => $data['project_receipt_name'] ?? $data['project_name'],
             ':description' => $data['description'] ?? null,
+            ':image_url' => $data['image_url'] ?? null,
             ':status' => $data['status'] ?? 'active'
         ]);
 
@@ -178,7 +188,7 @@ class ProjectController
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        $allowedFields = ['project_name', 'project_receipt_name', 'description', 'status'];
+        $allowedFields = ['project_name', 'project_receipt_name', 'description', 'image_url', 'status'];
         $fields = [];
         $params = [':id' => $id];
 
@@ -218,5 +228,175 @@ class ProjectController
         }
 
         return Response::success(null, 'ลบโครงการสำเร็จ');
+    }
+
+    /**
+     * POST /projects/upload-image
+     * อัปโหลดรูปภาพโครงการ (Admin)
+     */
+    private function uploadImage(): array
+    {
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $errorCode = $_FILES['image']['error'] ?? 'NO_FILE';
+            return Response::error('UPLOAD_ERROR', 'การอัปโหลดไฟล์ล้มเหลว: ' . $this->getUploadErrorMessage($errorCode));
+        }
+
+        $file = $_FILES['image'];
+
+        // Validate file size
+        if ($file['size'] > self::MAX_FILE_SIZE) {
+            return Response::error('FILE_TOO_LARGE', 'ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)');
+        }
+
+        // Validate file type
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']);
+
+        if (!in_array($mimeType, self::ALLOWED_TYPES)) {
+            return Response::error('INVALID_TYPE', 'ประเภทไฟล์ไม่ถูกต้อง (รองรับ: JPG, PNG, GIF, WebP)');
+        }
+
+        // Generate unique filename
+        $extension = $this->getExtensionFromMime($mimeType);
+        $filename = 'project_' . uniqid() . '_' . time() . '.' . $extension;
+        $targetPath = self::UPLOAD_PATH . '/' . $filename;
+
+        // Ensure upload directory exists
+        if (!is_dir(self::UPLOAD_PATH)) {
+            mkdir(self::UPLOAD_PATH, 0755, true);
+        }
+
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            return Response::error('UPLOAD_FAILED', 'ไม่สามารถบันทึกไฟล์ได้');
+        }
+
+        // Optimize image if too large
+        $this->optimizeImage($targetPath, 1200, 800);
+
+        // Return the relative path for storing in database
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+        $imageUrl = $basePath . '/assets/images/projects/' . $filename;
+
+        return Response::success([
+            'filename' => $filename,
+            'url' => $imageUrl,
+            'size' => filesize($targetPath),
+            'type' => $mimeType
+        ], 'อัปโหลดรูปภาพสำเร็จ');
+    }
+
+    /**
+     * Optimize and resize image
+     */
+    private function optimizeImage(string $path, int $maxWidth, int $maxHeight): void
+    {
+        if (!extension_loaded('gd')) {
+            return;
+        }
+
+        $info = getimagesize($path);
+        if (!$info) {
+            return;
+        }
+
+        list($width, $height) = $info;
+        $mime = $info['mime'];
+
+        // Only resize if larger than max dimensions
+        if ($width <= $maxWidth && $height <= $maxHeight) {
+            return;
+        }
+
+        // Calculate new dimensions
+        $ratio = min($maxWidth / $width, $maxHeight / $height);
+        $newWidth = (int) ($width * $ratio);
+        $newHeight = (int) ($height * $ratio);
+
+        // Create image based on type
+        switch ($mime) {
+            case 'image/jpeg':
+                $source = imagecreatefromjpeg($path);
+                break;
+            case 'image/png':
+                $source = imagecreatefrompng($path);
+                break;
+            case 'image/gif':
+                $source = imagecreatefromgif($path);
+                break;
+            case 'image/webp':
+                $source = imagecreatefromwebp($path);
+                break;
+            default:
+                return;
+        }
+
+        if (!$source) {
+            return;
+        }
+
+        // Create resized image
+        $resized = imagecreatetruecolor($newWidth, $newHeight);
+
+        // Preserve transparency for PNG and GIF
+        if ($mime === 'image/png' || $mime === 'image/gif') {
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
+            $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
+            imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+
+        // Resize
+        imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+        // Save
+        switch ($mime) {
+            case 'image/jpeg':
+                imagejpeg($resized, $path, 85);
+                break;
+            case 'image/png':
+                imagepng($resized, $path, 8);
+                break;
+            case 'image/gif':
+                imagegif($resized, $path);
+                break;
+            case 'image/webp':
+                imagewebp($resized, $path, 85);
+                break;
+        }
+
+        imagedestroy($source);
+        imagedestroy($resized);
+    }
+
+    /**
+     * Get file extension from MIME type
+     */
+    private function getExtensionFromMime(string $mime): string
+    {
+        $map = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp'
+        ];
+        return $map[$mime] ?? 'jpg';
+    }
+
+    /**
+     * Get upload error message
+     */
+    private function getUploadErrorMessage($code): string
+    {
+        $messages = [
+            UPLOAD_ERR_INI_SIZE => 'ไฟล์ใหญ่เกินกำหนดของ server',
+            UPLOAD_ERR_FORM_SIZE => 'ไฟล์ใหญ่เกินกำหนดของฟอร์ม',
+            UPLOAD_ERR_PARTIAL => 'อัปโหลดไฟล์ไม่สมบูรณ์',
+            UPLOAD_ERR_NO_FILE => 'ไม่พบไฟล์ที่อัปโหลด',
+            UPLOAD_ERR_NO_TMP_DIR => 'ไม่พบโฟลเดอร์ชั่วคราว',
+            UPLOAD_ERR_CANT_WRITE => 'ไม่สามารถเขียนไฟล์ได้',
+            UPLOAD_ERR_EXTENSION => 'ส่วนขยาย PHP หยุดการอัปโหลด'
+        ];
+        return $messages[$code] ?? 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
     }
 }

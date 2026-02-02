@@ -74,28 +74,28 @@
                     </div>
                     <div class="card-body">
                         <!-- Filters -->
-                        <div class="row mb-3 g-2 align-items-center">
-                            <div class="col-md-2">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">แสดง</span>
-                                    <select id="limitSelector" class="form-select" onchange="changeLimit()">
+                        <div
+                            class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-muted">แสดง</span>
+                                    <select id="limitSelector" class="form-select form-select-sm border-0 bg-light"
+                                        style="width: auto;" onchange="changeLimit()">
                                         <option value="25">25</option>
                                         <option value="50">50</option>
                                         <option value="100">100</option>
                                         <option value="250">250</option>
                                         <option value="500">500</option>
                                     </select>
-                                    <span class="input-group-text bg-light">แถว</span>
+                                    <span class="text-muted">แถว</span>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        ค้นหา
-                                    </span>
-                                    <input type="text" id="searchInput" class="form-control"
-                                        placeholder="ค้นหาโครงการ...">
-                                </div>
+                            <div class="d-flex align-items-center gap-2 bg-light rounded px-3 py-2"
+                                style="min-width: 280px;">
+                                <iconify-icon icon="iconamoon:search-duotone" class="text-muted fs-5"></iconify-icon>
+                                <input type="text" id="searchInput"
+                                    class="form-control form-control-sm border-0 bg-transparent p-0"
+                                    placeholder="ค้นหาโครงการ...">
                             </div>
                         </div>
 
@@ -174,6 +174,31 @@
                             <label class="form-label">รายละเอียดโครงการ</label>
                             <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                             <div class="form-text">แสดงในหน้าเว็บสาธารณะ</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">รูปภาพโครงการ</label>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <input type="file" class="form-control" id="project_image" name="project_image"
+                                        accept="image/jpeg,image/png,image/gif,image/webp"
+                                        onchange="previewImage(this)">
+                                    <div class="form-text">รองรับ JPG, PNG, GIF, WebP (สูงสุด 5MB)</div>
+                                    <input type="hidden" id="image_url" name="image_url">
+                                </div>
+                                <div class="col-md-4">
+                                    <div id="imagePreviewContainer" class="border rounded p-2 text-center"
+                                        style="min-height: 100px;">
+                                        <img id="imagePreview" src="" alt="Preview" class="img-fluid rounded d-none"
+                                            style="max-height: 150px;">
+                                        <span id="noImageText" class="text-muted small">ยังไม่มีรูปภาพ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="uploadProgress" class="progress mt-2 d-none" style="height: 5px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                                    style="width: 0%"></div>
+                            </div>
                         </div>
 
                         <div class="row">
@@ -352,6 +377,13 @@
             document.getElementById('modalTitle').textContent = 'เพิ่มโครงการใหม่';
             document.getElementById('projectForm').reset();
             document.getElementById('projectId').value = '';
+            document.getElementById('image_url').value = '';
+
+            // Reset image preview
+            document.getElementById('imagePreview').classList.add('d-none');
+            document.getElementById('imagePreview').src = '';
+            document.getElementById('noImageText').classList.remove('d-none');
+            document.getElementById('project_image').value = '';
         }
 
         // Open edit modal
@@ -367,6 +399,18 @@
             document.getElementById('project_receipt_name').value = project.project_receipt_name || '';
             document.getElementById('description').value = project.description || '';
             document.getElementById('status').value = project.status || 'active';
+            document.getElementById('image_url').value = project.image_url || '';
+            document.getElementById('project_image').value = '';
+
+            // Show existing image preview
+            if (project.image_url) {
+                document.getElementById('imagePreview').src = project.image_url;
+                document.getElementById('imagePreview').classList.remove('d-none');
+                document.getElementById('noImageText').classList.add('d-none');
+            } else {
+                document.getElementById('imagePreview').classList.add('d-none');
+                document.getElementById('noImageText').classList.remove('d-none');
+            }
 
             new bootstrap.Modal(document.getElementById('projectModal')).show();
         }
@@ -382,11 +426,26 @@
             spinner.classList.remove('d-none');
 
             try {
+                // Upload image first if selected
+                const imageInput = document.getElementById('project_image');
+                let imageUrl = document.getElementById('image_url').value;
+
+                if (imageInput.files && imageInput.files[0]) {
+                    const uploadResult = await uploadProjectImage(imageInput.files[0]);
+                    if (uploadResult.success) {
+                        imageUrl = uploadResult.data.url;
+                        document.getElementById('image_url').value = imageUrl;
+                    } else {
+                        throw new Error(uploadResult.error?.message || 'อัปโหลดรูปภาพล้มเหลว');
+                    }
+                }
+
                 const formData = {
                     project_number: document.getElementById('project_number').value,
                     project_name: document.getElementById('project_name').value,
                     project_receipt_name: document.getElementById('project_receipt_name').value,
                     description: document.getElementById('description').value,
+                    image_url: imageUrl,
                     status: document.getElementById('status').value
                 };
 
@@ -447,6 +506,94 @@
                 clearTimeout(timeout);
                 timeout = setTimeout(() => func.apply(this, args), wait);
             };
+        }
+
+        // Preview selected image
+        function previewImage(input) {
+            const preview = document.getElementById('imagePreview');
+            const noImageText = document.getElementById('noImageText');
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                // Validate file size (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    showError('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)');
+                    input.value = '';
+                    return;
+                }
+
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    showError('ประเภทไฟล์ไม่ถูกต้อง (รองรับ: JPG, PNG, GIF, WebP)');
+                    input.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                    noImageText.classList.add('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // Reset preview if no file
+                if (!document.getElementById('image_url').value) {
+                    preview.classList.add('d-none');
+                    preview.src = '';
+                    noImageText.classList.remove('d-none');
+                }
+            }
+        }
+
+        // Upload project image to server
+        async function uploadProjectImage(file) {
+            const progressBar = document.getElementById('uploadProgress');
+            const progressInner = progressBar.querySelector('.progress-bar');
+
+            progressBar.classList.remove('d-none');
+            progressInner.style.width = '0%';
+
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('image', file);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', API_BASE + '/projects/upload-image', true);
+
+                // Progress handler
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressInner.style.width = percent + '%';
+                    }
+                };
+
+                // Complete handler
+                xhr.onload = function () {
+                    progressBar.classList.add('d-none');
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (xhr.status === 200 && response.success) {
+                            resolve(response);
+                        } else {
+                            resolve({ success: false, error: response.error || { message: 'Upload failed' } });
+                        }
+                    } catch (e) {
+                        resolve({ success: false, error: { message: 'Invalid response' } });
+                    }
+                };
+
+                // Error handler
+                xhr.onerror = function () {
+                    progressBar.classList.add('d-none');
+                    resolve({ success: false, error: { message: 'Network error' } });
+                };
+
+                xhr.send(formData);
+            });
         }
     </script>
 

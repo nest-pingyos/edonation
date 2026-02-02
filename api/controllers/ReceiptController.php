@@ -57,6 +57,9 @@ class ReceiptController
                 case 'resend':
                     AuthMiddleware::requireAdmin();
                     return $this->resend($id);
+                case 'shipping':
+                    AuthMiddleware::requireAdmin();
+                    return $this->updateShipping($id);
             }
         }
 
@@ -606,6 +609,16 @@ class ReceiptController
             $params[':to'] = $_GET['to'] . ' 23:59:59';
         }
 
+        // Shipping status filter
+        if (!empty($_GET['shipping_status'])) {
+            if ($_GET['shipping_status'] === 'pending') {
+                $where[] = "rs.status IS NULL";
+            } else {
+                $where[] = "rs.status = :shipping_status";
+                $params[':shipping_status'] = $_GET['shipping_status'];
+            }
+        }
+
         $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
         $sql = "SELECT 
@@ -623,6 +636,7 @@ class ReceiptController
                     r.id_card,
                     r.id_members,
                     du.project_name,
+                    du.project_number,
                     du.first_name,
                     du.last_name,
                     du.status_donat,
@@ -634,10 +648,16 @@ class ReceiptController
                     du.province,
                     du.amphure,
                     du.district,
-                    du.zip_code
+                    du.zip_code,
+                    rs.shipping_method,
+                    rs.tracking_number,
+                    rs.status as shipping_status,
+                    rs.shipped_at,
+                    rs.notes
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
+                LEFT JOIN edonation_receipt_shippings rs ON r.id = rs.receipt_id
                 $whereClause
                 ORDER BY r.receipt_no DESC 
                 LIMIT :limit OFFSET :offset";
@@ -1099,6 +1119,64 @@ class ReceiptController
             $this->pdo->rollBack();
             error_log("Update receipt error: " . $e->getMessage());
             return Response::error('DATABASE_ERROR', 'ไม่สามารถแก้ไขใบเสร็จได้: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /receipts/:id/shipping (Admin)
+     * อัปเดตข้อมูลการจัดส่ง
+     */
+    private function updateShipping(string $id): array
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        try {
+            $this->pdo->beginTransaction();
+
+            // Check if shipping record exists
+            $checkStmt = $this->pdo->prepare("SELECT id FROM edonation_receipt_shippings WHERE receipt_id = :id");
+            $checkStmt->execute([':id' => $id]);
+            $shippingId = $checkStmt->fetchColumn();
+
+            if ($shippingId) {
+                // Update
+                $sql = "UPDATE edonation_receipt_shippings SET 
+                            shipping_method = :method,
+                            tracking_number = :tracking,
+                            status = :status,
+                            notes = :notes,
+                            shipped_at = NOW()
+                        WHERE receipt_id = :id";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute([
+                    ':id' => $id,
+                    ':method' => $data['shipping_method'] ?? 'ThaiPost',
+                    ':tracking' => $data['tracking_number'] ?? '',
+                    ':status' => $data['status'] ?? 'shipped',
+                    ':notes' => $data['notes'] ?? ''
+                ]);
+            } else {
+                // Insert
+                $sql = "INSERT INTO edonation_receipt_shippings (receipt_id, shipping_method, tracking_number, status, notes, shipped_at)
+                        VALUES (:id, :method, :tracking, :status, :notes, NOW())";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute([
+                    ':id' => $id,
+                    ':method' => $data['shipping_method'] ?? 'ThaiPost',
+                    ':tracking' => $data['tracking_number'] ?? '',
+                    ':status' => $data['status'] ?? 'shipped',
+                    ':notes' => $data['notes'] ?? ''
+                ]);
+            }
+
+            $this->pdo->commit();
+            return Response::success(null, 'อัปเดตข้อมูลการจัดส่งสำเร็จ');
+        } catch (PDOException $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log("Update shipping error: " . $e->getMessage());
+            return Response::error('DATABASE_ERROR', 'ไม่สามารถอัปเดตข้อมูลการจัดส่งได้: ' . $e->getMessage(), 500);
         }
     }
 }

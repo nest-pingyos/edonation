@@ -178,10 +178,23 @@
                                     </div>
                                 </div>
 
-                                <div class="col-lg-2 col-md-12 d-flex align-items-end">
-                                    <button class="btn btn-primary w-100 py-2 d-flex align-items-center justify-content-center" onclick="searchReceipts()">
-                                        <iconify-icon icon="solar:filter-bold-duotone" class="me-2 fs-18"></iconify-icon>
+                                <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                                    <button
+                                        class="btn btn-primary w-100 py-2 d-flex align-items-center justify-content-center"
+                                        onclick="searchReceipts()">
+                                        <iconify-icon icon="solar:filter-bold-duotone"
+                                            class="me-2 fs-18"></iconify-icon>
                                         ค้นหาใบเสร็จ
+                                    </button>
+                                </div>
+
+                                <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                                    <button
+                                        class="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center"
+                                        onclick="resetFilters()">
+                                        <iconify-icon icon="solar:refresh-bold-duotone"
+                                            class="me-2 fs-18"></iconify-icon>
+                                        ล้างค่า
                                     </button>
                                 </div>
                             </div>
@@ -302,12 +315,27 @@
                     const option = document.createElement('option');
                     option.value = p.project_number; // Use project_number as value
                     // If project has no number, fallback to ID? Usually project_number is key.
-                    option.textContent = truncateText(p.project_name, 40);
+                    option.textContent = `[${p.project_number}] ` + truncateText(p.project_name, 30);
                     select.appendChild(option);
                 });
             } catch (error) {
                 console.error('Failed to load projects:', error);
             }
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('projectFilter').value = '';
+            document.getElementById('yearFilter').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('limitSelector').value = '25';
+
+            currentPage = 1;
+            perPage = 25;
+
+            loadReceipts();
         }
 
         function truncateText(text, length) {
@@ -392,6 +420,7 @@
                 </div>
             </td>
             <td style="max-width: 180px;">
+                <div class="small text-muted font-monospace">${escapeHtml(item.project_number || '-')}</div>
                 <div class="text-truncate" title="${escapeHtml(item.project_name || '-')}">
                     ${escapeHtml(item.project_name || '-')}
                 </div>

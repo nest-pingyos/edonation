@@ -242,7 +242,7 @@
                 document.getElementById('projectSummary').innerHTML = byProject.map(p => `
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <span class="fw-medium">${escapeHtml(p.project_name || p.project_number)}</span>
+                    <span class="fw-medium">[${escapeHtml(p.project_number || '-')}] ${escapeHtml(p.project_name || '-')}</span>
                     <br><small class="text-muted">${p.count} ครั้ง</small>
                 </div>
                 <span class="badge bg-primary fs-14">${formatCurrency(p.amount)}</span>
@@ -258,7 +258,7 @@
             <tr>
                 <td>${i + 1}</td>
                 <td><span class="badge bg-light text-dark font-monospace">${d.billPaymentRef1 || '-'}</span></td>
-                <td>${escapeHtml(d.project_name || d.project_number || '-')}</td>
+                <td>[${escapeHtml(d.project_number || '-')}] ${escapeHtml(d.project_name || '-')}</td>
                 <td class="text-end fw-medium text-primary">${formatCurrency(d.amount)}</td>
                 <td>${formatThaiDateShort(d.transaction_date || d.created_at)}</td>
                 <td>${getStatusBadge(d.status)}</td>

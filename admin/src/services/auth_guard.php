@@ -17,7 +17,9 @@ function authGuard(): void
 
     // Pages that don't need authentication
     $bypassPages = [
-        'auth/login.php',
+        'login.php',
+        'dev-login.php',
+        'logout.php',
         'auth-callback.php',
         'auth-signin.php'
     ];
@@ -35,7 +37,7 @@ function authGuard(): void
         logoutSession();
 
         $base = defined('BASE_PATH') ? BASE_PATH : '';
-        header("Location: {$base}/admin/src/auth/login.php");
+        header("Location: {$base}/admin/src/login.php");
         exit;
     }
 }

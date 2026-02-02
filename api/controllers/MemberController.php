@@ -271,6 +271,7 @@ class MemberController
                         title,
                         first_name,
                         last_name,
+                        full_name,
                         phone,
                         occupation,
                         address_line,
@@ -296,6 +297,7 @@ class MemberController
                         du.title,
                         du.first_name,
                         du.last_name,
+                        TRIM(CONCAT_WS(' ', du.title, du.first_name, du.last_name)) as full_name,
                         MAX(du.phone) as phone,
                         MAX(du.occupation) as occupation,
                         MAX(du.address_line) as address_line,
@@ -326,6 +328,7 @@ class MemberController
                     GROUP BY r.id_members, r.id_card, du.title, du.first_name, du.last_name
                     ON DUPLICATE KEY UPDATE
                         id_card = COALESCE(VALUES(id_card), id_card),
+                        full_name = VALUES(full_name),
                         phone = COALESCE(VALUES(phone), phone),
                         occupation = COALESCE(VALUES(occupation), occupation),
                         address_line = COALESCE(VALUES(address_line), address_line),
@@ -608,7 +611,7 @@ class MemberController
     {
         $query = trim($_GET['q'] ?? '');
         $type = $_GET['type'] ?? 'all'; // all, name, id_card
-        $limit = min(50, max(1, intval($_GET['limit'] ?? 20)));
+        $limit = min(100, max(1, intval($_GET['limit'] ?? 50)));
 
         $sql = "SELECT 
                     id,
@@ -638,17 +641,22 @@ class MemberController
         $params = [];
 
         if (!empty($query)) {
+            $cleanQuery = str_replace(' ', '', $query);
+            $searchVal = '%' . $query . '%';
+            $cleanSearchVal = '%' . $cleanQuery . '%';
+
             switch ($type) {
                 case 'name':
                     $sql .= " AND (
-                        full_name LIKE :q1 
-                        OR first_name LIKE :q2
-                        OR last_name LIKE :q3
+                        REPLACE(full_name, ' ', '') LIKE :q1 
+                        OR REPLACE(CONCAT(first_name, last_name), ' ', '') LIKE :q2
+                        OR first_name LIKE :q3
+                        OR last_name LIKE :q4
                     )";
-                    $searchVal = '%' . $query . '%';
-                    $params[':q1'] = $searchVal;
-                    $params[':q2'] = $searchVal;
+                    $params[':q1'] = $cleanSearchVal;
+                    $params[':q2'] = $cleanSearchVal;
                     $params[':q3'] = $searchVal;
+                    $params[':q4'] = $searchVal;
                     break;
 
                 case 'id_card':
@@ -658,20 +666,21 @@ class MemberController
 
                 default: // all
                     $sql .= " AND (
-                        full_name LIKE :q1 
-                        OR id_card LIKE :q2 
-                        OR id_members LIKE :q3
-                        OR first_name LIKE :q4
-                        OR last_name LIKE :q5
-                        OR phone LIKE :q6
+                        REPLACE(full_name, ' ', '') LIKE :q1 
+                        OR REPLACE(CONCAT(first_name, last_name), ' ', '') LIKE :q2
+                        OR id_card LIKE :q3 
+                        OR id_members LIKE :q4
+                        OR first_name LIKE :q5
+                        OR last_name LIKE :q6
+                        OR phone LIKE :q7
                     )";
-                    $searchVal = '%' . $query . '%';
-                    $params[':q1'] = $searchVal;
-                    $params[':q2'] = '%' . preg_replace('/\D/', '', $query) . '%';
-                    $params[':q3'] = $searchVal;
+                    $params[':q1'] = $cleanSearchVal;
+                    $params[':q2'] = $cleanSearchVal;
+                    $params[':q3'] = '%' . preg_replace('/\D/', '', $query) . '%';
                     $params[':q4'] = $searchVal;
                     $params[':q5'] = $searchVal;
-                    $params[':q6'] = '%' . preg_replace('/\D/', '', $query) . '%';
+                    $params[':q6'] = $searchVal;
+                    $params[':q7'] = '%' . preg_replace('/\D/', '', $query) . '%';
             }
         }
 

@@ -9,9 +9,10 @@ require_once __DIR__ . '/env.php';
 // 2. Load Database Service
 require_once __DIR__ . '/database.php';
 
-// 3. Load Common Helpers & Middlewares
+// 3. Load Common Helpers, Services & Middlewares
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Validator.php';
+require_once __DIR__ . '/../services/LineNotificationService.php';
 require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 
 // 4. Set Session Configuration (Unify with Admin)

@@ -330,7 +330,7 @@
             projects.forEach(p => {
                 const option = document.createElement('option');
                 option.value = p.project_number;
-                option.textContent = p.project_name;
+                option.textContent = `[${p.project_number}] ${p.project_name}`;
                 option.dataset.name = p.project_receipt_name || p.project_name;
                 select.appendChild(option);
             });

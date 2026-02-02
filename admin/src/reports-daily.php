@@ -301,7 +301,12 @@
                     <td>
                         <div class="fw-medium">${escapeHtml(item.donor_name || 'ไม่ระบุชื่อ')}</div>
                     </td>
-                    <td>${escapeHtml(item.project_name || item.project_number || '-')}</td>
+                    <td>
+                        <div>
+                            <div class="small text-muted font-monospace">${escapeHtml(item.project_number || '-')}</div>
+                            <div>${escapeHtml(item.project_name || '-')}</div>
+                        </div>
+                    </td>
                     <td class="text-end fw-semibold text-primary">${formatCurrency(item.amount || 0)}</td>
                     <td>${getStatusBadge(item.status)}</td>
                 </tr>

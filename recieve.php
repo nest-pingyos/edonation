@@ -19,12 +19,11 @@ $logFile = __DIR__ . '/logs/bank_callback.log';
 
 function logCallback($message)
 {
-    global $logFile;
-    $logDir = dirname($logFile);
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0755, true);
+    $logFile = __DIR__ . '/logs/bank_callback.log';
+    if (!is_dir(dirname($logFile))) {
+        @mkdir(dirname($logFile), 0777, true);
     }
-    file_put_contents($logFile, date('[Y-m-d H:i:s] ') . $message . PHP_EOL, FILE_APPEND);
+    @file_put_contents($logFile, date('[Y-m-d H:i:s] ') . $message . PHP_EOL, FILE_APPEND);
 }
 
 // Get raw input

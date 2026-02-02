@@ -149,14 +149,8 @@ function requireAuth(): void
         error_log("AUTH REDIRECT: Redirecting to login because not logged in. Path: $currentPath");
         logoutSession();
 
-        $loginBase = defined('BASE_PATH') ? BASE_PATH . '/admin/src/auth/login.php' : 'auth/login.php';
-
-        // If we are already in the auth folder, use simple login.php
-        if (strpos($currentPath, '/admin/src/auth/') !== false) {
-            $redirectUrl = 'login.php';
-        } else {
-            $redirectUrl = $loginBase;
-        }
+        $loginBase = defined('BASE_PATH') ? BASE_PATH . '/admin/src/login.php' : 'login.php';
+        $redirectUrl = $loginBase;
 
         header("Location: $redirectUrl");
         exit();

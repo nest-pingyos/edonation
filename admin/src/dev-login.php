@@ -3,7 +3,7 @@
  * Developer Login Handler
  * Sets a mock session for development testing
  */
-require_once __DIR__ . '/../services/session.php';
+require_once __DIR__ . '/services/session.php';
 
 if (defined('APP_ENV') && APP_ENV === 'development') {
     $_SESSION['user'] = [
@@ -16,7 +16,7 @@ if (defined('APP_ENV') && APP_ENV === 'development') {
     $_SESSION['login_time'] = time();
     $_SESSION['last_activity'] = time();
 
-    header('Location: ../index.php');
+    header('Location: index.php');
     exit;
 } else {
     die('Developer login is only available in development environment.');

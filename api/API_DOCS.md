@@ -484,12 +484,108 @@ GET /projects
 
 รายการโครงการทั้งหมด
 
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| page | int | หน้าที่ต้องการ (default: 1) |
+| limit | int | จำนวนต่อหน้า (default: 20, max: 500) |
+| status | string | active, inactive, completed |
+| search | string | ค้นหาชื่อโครงการ, รหัสโครงการ |
+
 ---
 
 ### Get Project Detail
 ```
 GET /projects/:id
 ```
+
+---
+
+### Create Project
+```
+POST /projects
+```
+🔐 **Requires Admin Auth**
+
+**Request Body:**
+```json
+{
+  "project_number": "PJ001",
+  "project_name": "โครงการทดสอบ",
+  "project_receipt_name": "กองทุนทดสอบ",
+  "description": "รายละเอียดโครงการ",
+  "image_url": "/edonation/assets/images/projects/project_xxx.jpg",
+  "status": "active"
+}
+```
+
+---
+
+### Update Project
+```
+PUT /projects/:id
+```
+🔐 **Requires Admin Auth**
+
+**Request Body:**
+```json
+{
+  "project_name": "ชื่อใหม่",
+  "project_receipt_name": "ชื่อใบเสร็จใหม่",
+  "description": "รายละเอียดใหม่",
+  "image_url": "/edonation/assets/images/projects/project_xxx.jpg",
+  "status": "active"
+}
+```
+
+---
+
+### Delete Project
+```
+DELETE /projects/:id
+```
+🔐 **Requires Admin Auth**
+
+---
+
+### Upload Project Image
+```
+POST /projects/upload-image
+```
+🔐 **Requires Admin Auth**
+
+**Content-Type:** `multipart/form-data`
+
+**Form Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| image | file | ไฟล์รูปภาพ (JPG, PNG, GIF, WebP) |
+
+**Constraints:**
+- Maximum file size: 5MB
+- Supported formats: JPEG, PNG, GIF, WebP
+- Images larger than 1200x800 will be automatically resized
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "filename": "project_65a1b2c3d4e5f_1706831400.jpg",
+    "url": "/edonation/assets/images/projects/project_65a1b2c3d4e5f_1706831400.jpg",
+    "size": 245678,
+    "type": "image/jpeg"
+  },
+  "message": "อัปโหลดรูปภาพสำเร็จ"
+}
+```
+
+**Error Responses:**
+| Code | Message |
+|------|---------|
+| UPLOAD_ERROR | การอัปโหลดไฟล์ล้มเหลว |
+| FILE_TOO_LARGE | ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB) |
+| INVALID_TYPE | ประเภทไฟล์ไม่ถูกต้อง |
 
 ---
 
@@ -629,6 +725,12 @@ GET /reports/top-donors?limit=10
 ---
 
 ## Changelog
+
+### Version 3.1 (2026-02-01)
+- เพิ่ม Endpoint `POST /projects/upload-image` สำหรับอัปโหลดรูปภาพโครงการ
+- เพิ่มฟิลด์ `image_url` ใน Create/Update Project
+- รองรับไฟล์รูปภาพ JPG, PNG, GIF, WebP (สูงสุด 5MB)
+- Auto-resize รูปภาพที่ใหญ่เกิน 1200x800
 
 ### Version 3.0 (2026-01-02)
 - เพิ่มฟิลด์ `id_card` และ `id_members` ในตาราง `edonation_receipts`

@@ -16,7 +16,7 @@ require_once __DIR__ . '/services/database.php';
 function redirectError($message)
 {
     $_SESSION['auth_error'] = $message;
-    header('Location: auth/login.php');
+    header('Location: login.php');
     exit;
 }
 

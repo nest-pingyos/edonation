@@ -124,10 +124,6 @@ class NotificationsController
             return Response::notFound('ไม่พบใบเสร็จ');
         }
 
-        // TODO: Implement email sending using PHPMailer
-        // require_once __DIR__ . '/../services/EmailService.php';
-        // EmailService::sendReceipt($receipt, $data['email']);
-
         error_log("Email receipt notification: #{$data['receipt_id']} to {$data['email']}");
 
         return Response::success([
@@ -139,7 +135,7 @@ class NotificationsController
 
     /**
      * POST /notifications/line
-     * ส่งข้อความ LINE Notify
+     * ส่งข้อความ LINE ของคณะ (Admin)
      */
     private function sendLine(): array
     {
@@ -154,25 +150,15 @@ class NotificationsController
             return Response::error('VALIDATION_ERROR', 'ข้อความไม่สามารถเป็นค่าว่างได้', 400);
         }
 
-        $lineToken = defined('LINE_TOKEN') ? LINE_TOKEN : null;
-
-        if (!$lineToken) {
-            error_log("LINE Notification Error: LINE_TOKEN not configured");
-            return Response::error('CONFIG_ERROR', 'LINE Token ยังไม่ได้ตั้งค่า', 500);
-        }
-
-        // Send to LINE Notify
-        $result = $this->sendToLineNotify($message, $lineToken);
+        // ใช้ LineNotificationService (API คณะ)
+        $notifier = new LineNotificationService();
+        $result = $notifier->sendCustomNotification('admin_direct', $message);
 
         if (!$result['success']) {
-            error_log("LINE Notification Error: " . ($result['error'] ?? 'Unknown error'));
-            return Response::error('LINE_ERROR', 'ไม่สามารถส่งข้อความ LINE ได้', 500);
+            return Response::error('LINE_ERROR', $result['message'] ?? 'ไม่สามารถส่งข้อความ LINE ได้', 500);
         }
 
-        return Response::success([
-            'message' => $message,
-            'message_length' => strlen($message)
-        ], 'ส่งข้อความ LINE เรียบร้อย');
+        return Response::success($result['results'], 'ส่งข้อความ LINE ของคณะเรียบร้อย');
     }
 
     /**
@@ -188,7 +174,6 @@ class NotificationsController
             return Response::error('VALIDATION_ERROR', 'รูปแบบอีเมลไม่ถูกต้อง', 400);
         }
 
-        // TODO: Implement email sending
         error_log("Email notification to {$data['to']}: " . substr($message, 0, 100));
 
         return Response::success([
@@ -200,51 +185,18 @@ class NotificationsController
     }
 
     /**
-     * Handle LINE notification
+     * Handle LINE notification (Faculty API)
      */
     private function handleLineNotification(string $message): array
     {
-        // TODO: Implement LINE notification
-        error_log("LINE notification: " . substr($message, 0, 100));
+        $notifier = new LineNotificationService();
+        $result = $notifier->sendCustomNotification('general', $message);
 
         return Response::success([
             'type' => 'line',
             'message' => $message,
-            'message_length' => strlen($message)
-        ], 'ส่งข้อความ LINE เรียบร้อย (Simulated)');
-    }
-
-    /**
-     * Send message to LINE Notify API
-     */
-    private function sendToLineNotify(string $message, string $token): array
-    {
-        $ch = curl_init();
-
-        curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://notify-api.line.me/api/notify',
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query(['message' => $message]),
-            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => true
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            return ['success' => false, 'error' => $curlError];
-        }
-
-        if ($httpCode !== 200) {
-            return ['success' => false, 'error' => "HTTP {$httpCode}: {$response}"];
-        }
-
-        return ['success' => true, 'response' => $response];
+            'results' => $result['results']
+        ], $result['success'] ? 'ส่งข้อความ LINE ของคณะเรียบร้อย' : 'ไม่สามารถส่งข้อความ LINE ได้');
     }
 
     /**

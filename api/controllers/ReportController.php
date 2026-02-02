@@ -386,58 +386,127 @@ class ReportController
     private function summary(): array
     {
         try {
-            // Default to calendar year
             $fiscalType = $_GET['fiscal_type'] ?? 'calendar';
-
-            // Calculate current year
             $currentYear = intval(date('Y'));
 
             $year = intval($_GET['year'] ?? $currentYear);
+            $month = !empty($_GET['month']) ? intval($_GET['month']) : null;
+            $projectNumber = $_GET['project'] ?? null;
             $today = date('Y-m-d');
 
-            // Calendar Year: Jan 1 - Dec 31
-            $startDate = $year . "-01-01";
-            $endDate = $year . "-12-31";
-            $months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            // Date Range for main stats
+            $whereParts = ["r.status = 1"];
+            $params = [];
 
-            // Summary Stats for the selected fiscal year
-            $yearStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end AND status = 1");
-            $yearStmt->execute([':start' => $startDate, ':end' => $endDate]);
+            if ($month) {
+                $startDate = sprintf('%04d-%02d-01', $year, $month);
+                $endDate = date('Y-m-t', strtotime($startDate));
+                $whereParts[] = "r.issued_at BETWEEN :start AND :end";
+                $params[':start'] = $startDate . ' 00:00:00';
+                $params[':end'] = $endDate . ' 23:59:59';
+            } else {
+                $startDate = $year . "-01-01";
+                $endDate = $year . "-12-31";
+                $whereParts[] = "r.issued_at BETWEEN :start AND :end";
+                $params[':start'] = $startDate . ' 00:00:00';
+                $params[':end'] = $endDate . ' 23:59:59';
+            }
+
+            if ($projectNumber) {
+                $whereParts[] = "du.project_number = :project_number";
+                $params[':project_number'] = $projectNumber;
+            }
+
+            $whereClause = "WHERE " . implode(" AND ", $whereParts);
+
+            // 1. Summary Stats for the filtered selection
+            $statsSql = "SELECT COUNT(*) as count, COALESCE(SUM(r.amount), 0) as total 
+                         FROM edonation_receipts r 
+                         LEFT JOIN edonation_donat_user du ON r.donation_id = du.id 
+                         $whereClause";
+            $yearStmt = $this->pdo->prepare($statsSql);
+            $yearStmt->execute($params);
             $yearStats = $yearStmt->fetch(PDO::FETCH_ASSOC);
 
-            // Today's stats
-            $todayStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE DATE(issued_at) = :date AND status = 1");
-            $todayStmt->execute([':date' => $today]);
+            // 2. Today's stats (Always today, but can be filtered by project)
+            $todayParams = [':today' => $today];
+            $todayWhere = "WHERE DATE(r.issued_at) = :today AND r.status = 1";
+            if ($projectNumber) {
+                $todayWhere .= " AND du.project_number = :proj";
+                $todayParams[':proj'] = $projectNumber;
+            }
+            $todayStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(r.amount), 0) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id $todayWhere");
+            $todayStmt->execute($todayParams);
             $todayStats = $todayStmt->fetch(PDO::FETCH_ASSOC);
 
-            // All time stats
-            $allStmt = $this->pdo->query("SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM edonation_receipts WHERE status = 1");
+            // 3. All time stats (Can be filtered by project)
+            $allParams = [];
+            $allWhere = "WHERE r.status = 1";
+            if ($projectNumber) {
+                $allWhere .= " AND du.project_number = :proj";
+                $allParams[':proj'] = $projectNumber;
+            }
+            $allStmt = $this->pdo->prepare("SELECT COUNT(*) as count, COALESCE(SUM(r.amount), 0) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id $allWhere");
+            $allStmt->execute($allParams);
             $allStats = $allStmt->fetch(PDO::FETCH_ASSOC);
 
-            // Unique donors count (All time)
-            $memberStmt = $this->pdo->query("SELECT COUNT(DISTINCT id_card) FROM edonation_donat_user WHERE (status_donat = 'completed' OR status_donat = 'CONFIRMED') AND id_card IS NOT NULL AND id_card != ''");
+            // 4. Unique donors count (Base on filters)
+            $memberWhere = "WHERE (du.status_donat = 'completed' OR du.status_donat = 'CONFIRMED') AND du.id_card IS NOT NULL AND du.id_card != ''";
+            $memberParams = [];
+            if ($projectNumber) {
+                $memberWhere .= " AND du.project_number = :proj";
+                $memberParams[':proj'] = $projectNumber;
+            }
+            if ($year) {
+                $memberWhere .= " AND du.fiscal_year = :year";
+                $memberParams[':year'] = $year;
+            }
+            $memberStmt = $this->pdo->prepare("SELECT COUNT(DISTINCT du.id_card) FROM edonation_donat_user du $memberWhere");
+            $memberStmt->execute($memberParams);
             $memberCount = (int) $memberStmt->fetchColumn();
 
-            // Monthly data for selected year
-            $monthlyData = [];
-            foreach ($months as $m)
-                $monthlyData[$m] = 0;
+            // 5. Monthly chart data for selected year
+            $monthlyData = array_fill(1, 12, 0);
+            $chartWhere = "WHERE r.issued_at BETWEEN :year_start AND :year_end AND r.status = 1";
+            $chartParams = [
+                ':year_start' => $year . '-01-01 00:00:00',
+                ':year_end' => $year . '-12-31 23:59:59'
+            ];
+            if ($projectNumber) {
+                $chartWhere .= " AND du.project_number = :proj";
+                $chartParams[':proj'] = $projectNumber;
+            }
 
-            $monthlyStmt = $this->pdo->prepare("SELECT MONTH(issued_at) as month, SUM(amount) as total FROM edonation_receipts WHERE issued_at BETWEEN :start AND :end AND status = 1 GROUP BY MONTH(issued_at)");
-            $monthlyStmt->execute([':start' => $startDate, ':end' => $endDate]);
+            $monthlyStmt = $this->pdo->prepare("SELECT MONTH(r.issued_at) as month, SUM(r.amount) as total 
+                                               FROM edonation_receipts r 
+                                               LEFT JOIN edonation_donat_user du ON r.donation_id = du.id 
+                                               $chartWhere 
+                                               GROUP BY MONTH(r.issued_at)");
+            $monthlyStmt->execute($chartParams);
             while ($row = $monthlyStmt->fetch()) {
                 $monthlyData[(int) $row['month']] = floatval($row['total']);
             }
 
-            // Project distribution (Top 5) for selected fiscal year
-            $projectStmt = $this->pdo->prepare("SELECT du.project_name, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end AND r.status = 1 GROUP BY du.project_name ORDER BY total DESC LIMIT 5");
-            $projectStmt->execute([':start' => $startDate, ':end' => $endDate]);
-            $projects = $projectStmt->fetchAll();
+            // 6. Project distribution
+            $projDistParams = [':start' => $startDate . ' 00:00:00', ':end' => $endDate . ' 23:59:59'];
+            $projDistWhere = "WHERE r.issued_at BETWEEN :start AND :end AND r.status = 1";
+            // No project filter here to show distribution, unless user wants ONLY that project (which would be 100%)
+            $projectStmt = $this->pdo->prepare("SELECT du.project_name, SUM(r.amount) as total 
+                                               FROM edonation_receipts r 
+                                               LEFT JOIN edonation_donat_user du ON r.donation_id = du.id 
+                                               $projDistWhere 
+                                               GROUP BY du.project_name ORDER BY total DESC LIMIT 5");
+            $projectStmt->execute($projDistParams);
+            $projects = $projectStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Payment method distribution for selected fiscal year
-            $payStmt = $this->pdo->prepare("SELECT du.payby, COUNT(*) as count, SUM(r.amount) as total FROM edonation_receipts r LEFT JOIN edonation_donat_user du ON r.donation_id = du.id WHERE r.issued_at BETWEEN :start AND :end AND r.status = 1 GROUP BY du.payby");
-            $payStmt->execute([':start' => $startDate, ':end' => $endDate]);
-            $payments = $payStmt->fetchAll();
+            // 7. Payment method distribution
+            $payStmt = $this->pdo->prepare("SELECT du.payby, COUNT(*) as count, SUM(r.amount) as total 
+                                           FROM edonation_receipts r 
+                                           LEFT JOIN edonation_donat_user du ON r.donation_id = du.id 
+                                           $whereClause 
+                                           GROUP BY du.payby");
+            $payStmt->execute($params);
+            $payments = $payStmt->fetchAll(PDO::FETCH_ASSOC);
 
             return Response::success([
                 'today' => [
@@ -446,6 +515,7 @@ class ReportController
                 ],
                 'selected_year' => [
                     'year' => $year,
+                    'month' => $month,
                     'count' => (int) $yearStats['count'],
                     'total' => floatval($yearStats['total'])
                 ],

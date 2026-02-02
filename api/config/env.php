@@ -90,7 +90,6 @@ define('JWT_EXPIRE', intval($_ENV['JWT_EXPIRE'] ?? 86400)); // 24 hours
 // ===========================================
 // External Services
 // ===========================================
-define('LINE_TOKEN', $_ENV['LINE_TOKEN'] ?? '');
 define('GMAIL_USER', $_ENV['GMAIL_USER'] ?? '');
 define('GMAIL_PASS', $_ENV['GMAIL_PASS'] ?? '');
 

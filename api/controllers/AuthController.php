@@ -303,7 +303,7 @@ class AuthController
 
         if (!$tokenResult['success']) {
             // Redirect to login with error
-            $errorUrl = $this->getAdminBaseUrl() . '/auth/login.php?error=' . urlencode($tokenResult['error']);
+            $errorUrl = $this->getAdminBaseUrl() . '/login.php?error=' . urlencode($tokenResult['error']);
             header("Location: $errorUrl");
             exit;
         }
@@ -314,7 +314,7 @@ class AuthController
         $userInfo = $this->getCmuUserInfo($accessToken);
 
         if (!$userInfo || !isset($userInfo['cmuitaccount'])) {
-            $errorUrl = $this->getAdminBaseUrl() . '/auth/login.php?error=' . urlencode('ไม่สามารถดึงข้อมูลผู้ใช้ได้');
+            $errorUrl = $this->getAdminBaseUrl() . '/login.php?error=' . urlencode('ไม่สามารถดึงข้อมูลผู้ใช้ได้');
             header("Location: $errorUrl");
             exit;
         }
@@ -323,7 +323,7 @@ class AuthController
         $authorizedUser = $this->getAdminUser($email);
 
         if (!$authorizedUser || $authorizedUser['status'] !== 'active') {
-            $errorUrl = $this->getAdminBaseUrl() . '/auth/login.php?error=' . urlencode("คุณไม่มีสิทธิ์เข้าใช้งานระบบ ({$email})");
+            $errorUrl = $this->getAdminBaseUrl() . '/login.php?error=' . urlencode("คุณไม่มีสิทธิ์เข้าใช้งานระบบ ({$email})");
             header("Location: $errorUrl");
             exit;
         }

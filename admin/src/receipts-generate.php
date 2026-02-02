@@ -103,6 +103,31 @@
             background: #1c84ee !important;
             color: white;
         }
+
+        .shadow-inner {
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .result-card {
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+        }
+
+        .result-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: #1c84ee;
+        }
+
+        .result-card.active {
+            border: 2px solid #1c84ee;
+            background-color: #f0f7ff;
+        }
+
+        .fs-24 {
+            font-size: 24px;
+        }
     </style>
 </head>
 
@@ -124,57 +149,37 @@
                         <!-- Form Column -->
                         <div class="col-12">
 
-                            <!-- ค้นหาผู้บริจาค -->
-                            <div class="card mb-4">
-                                <div class="card-header bg-soft-primary">
-                                    <h5 class="card-title mb-0 text-primary">
-                                        ค้นหาผู้บริจาค
-                                        <small class="text-muted fw-normal ms-2">(กรอกข้อมูลเพื่อดึงประวัติ)</small>
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <!-- Search Type Selection -->
-                                    <div class="mb-3 d-none">
-                                        <label class="form-label d-block mb-2 text-muted small">ค้นหาจาก</label>
-                                        <input type="hidden" id="searchType" value="all">
+                            <!-- Simple Donor Search -->
+                            <div class="card shadow-sm border-0 mb-4 divider-dashed">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <iconify-icon icon="solar:magnifer-linear" class="text-primary fs-24 me-2"></iconify-icon>
+                                        <h5 class="card-title mb-0">ค้นหาประวัติบุคคล</h5>
                                     </div>
-
-                                    <!-- Search Input -->
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" id="searchQuery"
-                                            placeholder="พิมพ์ชื่อ, นามสกุล หรือเลขบัตรประชาชน..."
-                                            onkeypress="if(event.key==='Enter'){event.preventDefault(); searchDonor();}">
-                                        <button class="btn btn-primary" type="button" onclick="searchDonor()">
-                                            ค้นหา
-                                        </button>
-                                    </div>
-
-                                    <!-- Search Results -->
-                                    <div id="searchResults" class="mt-3" style="display: none;">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="text-muted small">ผลการค้นหา</span>
-                                            <span class="badge bg-primary rounded-pill" id="resultCount">0 รายการ</span>
+                                    
+                                    <div class="row g-2">
+                                        <div class="col-md-10">
+                                            <input type="text" class="form-control form-control-lg bg-light border-0 px-3" id="searchQuery" 
+                                                placeholder="กรอกชื่อ-นามสกุล, เลขบัตร หรือเบอร์โทรศัพท์ เพื่อดึงข้อมูลเดิม..."
+                                                onkeypress="if(event.key==='Enter'){event.preventDefault(); smartSearch();}">
                                         </div>
-                                        <div class="table-responsive border rounded"
-                                            style="max-height: 220px; overflow-y: auto;">
-                                            <table class="table table-hover table-sm align-middle mb-0">
-                                                <thead class="table-light sticky-top">
-                                                    <tr>
-                                                        <th class="ps-3">ชื่อผู้บริจาค</th>
-                                                        <th>เลขบัตรประชาชน</th>
-                                                        <th class="text-center" width="80"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="searchResultsBody">
-                                                    <!-- Dynamic results -->
-                                                </tbody>
-                                            </table>
+                                        <div class="col-md-2">
+                                            <button class="btn btn-primary btn-lg w-100" type="button" onclick="smartSearch()">
+                                                ค้นหา
+                                            </button>
                                         </div>
                                     </div>
 
-                                    <!-- No Results Message -->
-                                    <div id="noResults" class="text-center py-4" style="display: none;">
-                                        <p class="text-muted mb-0 small">ไม่พบข้อมูล กรุณากรอกข้อมูลด้านล่าง</p>
+                                    <!-- Search Results Area (Simplified List) -->
+                                    <div id="searchResults" class="mt-4" style="display: none;">
+                                        <div id="searchResultsBody" class="list-group list-group-flush border rounded-3 overflow-auto" style="max-height: 300px;">
+                                            <!-- Results will be injected here as List Items -->
+                                        </div>
+                                    </div>
+
+                                    <!-- No Results -->
+                                    <div id="noResults" class="mt-3 text-center py-3 border border-dashed rounded bg-light" style="display: none;">
+                                        <span class="text-muted small">ไม่พบข้อมูลประวัติ กรุณากรอกเริ่มกรอกข้อมูลใหม่ด้านล่าง หรือตรวจสอบตัวสะกด</span>
                                     </div>
                                 </div>
                             </div>
@@ -542,30 +547,30 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Init AutoProvince for Receipt
             receiptAutoAddr = new AutoProvince({
-            apiPath: '<?php echo AUTOPROVINCE_API_PATH; ?>',
-            provinceSelector: '#province',
-            districtSelector: '#district',
-            subdistrictSelector: '#subdistrict',
-            postcodeSelector: '#postcode',
-            onAddressComplete: function (addr) {
-                updateFullAddress();
-            }
-        });
+                apiPath: '<?php echo AUTOPROVINCE_API_PATH; ?>',
+                provinceSelector: '#province',
+                districtSelector: '#district',
+                subdistrictSelector: '#subdistrict',
+                postcodeSelector: '#postcode',
+                onAddressComplete: function (addr) {
+                    updateFullAddress();
+                }
+            });
 
-        // Init AutoProvince for Shipping
-        shippingAutoAddr = new AutoProvince({
-            apiPath: '<?php echo AUTOPROVINCE_API_PATH; ?>',
-            provinceSelector: '#ship_province',
-            districtSelector: '#ship_district',
-            subdistrictSelector: '#ship_subdistrict',
-            postcodeSelector: '#ship_postcode',
-            onAddressComplete: function (addr) {
-                updateShippingFullAddress();
-            }
-        });
+            // Init AutoProvince for Shipping
+            shippingAutoAddr = new AutoProvince({
+                apiPath: '<?php echo AUTOPROVINCE_API_PATH; ?>',
+                provinceSelector: '#ship_province',
+                districtSelector: '#ship_district',
+                subdistrictSelector: '#ship_subdistrict',
+                postcodeSelector: '#ship_postcode',
+                onAddressComplete: function (addr) {
+                    updateShippingFullAddress();
+                }
+            });
 
-        loadProjects();
-        setDefaultDate();
+            loadProjects();
+            setDefaultDate();
         });
 
         // ===== AUTOPROVINCE FUNCTIONS =====
@@ -598,24 +603,16 @@
 
             // Copy Province -> District -> Subdistrict (Cascading)
             if (receiptData.province.id) {
-                $('#ship_province').val(receiptData.province.id).trigger('change');
-
-                // Wait for districts
-                setTimeout(() => {
-                    if (receiptData.district.id) {
-                        $('#ship_district').val(receiptData.district.id).trigger('change');
-
-                        // Wait for subdistricts
-                        setTimeout(() => {
-                            if (receiptData.subdistrict.id) {
-                                $('#ship_subdistrict').val(receiptData.subdistrict.id).trigger('change');
-                            }
-                        }, 500);
-                    }
-                }, 500);
+                shippingAutoAddr.setValues({
+                    province: receiptData.province.id,
+                    district: receiptData.district.id,
+                    subdistrict: receiptData.subdistrict.id
+                }).then(() => {
+                    showSuccess('คัดลอกที่อยู่เรียบร้อย');
+                });
+            } else {
+                showSuccess('คัดลอกที่อยู่ (เฉพาะข้อความ) เรียบร้อย');
             }
-
-            showSuccess('คัดลอกที่อยู่เรียบร้อย');
         }
 
         // Helper to set address from search result
@@ -646,13 +643,29 @@
                 projects.forEach(p => {
                     const option = document.createElement('option');
                     option.value = p.project_number;
-                    option.textContent = p.project_name;
+                    option.textContent = `[${p.project_number}] ${p.project_name}`;
                     option.dataset.name = p.project_name;
                     option.dataset.receiptName = p.project_receipt_name || p.project_name;
                     select.appendChild(option);
                 });
             } catch (error) {
                 console.error('Failed to load projects:', error);
+            }
+        }
+
+        function handleProjectChange() {
+            const select = document.getElementById('project_number');
+            const customInput = document.getElementById('custom_project_name');
+            const selectedVal = select.value;
+
+            // แสดงช่องระบุชื่อโครงการเอง หากเลือก "อื่น ๆ" (รหัส 121210)
+            if (selectedVal === '121210') {
+                customInput.style.display = 'block';
+                customInput.setAttribute('required', 'required');
+            } else {
+                customInput.style.display = 'none';
+                customInput.removeAttribute('required');
+                customInput.value = '';
             }
         }
 
@@ -693,47 +706,30 @@
             input.value = integerPart + decimalPart;
         }
 
-        // ===== NEW SEARCH FUNCTIONS =====
+        // ===== NEW SMART SEARCH FUNCTIONS =====
 
-        function setSearchType(type) {
-            document.getElementById('searchType').value = type;
-
-            // Check the correct radio button
-            const radioMap = {
-                'all': 'searchTypeAll',
-                'name': 'searchTypeName',
-                'id_card': 'searchTypeIdCard'
-            };
-            const radioId = radioMap[type];
-            if (radioId) {
-                document.getElementById(radioId).checked = true;
-            }
-
-            // Update placeholder
-            const placeholders = {
-                'all': 'พิมพ์ชื่อ, นามสกุล หรือเลขบัตรประชาชน...',
-                'name': 'พิมพ์ชื่อ หรือ นามสกุล...',
-                'id_card': 'พิมพ์เลขบัตรประชาชน 13 หลัก...'
-            };
-            document.getElementById('searchQuery').placeholder = placeholders[type] || placeholders['all'];
+        function toggleAdvancedSearch() {
+            const panel = document.getElementById('advancedSearchPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         }
 
-        async function searchDonor() {
-            const query = document.getElementById('searchQuery').value.trim();
-            const type = document.getElementById('searchType').value;
+        function hideSearchResults() {
+            document.getElementById('searchResults').style.display = 'none';
+        }
+
+        async function smartSearch() {
+            let query = document.getElementById('searchQuery').value.trim();
 
             if (!query) {
                 showWarning('กรุณากรอกข้อมูลที่ต้องการค้นหา');
                 return;
             }
 
-            // Reset display
             document.getElementById('searchResults').style.display = 'none';
             document.getElementById('noResults').style.display = 'none';
 
             try {
-                // Call new search API
-                const response = await apiGet(`/members/search?q=${encodeURIComponent(query)}&type=${type}`);
+                const response = await apiGet(`/members/search?q=${encodeURIComponent(query)}`);
                 const results = response.data || [];
 
                 if (results.length === 0) {
@@ -741,61 +737,46 @@
                     return;
                 }
 
-                // Display results in table
-                displaySearchResultsTable(results);
-
+                renderSimpleResults(results);
             } catch (error) {
-                if (error.message.includes('404') || error.message.includes('ไม่พบ')) {
-                    document.getElementById('noResults').style.display = 'block';
-                } else {
-                    showError(error.message);
-                }
+                document.getElementById('noResults').style.display = 'block';
             }
         }
 
-        function displaySearchResultsTable(results) {
+        function renderSimpleResults(results) {
             const container = document.getElementById('searchResults');
-            const tbody = document.getElementById('searchResultsBody');
-            const countBadge = document.getElementById('resultCount');
+            const body = document.getElementById('searchResultsBody');
 
             container.style.display = 'block';
-            countBadge.textContent = results.length + ' รายการ';
 
-            tbody.innerHTML = results.map((item, index) => `
-                <tr class="search-result-row" style="cursor: pointer;" onclick="selectSearchResult(${index})">
-                    <td>
-                        <div class="fw-medium">${escapeHtml(item.name || 'ไม่ระบุชื่อ')}</div>
-                        <small class="text-muted">รหัส: ${item.id_members || '-'}</small>
-                    </td>
-                    <td>
-                        <span class="font-monospace small">${escapeHtml(item.id_card_formatted || item.id_card || '-')}</span>
-                    </td>
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); selectSearchResult(${index})">
-                            เลือก
-                        </button>
-                    </td>
-                </tr>
+            body.innerHTML = results.map((item, index) => `
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 px-4" onclick="selectSimpleResult(${index})">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold text-primary mb-1">${escapeHtml(item.name || 'ไม่ระบุชื่อ')}</div>
+                            <div class="text-muted small">
+                                <span class="me-3"><i class="bx bx-id-card me-1"></i> ${escapeHtml(item.id_card_formatted || item.id_card || '-')}</span>
+                                <span><i class="bx bx-phone me-1"></i> ${escapeHtml(item.phone || '-')}</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill">เลือกดึงข้อมูล</button>
+                    </div>
+                </a>
             `).join('');
 
-            // Store results for selection
             window.searchResults = results;
         }
 
-        function selectSearchResult(index) {
+        function selectSimpleResult(index) {
             const item = window.searchResults[index];
             if (!item) return;
 
-            // Highlight selected row
-            document.querySelectorAll('.search-result-row').forEach((row, i) => {
-                row.classList.toggle('table-primary', i === index);
-            });
-
-            // Fill form with selected data
             fillFormFromSearchResult(item);
+            document.getElementById('searchResults').style.display = 'none';
+            showSuccess('เรียบร้อย');
 
-            showSuccess('เลือกข้อมูลจาก: ' + (item.name || 'ไม่ระบุชื่อ'));
+            // Scroll to form
+            document.getElementById('affiliation').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function fillFormFromSearchResult(item) {
@@ -819,35 +800,16 @@
 
             // Trigger AutoProvince if data available
             if (item.province && receiptAutoAddr) {
-                const $prov = $('#province');
-                const provOption = $prov.find('option').filter(function () { return $(this).text() === item.province; });
-                if (provOption.length) {
-                    $prov.val(provOption.val()).trigger('change');
-
-                    // Delay for district and subdistrict
-                    setTimeout(() => {
-                        if (item.district || item.amphure) {
-                            const targetDist = item.amphure || item.district;
-                            const $dist = $('#district');
-                            const distOption = $dist.find('option').filter(function () { return $(this).text() === targetDist; });
-                            if (distOption.length) {
-                                $dist.val(distOption.val()).trigger('change');
-
-                                setTimeout(() => {
-                                    if (item.subdistrict || item.district) {
-                                        const targetSub = item.subdistrict || item.district;
-                                        const $sub = $('#subdistrict');
-                                        const subOption = $sub.find('option').filter(function () { return $(this).text() === targetSub; });
-                                        if (subOption.length) {
-                                            $sub.val(subOption.val()).trigger('change');
-                                            if (item.zip_code) document.getElementById('postcode').value = item.zip_code;
-                                        }
-                                    }
-                                }, 600);
-                            }
-                        }
-                    }, 600);
-                }
+                receiptAutoAddr.setValues({
+                    province: item.province,
+                    district: item.district || item.amphure,
+                    subdistrict: item.subdistrict
+                }).then(() => {
+                    if (item.zip_code) {
+                        document.getElementById('postcode').value = item.zip_code;
+                    }
+                    updateFullAddress();
+                });
             }
         }
 
@@ -883,7 +845,19 @@
             // Fill address
             const addrValue = donation.receipt_address || donation.shipping_address || donation.address || '';
             document.getElementById('address').value = addrValue;
-            document.getElementById('address_line').value = addrValue;
+            document.getElementById('address_line').value = donation.address_line || addrValue;
+
+            // Trigger AutoProvince if structured data available
+            if (donation.province && receiptAutoAddr) {
+                receiptAutoAddr.setValues({
+                    province: donation.province,
+                    district: donation.amphure || donation.district,
+                    subdistrict: donation.district || donation.subdistrict
+                }).then(() => {
+                    if (donation.zip_code) document.getElementById('postcode').value = donation.zip_code;
+                    updateFullAddress();
+                });
+            }
 
             // Fill amount
             if (donation.amount) {
@@ -927,7 +901,13 @@
             const addressLine = document.getElementById('address_line').value.trim();
             const projectSelect = document.getElementById('project_number');
             const projectNumber = projectSelect.value;
-            const projectName = projectSelect.options[projectSelect.selectedIndex]?.dataset?.receiptName || projectSelect.options[projectSelect.selectedIndex]?.dataset?.name || projectSelect.options[projectSelect.selectedIndex]?.text || '';
+            let projectName = projectSelect.options[projectSelect.selectedIndex]?.dataset?.receiptName || projectSelect.options[projectSelect.selectedIndex]?.dataset?.name || projectSelect.options[projectSelect.selectedIndex]?.text || '';
+
+            // หากเป็นโครงการ "อื่น ๆ" ให้ใช้ชื่อที่กรอกเองเพิ่มเติม
+            if (projectNumber === '121210') {
+                const customName = document.getElementById('custom_project_name').value.trim();
+                if (customName) projectName = customName;
+            }
             const amount = document.getElementById('amount').value.replace(/,/g, '');
             const donationDate = document.getElementById('donation_date').value;
 

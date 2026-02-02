@@ -114,7 +114,7 @@ class DonationController
                     address_line, province, amphure, district, zip_code
                 ) VALUES (
                     :ref1, :project_number, :project_name, :type, :phone, :amount, 
-                    :fiscal_year, 'pending', 'QR PromptPay', CURDATE(),
+                    :fiscal_year, 'pending', 'โอน/QR PromptPay', CURDATE(),
                     :need_receipt, :receipt_address, :shipping_address,
                     :address_line, :province, :amphure, :district, :zip_code
                 )"
@@ -240,12 +240,12 @@ class DonationController
                     billPaymentRef1, project_number, project_name, type, phone, email, occupation, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
                     need_receipt, title, first_name, last_name, id_card, receipt_address, shipping_address,
-                    address_line, province, amphure, district, zip_code
+                    address_line, province, amphure, district, zip_code, notes
                 ) VALUES (
                     :ref1, :project_number, :project_name, :type, :phone, :email, :occupation, :amount, 
                     :fiscal_year, 'completed', :payby, :receipt_date,
                     1, :title, :first_name, :last_name, :id_card, :receipt_address, :shipping_address,
-                    :address_line, :province, :amphure, :district, :zip_code
+                    :address_line, :province, :amphure, :district, :zip_code, :notes
                 )
             ");
 
@@ -271,7 +271,8 @@ class DonationController
                 ':province' => $data['province'] ?? null,
                 ':amphure' => $data['amphure'] ?? null,
                 ':district' => $data['district'] ?? null,
-                ':zip_code' => $data['zip_code'] ?? null
+                ':zip_code' => $data['zip_code'] ?? null,
+                ':notes' => $data['note'] ?? ''
             ]);
 
             $donationId = $this->pdo->lastInsertId();
@@ -341,7 +342,7 @@ class DonationController
             // Insert receipt
             $receiptStmt = $this->pdo->prepare("
                 INSERT INTO edonation_receipts (donation_id, receipt_no, payer_name, amount, issued_at, id_card, id_members)
-                VALUES (:donation_id, :receipt_no, :payer_name, :amount, NOW(), :id_card, :id_members)
+                VALUES (:donation_id, :receipt_no, :payer_name, :amount, :issued_at, :id_card, :id_members)
             ");
 
             $receiptStmt->execute([
@@ -349,6 +350,7 @@ class DonationController
                 ':receipt_no' => $receiptNo,
                 ':payer_name' => $payerName,
                 ':amount' => $data['amount'],
+                ':issued_at' => $data['donation_date'] . ' ' . date('H:i:s'),
                 ':id_card' => $idCard,
                 ':id_members' => $idMembers
             ]);

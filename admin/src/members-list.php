@@ -162,19 +162,17 @@
                         <!-- Toolbar -->
                         <div
                             class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mb-4">
-                            <div class="col-md-2">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">แสดง</span>
-                                    <select id="limitSelector" class="form-select border-0 bg-light"
-                                        onchange="changeLimit()">
-                                        <option value="25">25</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                        <option value="250">250</option>
-                                        <option value="500">500</option>
-                                    </select>
-                                    <span class="input-group-text bg-light">แถว</span>
-                                </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted">แสดง</span>
+                                <select id="limitSelector" class="form-select form-select-sm border-0 bg-light"
+                                    style="width: auto;" onchange="changeLimit()">
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="250">250</option>
+                                    <option value="500">500</option>
+                                </select>
+                                <span class="text-muted">แถว</span>
                             </div>
                             <div class="search-box d-flex align-items-center flex-grow-1" style="max-width: 400px;">
                                 <iconify-icon icon="iconamoon:search-duotone"
@@ -783,7 +781,7 @@
                                     <tbody>
                                         ${data.top_projects.map(p => `
                                             <tr>
-                                                <td>${p.project_name || p.project_number}</td>
+                                                <td>[${p.project_number || '-'}] ${p.project_name || '-'}</td>
                                                 <td class="text-end fw-medium">${formatCurrency(p.total)}</td>
                                             </tr>
                                         `).join('')}
@@ -832,7 +830,7 @@
                 } else if (data.shipping_address) {
                     $('#edit_ship_address_line').val(data.shipping_address);
                 }
-                
+
                 updateFullAddressEdit();
                 updateShippingFullAddressEdit();
 

@@ -88,36 +88,34 @@
                     </div>
                     <div class="card-body">
                         <!-- Filters -->
-                        <div class="row mb-3 g-2 align-items-center">
-                            <div class="col-md-2">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">แสดง</span>
-                                    <select id="limitSelector" class="form-select border-0 bg-light"
-                                        onchange="changeLimit()">
+                        <div
+                            class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-muted">แสดง</span>
+                                    <select id="limitSelector" class="form-select form-select-sm border-0 bg-light"
+                                        style="width: auto;" onchange="changeLimit()">
                                         <option value="25">25</option>
                                         <option value="50">50</option>
                                         <option value="100">100</option>
                                         <option value="250">250</option>
                                         <option value="500">500</option>
                                     </select>
-                                    <span class="input-group-text bg-light">แถว</span>
+                                    <span class="text-muted">แถว</span>
                                 </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        ค้นหา
-                                    </span>
-                                    <input type="text" id="searchInput" class="form-control"
-                                        placeholder="ค้นหาชื่อระดับ..." oninput="filterTable()">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <select id="statusFilter" class="form-select" onchange="filterTable()">
+                                <select id="statusFilter" class="form-select form-select-sm border-0 bg-light"
+                                    style="width: auto; min-width: 140px;" onchange="filterTable()">
                                     <option value="">ทุกสถานะ</option>
                                     <option value="active">เปิดใช้งาน</option>
                                     <option value="inactive">ปิดใช้งาน</option>
                                 </select>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 bg-light rounded px-3 py-2"
+                                style="min-width: 250px;">
+                                <iconify-icon icon="iconamoon:search-duotone" class="text-muted fs-5"></iconify-icon>
+                                <input type="text" id="searchInput"
+                                    class="form-control form-control-sm border-0 bg-transparent p-0"
+                                    placeholder="ค้นหาชื่อระดับ..." oninput="filterTable()">
                             </div>
                         </div>
 
