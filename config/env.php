@@ -72,16 +72,20 @@ if (!defined('API_DOMAIN')) {
 
 // Base paths
 if (!defined('BASE_PATH')) {
-    // Check if BASE_PATH is set in environment (Docker)
+    // Check if BASE_PATH is explicitly set in environment (e.g. via .env)
     if (isset($_ENV['BASE_PATH'])) {
-        // Use environment variable directly (can be empty for root deployment)
         $env_base = $_ENV['BASE_PATH'];
-        // Normalize: remove trailing slash, keep leading slash (or empty)
-        $env_base = rtrim($env_base, '/');
+        // Normalize: remove trailing slash, ensure leading slash if not empty
+        if ($env_base !== '') {
+            $env_base = rtrim($env_base, '/');
+            if ($env_base[0] !== '/') {
+                $env_base = '/' . $env_base;
+            }
+        }
         define('BASE_PATH', $env_base);
     } else {
-        // Detect BASE_PATH automatically (e.g., /appdev/edonation)
-        $script_path = str_replace('\\', '/', dirname(__DIR__, 2));
+        // Detect BASE_PATH automatically (e.g., /edonation for XAMPP)
+        $script_path = str_replace('\\', '/', dirname(__DIR__));
         $root_path = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
 
         if (empty($root_path)) {
