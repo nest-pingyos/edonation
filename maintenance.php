@@ -274,7 +274,7 @@ header('Retry-After: 3600'); // 1 hour
             Maintenance in Progress
         </div>
 
-        <img src="assets/images/maintenance.png" alt="Maintenance" class="illustration">
+        <img src="maintenance.png" alt="Maintenance" class="illustration">
 
         <h1>ปิดปรับปรุงระบบชั่วคราว</h1>
         <p>
