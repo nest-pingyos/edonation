@@ -50,15 +50,22 @@ foreach ($envVars as $key => $value) {
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $isDocker = isset($_ENV['BASE_PATH']) && $_ENV['BASE_PATH'] === '';
 
-define('APP_DOMAIN', $_ENV['APP_DOMAIN'] ?? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://') . $host);
-define('BASE_PATH', $_ENV['BASE_PATH'] ?? '/edonation');
-define('API_BASE_PATH', $_ENV['API_BASE_PATH'] ?? BASE_PATH . '/api');
+if (!defined('APP_DOMAIN'))
+    define('APP_DOMAIN', $_ENV['APP_DOMAIN'] ?? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://') . $host);
+if (!defined('BASE_PATH'))
+    define('BASE_PATH', $_ENV['BASE_PATH'] ?? '/edonation');
+if (!defined('API_BASE_PATH'))
+    define('API_BASE_PATH', $_ENV['API_BASE_PATH'] ?? BASE_PATH . '/api');
 
 // Full URLs
-define('APP_URL', APP_DOMAIN . BASE_PATH);
-define('API_URL', APP_DOMAIN . API_BASE_PATH);
-define('WEB_URL', APP_URL);
-define('ADMIN_URL', APP_URL . '/admin');
+if (!defined('APP_URL'))
+    define('APP_URL', APP_DOMAIN . BASE_PATH);
+if (!defined('API_URL'))
+    define('API_URL', APP_DOMAIN . API_BASE_PATH);
+if (!defined('WEB_URL'))
+    define('WEB_URL', APP_URL);
+if (!defined('ADMIN_URL'))
+    define('ADMIN_URL', APP_URL . '/admin');
 
 // ===========================================
 // CORS Configuration
@@ -70,22 +77,30 @@ define('CORS_ALLOWED_ORIGINS', explode(',', $allowedOrigins));
 // ===========================================
 // Application Settings
 // ===========================================
-define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
-define('APP_DEBUG', ($_ENV['APP_DEBUG'] ?? 'false') === 'true');
+if (!defined('APP_ENV'))
+    define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
+if (!defined('APP_DEBUG'))
+    define('APP_DEBUG', ($_ENV['APP_DEBUG'] ?? 'false') === 'true');
 
 // ===========================================
 // Database Configuration
 // ===========================================
-define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
-define('DB_NAME', $_ENV['DB_NAME'] ?? 'edonation');
-define('DB_USER', $_ENV['DB_USER'] ?? 'root');
-define('DB_PASS', $_ENV['DB_PASS'] ?? '');
+if (!defined('DB_HOST'))
+    define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
+if (!defined('DB_NAME'))
+    define('DB_NAME', $_ENV['DB_NAME'] ?? 'edonation');
+if (!defined('DB_USER'))
+    define('DB_USER', $_ENV['DB_USER'] ?? 'root');
+if (!defined('DB_PASS'))
+    define('DB_PASS', $_ENV['DB_PASS'] ?? '');
 
 // ===========================================
 // JWT Configuration
 // ===========================================
-define('JWT_SECRET', $_ENV['JWT_SECRET'] ?? 'your-secret-key-change-this');
-define('JWT_EXPIRE', intval($_ENV['JWT_EXPIRE'] ?? 86400)); // 24 hours
+if (!defined('JWT_SECRET'))
+    define('JWT_SECRET', $_ENV['JWT_SECRET'] ?? 'your-secret-key-change-this');
+if (!defined('JWT_EXPIRE'))
+    define('JWT_EXPIRE', intval($_ENV['JWT_EXPIRE'] ?? 86400)); // 24 hours
 
 // ===========================================
 // External Services

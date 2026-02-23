@@ -25,6 +25,9 @@ $basePath = '';  // Relative to the current page in src/
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
         rel="stylesheet" />
 
+    <!-- Flatpickr (Required) -->
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+
     <!-- Local CSS Files -->
     <link href="<?php echo $basePath; ?>assets/css/icons.css" rel="stylesheet" type="text/css" />
     <link href="<?php echo $basePath; ?>assets/css/app.css" rel="stylesheet" type="text/css" />
@@ -66,9 +69,9 @@ $basePath = '';  // Relative to the current page in src/
     <!-- Reback Admin Custom Styles (CDN Version) -->
     <style>
         /* ============================================
-                       Reback Admin Template - CDN Version
-                       Primary Color: #1c84ee (Blue)
-                       ============================================ */
+                                       Reback Admin Template - CDN Version
+                                       Primary Color: #1c84ee (Blue)
+                                       ============================================ */
 
         :root {
             --bs-primary: #1c84ee;

@@ -271,7 +271,6 @@ class MemberController
                         title,
                         first_name,
                         last_name,
-                        full_name,
                         phone,
                         occupation,
                         address_line,
@@ -287,57 +286,66 @@ class MemberController
                         last_donation_date,
                         benefactor_level
                     )
+                SELECT 
+                    stats.id_members,
+                    LEFT(du.id_card, 13) as id_card,
+                    CASE 
+                        WHEN du.title IN ('บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม') THEN 'juristic'
+                        ELSE 'individual'
+                    END as type,
+                    COALESCE(du.title, '') as title,
+                    COALESCE(du.first_name, '') as first_name,
+                    COALESCE(du.last_name, '') as last_name,
+                    LEFT(du.phone, 20) as phone,
+                    du.occupation,
+                    du.address_line,
+                    du.province,
+                    du.amphure as district,
+                    du.district as subdistrict,
+                    du.zip_code,
+                    COALESCE(du.receipt_address, du.shipping_address, 
+                        CONCAT_WS(' ', du.address_line, du.district, du.amphure, du.province, du.zip_code)
+                    ) as full_address,
+                    du.shipping_address,
+                    stats.total_donated,
+                    stats.donation_count,
+                    stats.first_donation_date,
+                    stats.last_donation_date,
+                    CASE 
+                        WHEN stats.total_donated >= 1000000 THEN 'มหากุศลาธิยาอา'
+                        WHEN stats.total_donated >= 500000 THEN 'กุศลาธิกาอา'
+                        WHEN stats.total_donated >= 100000 THEN 'อุดมกุศลา'
+                        WHEN stats.total_donated >= 50000 THEN 'มหากุศลา'
+                        WHEN stats.total_donated >= 10000 THEN 'กุศลา'
+                        ELSE 'ผู้บริจาค'
+                    END as benefactor_level
+                FROM (
+                    -- Subquery: Calculate Totals & Find Latest Receipt ID
                     SELECT 
-                        r.id_members,
-                        r.id_card,
-                        CASE 
-                            WHEN du.title IN ('บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม') THEN 'juristic'
-                            ELSE 'individual'
-                        END as type,
-                        du.title,
-                        du.first_name,
-                        du.last_name,
-                        TRIM(CONCAT_WS(' ', du.title, du.first_name, du.last_name)) as full_name,
-                        MAX(du.phone) as phone,
-                        MAX(du.occupation) as occupation,
-                        MAX(du.address_line) as address_line,
-                        MAX(du.province) as province,
-                        MAX(du.amphure) as district,
-                        MAX(du.district) as subdistrict,
-                        MAX(du.zip_code) as zip_code,
-                        MAX(COALESCE(du.receipt_address, du.shipping_address, 
-                            CONCAT_WS(' ', du.address_line, du.district, du.amphure, du.province, du.zip_code)
-                        )) as full_address,
-                        MAX(du.shipping_address) as shipping_address,
-                        SUM(r.amount) as total_donated,
-                        COUNT(DISTINCT r.id) as donation_count,
-                        MIN(DATE(r.issued_at)) as first_donation_date,
-                        MAX(DATE(r.issued_at)) as last_donation_date,
-                        CASE 
-                            WHEN SUM(r.amount) >= 1000000 THEN 'มหากุศลาธิยาอา'
-                            WHEN SUM(r.amount) >= 500000 THEN 'กุศลาธิกาอา'
-                            WHEN SUM(r.amount) >= 100000 THEN 'อุดมกุศลา'
-                            WHEN SUM(r.amount) >= 50000 THEN 'มหากุศลา'
-                            WHEN SUM(r.amount) >= 10000 THEN 'กุศลา'
-                            ELSE 'ผู้บริจาค'
-                        END as benefactor_level
-                    FROM edonation_receipts r
-                    LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                    WHERE r.id_members IS NOT NULL 
-                      AND r.id_members != ''
-                    GROUP BY r.id_members, r.id_card, du.title, du.first_name, du.last_name
+                        id_members,
+                        SUM(amount) as total_donated,
+                        COUNT(DISTINCT id) as donation_count,
+                        MIN(DATE(issued_at)) as first_donation_date,
+                        MAX(DATE(issued_at)) as last_donation_date,
+                        SUBSTRING_INDEX(GROUP_CONCAT(id ORDER BY issued_at DESC, id DESC), ',', 1) as latest_receipt_id
+                    FROM edonation_receipts
+                    WHERE id_members IS NOT NULL 
+                      AND id_members != ''
+                    GROUP BY id_members
+                ) as stats
+                JOIN edonation_receipts r ON stats.latest_receipt_id = r.id
+                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                     ON DUPLICATE KEY UPDATE
-                        id_card = COALESCE(VALUES(id_card), id_card),
-                        full_name = VALUES(full_name),
-                        phone = COALESCE(VALUES(phone), phone),
-                        occupation = COALESCE(VALUES(occupation), occupation),
-                        address_line = COALESCE(VALUES(address_line), address_line),
-                        province = COALESCE(VALUES(province), province),
-                        district = COALESCE(VALUES(district), district),
-                        subdistrict = COALESCE(VALUES(subdistrict), subdistrict),
-                        zip_code = COALESCE(VALUES(zip_code), zip_code),
-                        full_address = COALESCE(VALUES(full_address), full_address),
-                        shipping_address = COALESCE(VALUES(shipping_address), shipping_address),
+                        id_card = VALUES(id_card),
+                        phone = VALUES(phone),
+                        occupation = VALUES(occupation),
+                        address_line = VALUES(address_line),
+                        province = VALUES(province),
+                        district = VALUES(district),
+                        subdistrict = VALUES(subdistrict),
+                        zip_code = VALUES(zip_code),
+                        full_address = VALUES(full_address),
+                        shipping_address = VALUES(shipping_address),
                         total_donated = VALUES(total_donated),
                         donation_count = VALUES(donation_count),
                         first_donation_date = VALUES(first_donation_date),
@@ -371,9 +379,10 @@ class MemberController
                 'synced_at' => date('Y-m-d H:i:s')
             ], 'Sync สมาชิกสำเร็จ');
 
-        } catch (PDOException $e) {
+        } catch (\Exception $e) {
             error_log("Sync Error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'เกิดข้อผิดพลาดในการ Sync: ' . $e->getMessage());
+            error_log("Sync SQL: " . $sql);
+            return Response::error('SYNC_ERROR', 'เกิดข้อผิดพลาดในการ Sync: ' . $e->getMessage(), 500);
         }
     }
 
@@ -501,8 +510,49 @@ class MemberController
     private function index(): array
     {
         $page = max(1, intval($_GET['page'] ?? 1));
-        $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
+        $limit = min(10000, max(1, intval($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
+
+        // Build Where Clause
+        $where = ["is_active = 1"];
+        $params = [];
+
+        // Filter by donation_count
+        if (isset($_GET['donation_count']) && $_GET['donation_count'] !== '') {
+            $where[] = "donation_count = :donation_count";
+            $params[':donation_count'] = intval($_GET['donation_count']);
+        }
+
+        // Filter by date range (last_donation_date)
+        $startDate = $_GET['start_date'] ?? '';
+        $endDate = $_GET['end_date'] ?? '';
+
+        if (!empty($startDate) && !empty($endDate)) {
+            $where[] = "DATE(last_donation_date) BETWEEN :start_date AND :end_date";
+            $params[':start_date'] = $startDate;
+            $params[':end_date'] = $endDate;
+        }
+
+        // Filter by year
+        $year = $_GET['year'] ?? '';
+        if (!empty($year)) {
+            $where[] = "YEAR(last_donation_date) = :year";
+            $params[':year'] = intval($year);
+        }
+
+        // Filter by type (Optional backend support for better pagination)
+        if (isset($_GET['type']) && $_GET['type'] !== '' && $_GET['type'] !== 'all') {
+            $type = $_GET['type'];
+            if ($type === 'new') {
+                $where[] = "donation_count = 1";
+            } elseif ($type === 'repeat') {
+                $where[] = "donation_count >= 2";
+            } elseif ($type === 'loyal') {
+                $where[] = "donation_count >= 10"; // Based on getMemberProfile logic
+            }
+        }
+
+        $whereSql = implode(" AND ", $where);
 
         $sql = "SELECT 
                     id,
@@ -526,19 +576,28 @@ class MemberController
                     created_at,
                     updated_at
                 FROM edonation_members
-                WHERE is_active = 1
+                WHERE $whereSql
                 ORDER BY last_donation_date DESC
                 LIMIT :limit OFFSET :offset";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
+
         $stmt->execute();
         $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Count total
-        $countSql = "SELECT COUNT(*) as total FROM edonation_members WHERE is_active = 1";
-        $countStmt = $this->pdo->query($countSql);
+        $countSql = "SELECT COUNT(*) as total FROM edonation_members WHERE $whereSql";
+        $countStmt = $this->pdo->prepare($countSql);
+        foreach ($params as $key => $val) {
+            $countStmt->bindValue($key, $val);
+        }
+        $countStmt->execute();
         $total = (int) $countStmt->fetch()['total'];
 
         // Format response
@@ -611,32 +670,32 @@ class MemberController
     {
         $query = trim($_GET['q'] ?? '');
         $type = $_GET['type'] ?? 'all'; // all, name, id_card
-        $limit = min(100, max(1, intval($_GET['limit'] ?? 50)));
+        $limit = min(10000, max(1, intval($_GET['limit'] ?? 50)));
 
         $sql = "SELECT 
-                    id,
-                    id_members,
-                    id_card,
-                    type,
-                    title,
-                    first_name,
-                    last_name,
-                    full_name as name,
-                    phone,
-                    email,
-                    occupation,
-                    address_line,
-                    province,
-                    district,
-                    subdistrict,
-                    zip_code,
-                    full_address as address,
-                    total_donated as total_amount,
-                    donation_count as receipt_count,
-                    benefactor_level,
-                    last_donation_date
-                FROM edonation_members
-                WHERE is_active = 1";
+                    m.id,
+                    m.id_members,
+                    m.id_card,
+                    m.type,
+                    m.title,
+                    m.first_name,
+                    m.last_name,
+                    m.full_name as name,
+                    m.phone,
+                    m.email,
+                    m.occupation,
+                    m.address_line,
+                    m.province,
+                    m.district,
+                    m.subdistrict,
+                    m.zip_code,
+                    m.full_address as address,
+                    m.total_donated as total_amount,
+                    m.donation_count as receipt_count,
+                    m.benefactor_level,
+                    m.last_donation_date
+                FROM edonation_members m
+                WHERE m.is_active = 1";
 
         $params = [];
 
@@ -648,31 +707,39 @@ class MemberController
             switch ($type) {
                 case 'name':
                     $sql .= " AND (
-                        REPLACE(full_name, ' ', '') LIKE :q1 
-                        OR REPLACE(CONCAT(first_name, last_name), ' ', '') LIKE :q2
-                        OR first_name LIKE :q3
-                        OR last_name LIKE :q4
+                        REPLACE(m.full_name, ' ', '') LIKE :q1 
+                        OR REPLACE(CONCAT(m.first_name, m.last_name), ' ', '') LIKE :q2
+                        OR m.first_name LIKE :q3
+                        OR m.last_name LIKE :q4
+                        OR EXISTS (SELECT 1 FROM edonation_receipts r WHERE r.id_members = m.id_members AND r.payer_name LIKE :q5)
                     )";
                     $params[':q1'] = $cleanSearchVal;
                     $params[':q2'] = $cleanSearchVal;
                     $params[':q3'] = $searchVal;
                     $params[':q4'] = $searchVal;
+                    $params[':q5'] = $searchVal;
                     break;
 
                 case 'id_card':
-                    $sql .= " AND id_card LIKE :q1";
+                    $sql .= " AND m.id_card LIKE :q1";
                     $params[':q1'] = '%' . preg_replace('/\D/', '', $query) . '%';
+                    break;
+
+                case 'payer_name':
+                    $sql .= " AND EXISTS (SELECT 1 FROM edonation_receipts r WHERE r.id_members = m.id_members AND r.payer_name LIKE :q1)";
+                    $params[':q1'] = $searchVal;
                     break;
 
                 default: // all
                     $sql .= " AND (
-                        REPLACE(full_name, ' ', '') LIKE :q1 
-                        OR REPLACE(CONCAT(first_name, last_name), ' ', '') LIKE :q2
-                        OR id_card LIKE :q3 
-                        OR id_members LIKE :q4
-                        OR first_name LIKE :q5
-                        OR last_name LIKE :q6
-                        OR phone LIKE :q7
+                        REPLACE(m.full_name, ' ', '') LIKE :q1 
+                        OR REPLACE(CONCAT(m.first_name, m.last_name), ' ', '') LIKE :q2
+                        OR m.id_card LIKE :q3 
+                        OR m.id_members LIKE :q4
+                        OR m.first_name LIKE :q5
+                        OR m.last_name LIKE :q6
+                        OR m.phone LIKE :q7
+                        OR EXISTS (SELECT 1 FROM edonation_receipts r WHERE r.id_members = m.id_members AND r.payer_name LIKE :q8)
                     )";
                     $params[':q1'] = $cleanSearchVal;
                     $params[':q2'] = $cleanSearchVal;
@@ -681,10 +748,11 @@ class MemberController
                     $params[':q5'] = $searchVal;
                     $params[':q6'] = $searchVal;
                     $params[':q7'] = '%' . preg_replace('/\D/', '', $query) . '%';
+                    $params[':q8'] = $searchVal;
             }
         }
 
-        $sql .= " ORDER BY last_donation_date DESC LIMIT :limit";
+        $sql .= " ORDER BY m.last_donation_date DESC LIMIT :limit";
 
         $stmt = $this->pdo->prepare($sql);
         foreach ($params as $key => $val) {

@@ -171,6 +171,7 @@
                                     <option value="100">100</option>
                                     <option value="250">250</option>
                                     <option value="500">500</option>
+                                    <option value="10000">ทั้งหมด</option>
                                 </select>
                                 <span class="text-muted">แถว</span>
                             </div>
@@ -178,7 +179,8 @@
                                 <iconify-icon icon="iconamoon:search-duotone"
                                     class="text-muted fs-5 me-2"></iconify-icon>
                                 <input type="text" id="searchInput" class="form-control form-control-flush p-0"
-                                    placeholder="ค้นหาชื่อ, รหัสสมาชิก หรือเบอร์โทร..." onkeyup="handleSearch(event)">
+                                    placeholder="ค้นหาชื่อ, ชื่อในใบเสร็จ, รหัสสมาชิก หรือเบอร์โทร..."
+                                    onkeyup="handleSearch(event)">
                             </div>
 
                             <div class="d-flex gap-2">
@@ -189,6 +191,24 @@
                                     <option value="repeat">ผู้บริจาคซ้ำ</option>
                                     <option value="new">ผู้บริจาคใหม่</option>
                                 </select>
+
+                                <select id="filterYear" class="form-select border-0 bg-light"
+                                    style="width: auto; min-width: 100px;" onchange="loadMembers()">
+                                    <option value="">ปีที่บริจาค</option>
+                                    <?php
+                                    $currentYear = date('Y');
+                                    for ($i = 0; $i < 10; $i++) {
+                                        $y = $currentYear - $i;
+                                        echo "<option value='$y'>$y (" . ($y + 543) . ")</option>";
+                                    }
+                                    ?>
+                                </select>
+
+                                <input type="number" id="filterDonationCount" class="form-control border-0 bg-light"
+                                    style="width: 120px;" placeholder="จำนวนครั้ง" min="1" onchange="loadMembers()">
+
+                                <input type="text" id="filterDateRange" class="form-control border-0 bg-light"
+                                    style="width: 220px;" placeholder="เลือกช่วงเวลา (ว/ด/ป)">
 
                                 <button class="btn btn-light" onclick="loadMembers()" title="รีเฟรช">
                                     <iconify-icon icon="iconamoon:restart-duotone" class="fs-5"></iconify-icon>
@@ -448,9 +468,25 @@
         let apReceipt, apShipping;
 
         document.addEventListener('DOMContentLoaded', function () {
+            initFilters();
             loadMembers();
             initAutoProvince();
         });
+
+        function initFilters() {
+            flatpickr("#filterDateRange", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                allowInput: true,
+                onClose: function (selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2 || selectedDates.length === 1) {
+                        loadMembers();
+                    }
+                }
+            });
+        }
 
         function initAutoProvince() {
             apReceipt = new AutoProvince({
@@ -548,7 +584,22 @@
                 } else {
                     // Add filter if not searching
                     const filter = document.getElementById('filterType').value;
+                    const donationCount = document.getElementById('filterDonationCount').value;
+                    const year = document.getElementById('filterYear').value;
+                    const dateRange = document.getElementById('filterDateRange').value;
+
                     if (filter) url += `&type=${filter}`;
+                    if (donationCount) url += `&donation_count=${donationCount}`;
+                    if (year) url += `&year=${year}`;
+
+                    if (dateRange) {
+                        if (dateRange.includes(' to ')) {
+                            const dates = dateRange.split(' to ');
+                            url += `&start_date=${dates[0]}&end_date=${dates[1]}`;
+                        } else {
+                            url += `&start_date=${dateRange}&end_date=${dateRange}`;
+                        }
+                    }
                 }
 
                 const response = await apiGet(url);
@@ -623,7 +674,7 @@
                     <td>${formatIdCard(item.id_card)}</td>
                     <td class="text-center">
                          <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport">
                                 จัดการ
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
@@ -866,11 +917,22 @@
 
         function exportSelected() {
             const checkboxes = document.querySelectorAll('.member-checkbox:checked');
-            const ids = Array.from(checkboxes).map(cb => cb.value);
-            if (ids.length === 0) {
-                showWarning('กรุณาเลือกรายการที่ต้องการ Export อย่างน้อย 1 รายการ');
+            if (checkboxes.length === 0) {
+                // If nothing selected, maybe export all with current filter? 
+                // For now, trigger SweetAlert warning
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'กรุณาเลือกรายการ',
+                        text: 'กรุณาเลือกรายชื่อสมาชิกที่ต้องการ Export อย่างน้อย 1 รายการ'
+                    });
+                } else {
+                    alert('กรุณาเลือกรายการที่ต้องการ Export อย่างน้อย 1 รายการ');
+                }
                 return;
             }
+
+            const ids = Array.from(checkboxes).map(cb => cb.value);
             document.getElementById('exportIds').value = ids.join(',');
             document.getElementById('exportForm').submit();
         }

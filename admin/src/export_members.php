@@ -7,17 +7,19 @@ ini_set('display_errors', 1);
 $rootPath = dirname(dirname(__DIR__)); // /Applications/XAMPP/xamppfiles/htdocs/edonation
 $adminSrcPath = dirname(__FILE__);     // /Applications/XAMPP/xamppfiles/htdocs/edonation/admin/src
 
-// 1. Config & Middleware
-require_once $adminSrcPath . '/auth/middleware.php';
+// 1. Config & Admin Session
+require_once $adminSrcPath . '/services/session.php';
 
-// 2. Controller (which loads Database)
+// 2. API Dependencies (Minimal set to avoid constant conflicts)
+require_once $rootPath . '/api/config/env.php';
+require_once $rootPath . '/api/config/database.php';
+require_once $rootPath . '/api/helpers/Response.php';
+
+// 3. Controller
 require_once $rootPath . '/api/controllers/MemberController.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-requireAuthentication();
+// Check Admin Authentication
+requireAuth();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die('Method Not Allowed');
