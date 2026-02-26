@@ -40,11 +40,21 @@ try {
     // 4. Retrieve User Basic Information from CMU API
     // USES: getCmuUserInfo() in config/oauth.php
     $userInfo = getCmuUserInfo($accessToken);
-    $email = $userInfo['cmuitaccount_email'] ?? null;
-    $displayName = $userInfo['cmuitaccount_name'] ?? 'CMU User';
+
+    // Debug CMU Info (Optional: remove in production)
+    // error_log("CMU User Info: " . json_encode($userInfo));
+
+    // Support various CMU API field formats
+    $email = $userInfo['cmuitaccount_email'] ?? $userInfo['cmuitaccount'] ?? null;
+    $displayName = $userInfo['firstname_TH'] ?? $userInfo['cmuitaccount_name'] ?? 'CMU User';
+
+    // If we only have account name without domain, append @cmu.ac.th
+    if ($email && strpos($email, '@') === false) {
+        $email .= '@cmu.ac.th';
+    }
 
     if (!$email) {
-        throw new Exception("ไม่พบข้อมูลอีเมล (cmuitaccount_email) ในบัญชีของคุณ");
+        throw new Exception("ไม่สามารถดึงข้อมูลอีเมลจาก CMU IT Account ได้");
     }
 
     // 5. Query Local Database for Authorized Admins

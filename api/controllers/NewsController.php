@@ -13,7 +13,7 @@
 
 class NewsController
 {
-    const VERSION = '2.0';
+    const VERSION = '3.0';
     private PDO $pdo;
 
     public function __construct()
@@ -127,13 +127,48 @@ class NewsController
         // Add image URLs - use BASE_PATH from config
         $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/assets/images/news/';
         foreach ($results as &$item) {
-            $item['image_url'] = $item['img_file']
-                ? $baseImageUrl . $item['img_file']
-                : $baseImageUrl . 'default.jpg';
+            $cover = 'default.jpg';
+            $album = [];
+
+            if ($item['img_file']) {
+                $imgData = json_decode($item['img_file'], true);
+
+                if (is_array($imgData)) {
+                    // Check if it's the new object format {cover: "", album: []}
+                    if (isset($imgData['cover'])) {
+                        $cover = $imgData['cover'];
+                        $album = $imgData['album'] ?? [];
+                    } else {
+                        // Old array format [...] - first is cover, rest is album
+                        $cover = $imgData[0] ?? 'default.jpg';
+                        $album = array_slice($imgData, 1);
+                    }
+                } else {
+                    // Old string format
+                    $cover = $item['img_file'];
+                }
+            }
+
+            $item['cover_url'] = $baseImageUrl . $cover;
+            $item['image_url'] = $baseImageUrl . $cover; // Maintain compatibility
+            $item['album_urls'] = array_map(fn($img) => $baseImageUrl . $img, $album);
+            $item['images'] = array_merge([$item['image_url']], $item['album_urls']); // Overall collection
 
             // Format published date
             if ($item['published_at']) {
                 $item['published_at_formatted'] = $this->formatThaiDate($item['published_at']);
+            }
+
+            // Auto-generate excerpt if empty
+            if (empty(trim($item['excerpt'] ?? '')) && !empty($item['content'])) {
+                // Strip tags, decode entities, and truncate
+                $plainText = trim(strip_tags(html_entity_decode($item['content'])));
+                if (!empty($plainText)) {
+                    $item['excerpt'] = mb_substr($plainText, 0, 160, 'UTF-8');
+                    if (mb_strlen($plainText, 'UTF-8') > 160) {
+                        $item['excerpt'] .= '...';
+                    }
+                }
             }
         }
 
@@ -171,13 +206,45 @@ class NewsController
 
         // Add image URL - use BASE_PATH from config
         $baseImageUrl = (defined('BASE_PATH') ? BASE_PATH : '/edonation') . '/assets/images/news/';
-        $result['image_url'] = $result['img_file']
-            ? $baseImageUrl . $result['img_file']
-            : $baseImageUrl . 'default.jpg';
+
+        $cover = 'default.jpg';
+        $album = [];
+
+        if ($result['img_file']) {
+            $imgData = json_decode($result['img_file'], true);
+
+            if (is_array($imgData)) {
+                if (isset($imgData['cover'])) {
+                    $cover = $imgData['cover'];
+                    $album = $imgData['album'] ?? [];
+                } else {
+                    $cover = $imgData[0] ?? 'default.jpg';
+                    $album = array_slice($imgData, 1);
+                }
+            } else {
+                $cover = $result['img_file'];
+            }
+        }
+
+        $result['cover_url'] = $baseImageUrl . $cover;
+        $result['image_url'] = $baseImageUrl . $cover;
+        $result['album_urls'] = array_map(fn($img) => $baseImageUrl . $img, $album);
+        $result['images'] = array_merge([$result['image_url']], $result['album_urls']);
 
         // Format published date
         if ($result['published_at']) {
             $result['published_at_formatted'] = $this->formatThaiDate($result['published_at']);
+        }
+
+        // Auto-generate excerpt if empty
+        if (empty(trim($result['excerpt'] ?? '')) && !empty($result['content'])) {
+            $plainText = trim(strip_tags(html_entity_decode($result['content'])));
+            if (!empty($plainText)) {
+                $result['excerpt'] = mb_substr($plainText, 0, 160, 'UTF-8');
+                if (mb_strlen($plainText, 'UTF-8') > 160) {
+                    $result['excerpt'] .= '...';
+                }
+            }
         }
 
         return Response::success($result);

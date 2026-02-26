@@ -181,18 +181,87 @@
                                     </div>
 
                                     <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label">รูปภาพประกอบ</label>
-                                            <div class="border rounded p-3 text-center bg-light">
-                                                <div id="imagePreviewWrapper" class="mb-2">
-                                                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='75' viewBox='0 0 100 75'%3E%3Crect width='100%25' height='100%25' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='10' fill='%2394a3b8'%3ENo Image%3C/text%3E%3C/svg%3E"
-                                                        id="imagePreview" class="img-fluid rounded border"
-                                                        style="max-height: 160px;">
+                                        <!-- Main Cover Section -->
+                                        <div class="mb-4">
+                                            <label class="form-label fw-bold">รูปหน้าปก (Main-Cover) <span
+                                                    class="text-danger">*</span></label>
+                                            <div class="border rounded p-3 bg-light text-center">
+                                                <div id="coverPreviewContainer" class="mb-3">
+                                                    <!-- Cover preview here -->
                                                 </div>
-                                                <input type="file" class="form-control" id="fileInput" accept="image/*">
+                                                <input type="file" class="form-none d-none" id="coverInput"
+                                                    accept="image/*">
+                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    onclick="document.getElementById('coverInput').click()">
+                                                    <iconify-icon icon="iconamoon:image-duotone"
+                                                        class="me-1"></iconify-icon>เลือกรูปหน้าปก
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Album Section -->
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">รูปอัลบั้มเพิ่มเติม (Album)</label>
+                                            <div class="border rounded p-3 bg-light">
+                                                <div id="albumGalleryContainer" class="d-flex flex-wrap gap-2 mb-3">
+                                                    <!-- Album previews here -->
+                                                </div>
+                                                <div class="upload-zone text-center p-2 border-dashed rounded">
+                                                    <input type="file" class="form-control d-none" id="albumInput"
+                                                        accept="image/*" multiple>
+                                                    <button type="button" class="btn btn-sm btn-soft-primary"
+                                                        onclick="document.getElementById('albumInput').click()">
+                                                        <iconify-icon icon="iconamoon:cloud-upload-duotone"
+                                                            class="me-1"></iconify-icon>เพิ่มรูปเข้าอัลบั้ม
+                                                    </button>
+                                                </div>
                                                 <input type="hidden" id="img_file" name="img_file">
                                             </div>
                                         </div>
+
+                                        <style>
+                                            .border-dashed {
+                                                border: 2px dashed #e2e8f0;
+                                            }
+
+                                            .image-preview-item {
+                                                position: relative;
+                                                width: 75px;
+                                                height: 75px;
+                                            }
+
+                                            .image-preview-item img {
+                                                width: 100%;
+                                                height: 100%;
+                                                object-fit: cover;
+                                                border-radius: 6px;
+                                                border: 1px solid #e2e8f0;
+                                            }
+
+                                            .image-preview-item .remove-btn {
+                                                position: absolute;
+                                                top: -6px;
+                                                right: -6px;
+                                                background: #ef4444;
+                                                color: white;
+                                                border-radius: 50%;
+                                                width: 18px;
+                                                height: 18px;
+                                                display: flex;
+                                                align-items: center;
+                                                justify-content: center;
+                                                cursor: pointer;
+                                                font-size: 10px;
+                                                border: 1px solid white;
+                                            }
+
+                                            #coverPreviewContainer img {
+                                                max-width: 100%;
+                                                max-height: 150px;
+                                                border-radius: 8px;
+                                                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                                            }
+                                        </style>
 
                                         <div class="mb-3">
                                             <label class="form-label">หมวดหมู่</label>
@@ -257,15 +326,96 @@
                     document.getElementById('categoryFilter').addEventListener('change', loadNews);
                     document.getElementById('newsForm').addEventListener('submit', handleSubmit);
 
-                    document.getElementById('fileInput').addEventListener('change', function (e) {
+                    // Cover Input Handler
+                    document.getElementById('coverInput').addEventListener('change', async function (e) {
                         const file = e.target.files[0];
-                        if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => document.getElementById('imagePreview').src = ev.target.result;
-                            reader.readAsDataURL(file);
-                        }
+                        if (!file) return;
+                        const btn = this.nextElementSibling;
+                        btn.disabled = true; btn.innerHTML = 'กำลังรูปอัปโหลด...';
+                        try {
+                            const formData = new FormData();
+                            formData.append('image', file);
+                            const res = await apiUpload('/news/upload', formData);
+                            if (res.success) {
+                                setCoverImage(res.data.image_url, res.data.filename);
+                            }
+                        } catch (err) { showError(err.message); }
+                        finally { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="iconamoon:image-duotone" class="me-1"></iconify-icon>เลือกรูปหน้าปก'; }
+                    });
+
+                    // Album Input Handler
+                    document.getElementById('albumInput').addEventListener('change', async function (e) {
+                        const files = e.target.files;
+                        if (!files.length) return;
+                        const btn = this.nextElementSibling;
+                        btn.disabled = true; btn.innerHTML = 'กำลังอัปโหลด...';
+                        try {
+                            for (let file of files) {
+                                const formData = new FormData();
+                                formData.append('image', file);
+                                const res = await apiUpload('/news/upload', formData);
+                                if (res.success) {
+                                    addAlbumImage(res.data.image_url, res.data.filename);
+                                }
+                            }
+                        } catch (err) { showError(err.message); }
+                        finally { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="iconamoon:cloud-upload-duotone" class="me-1"></iconify-icon>เพิ่มรูปเข้าอัลบั้ม'; }
                     });
                 });
+
+                let uploadedCover = null; // { url, filename }
+                let uploadedAlbum = []; // [{ url, filename }]
+
+                function setCoverImage(url, filename) {
+                    uploadedCover = { url, filename };
+                    renderPreviews();
+                    updateImgFilesInput();
+                }
+
+                function addAlbumImage(url, filename) {
+                    uploadedAlbum.push({ url, filename });
+                    renderPreviews();
+                    updateImgFilesInput();
+                }
+
+                function removeAlbumImage(index) {
+                    uploadedAlbum.splice(index, 1);
+                    renderPreviews();
+                    updateImgFilesInput();
+                }
+
+                function renderPreviews() {
+                    // Render Cover
+                    const coverContainer = document.getElementById('coverPreviewContainer');
+                    if (uploadedCover) {
+                        coverContainer.innerHTML = `<img src="${uploadedCover.url}" alt="Cover">`;
+                    } else {
+                        coverContainer.innerHTML = `<img src="${NO_IMAGE}" alt="No Cover" style="opacity: 0.5;">`;
+                    }
+
+                    // Render Album
+                    const albumContainer = document.getElementById('albumGalleryContainer');
+                    if (!uploadedAlbum.length) {
+                        albumContainer.innerHTML = '<div class="w-100 text-center text-muted small py-2">ยังไม่มีรูปในอัลบั้ม</div>';
+                    } else {
+                        albumContainer.innerHTML = uploadedAlbum.map((img, idx) => `
+                            <div class="image-preview-item">
+                                <img src="${img.url}" alt="Album Item">
+                                <div class="remove-btn" onclick="removeAlbumImage(${idx})">
+                                    <iconify-icon icon="iconamoon:close"></iconify-icon>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
+
+                function updateImgFilesInput() {
+                    const data = {
+                        cover: uploadedCover ? uploadedCover.filename : null,
+                        album: uploadedAlbum.map(img => img.filename)
+                    };
+                    document.getElementById('img_file').value = JSON.stringify(data);
+                }
 
                 async function loadNews() {
                     try {
@@ -316,7 +466,9 @@
                     document.getElementById('newsId').value = id || '';
                     document.getElementById('modalTitle').textContent = id ? 'แก้ไขข่าว' : 'เพิ่มข่าวใหม่';
                     quill.root.innerHTML = '';
-                    document.getElementById('imagePreview').src = NO_IMAGE;
+                    uploadedCover = null;
+                    uploadedAlbum = [];
+                    renderPreviews();
                     document.getElementById('img_file').value = '';
                     document.getElementById('published_at').value = new Date().toISOString().split('T')[0];
 
@@ -328,7 +480,43 @@
                             document.getElementById('category').value = item.category || 'ข่าวประชาสัมพันธ์';
                             document.getElementById('is_active').value = item.is_active ? "1" : "0";
                             document.getElementById('published_at').value = (item.published_at || '').split(' ')[0];
-                            document.getElementById('imagePreview').src = item.image_url || NO_IMAGE;
+                            
+                            // Load existing images from the hybrid structure
+                            try {
+                                const imgData = JSON.parse(item.img_file);
+                                if (imgData && typeof imgData === 'object' && !Array.isArray(imgData)) {
+                                    // New format: {cover, album}
+                                    if (imgData.cover) {
+                                        uploadedCover = { 
+                                            url: item.cover_url, 
+                                            filename: imgData.cover 
+                                        };
+                                    }
+                                    if (imgData.album) {
+                                        uploadedAlbum = imgData.album.map((fn, idx) => ({
+                                            url: item.album_urls[idx],
+                                            filename: fn
+                                        }));
+                                    }
+                                } else if (Array.isArray(imgData)) {
+                                    // Old array format: [cover, ...album]
+                                    if (imgData[0]) {
+                                        uploadedCover = { url: item.images[0], filename: imgData[0] };
+                                        uploadedAlbum = imgData.slice(1).map((fn, idx) => ({
+                                            url: item.images[idx + 1],
+                                            filename: fn
+                                        }));
+                                    }
+                                } else if (item.img_file) {
+                                    // Old string format
+                                    uploadedCover = { url: item.image_url, filename: item.img_file };
+                                }
+                            } catch (e) {
+                                // Fallback literal string
+                                if (item.img_file) uploadedCover = { url: item.image_url, filename: item.img_file };
+                            }
+                            
+                            renderPreviews();
                             document.getElementById('img_file').value = item.img_file || '';
                         }
                     }
@@ -341,24 +529,13 @@
                     btn.disabled = true; spinner.classList.remove('d-none');
 
                     try {
-                        let imgFile = document.getElementById('img_file').value;
-                        const file = document.getElementById('fileInput').files[0];
-
-                        // Upload image if selected
-                        if (file) {
-                            const uploadFormData = new FormData();
-                            uploadFormData.append('image', file);
-                            const uploadRes = await apiUpload('/news/upload', uploadFormData);
-                            if (uploadRes.success) imgFile = uploadRes.data.filename;
-                        }
-
                         const payload = {
                             title: document.getElementById('news_name').value,
                             content: quill.root.innerHTML,
                             category: document.getElementById('category').value,
                             is_active: parseInt(document.getElementById('is_active').value),
                             published_at: document.getElementById('published_at').value,
-                            img_file: imgFile
+                            img_file: document.getElementById('img_file').value // Already updated by updateImgFilesInput
                         };
 
                         const id = document.getElementById('newsId').value;

@@ -689,6 +689,17 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/appdev/edonation';
                 data.amphure = aData ? aData.text : '';
                 data.district = dData ? dData.text : '';
                 data.zipCode = document.getElementById('receiptPostcode').value;
+
+                // Send split shipping address fields
+                data.shipAddressLine = document.getElementById('shippingAddressLine').value;
+                const spData = $('#shippingProvince').select2('data')[0];
+                const saData = $('#shippingDistrict').select2('data')[0];
+                const sdData = $('#shippingSubdistrict').select2('data')[0];
+
+                data.shipProvince = spData ? spData.text : '';
+                data.shipAmphure = saData ? saData.text : '';
+                data.shipDistrict = sdData ? sdData.text : '';
+                data.shipZipCode = document.getElementById('shippingPostcode').value;
             }
 
             try {

@@ -5,7 +5,7 @@
  * 
  * รองรับ API แยก domain พร้อม CORS
  * 
- * @version 2.0
+ * @version 3.0
  */
 
 // Load .env file from project root
@@ -102,11 +102,6 @@ if (!defined('JWT_SECRET'))
 if (!defined('JWT_EXPIRE'))
     define('JWT_EXPIRE', intval($_ENV['JWT_EXPIRE'] ?? 86400)); // 24 hours
 
-// ===========================================
-// External Services
-// ===========================================
-define('GMAIL_USER', $_ENV['GMAIL_USER'] ?? '');
-define('GMAIL_PASS', $_ENV['GMAIL_PASS'] ?? '');
 
 // ===========================================
 // SCB PromptPay Configuration  
@@ -134,8 +129,8 @@ function handleCors(): void
         }
     }
 
-    // If development, allow localhost
-    if (APP_ENV === 'development' && strpos($origin, 'localhost') !== false) {
+    // If development/local, allow localhost
+    if ((APP_ENV === 'development' || APP_ENV === 'local') && strpos($origin, 'localhost') !== false) {
         $allowed = true;
     }
 

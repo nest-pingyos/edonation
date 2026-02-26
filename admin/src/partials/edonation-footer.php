@@ -7,7 +7,7 @@
                 <span class="d-none d-md-inline">- มหาวิทยาลัยเชียงใหม่</span>
             </div>
             <div class="col-md-6 text-center text-md-end">
-                <span class="text-muted">Version 1.0.0</span>
+                <span class="text-muted">Version 3.0</span>
             </div>
         </div>
     </div>

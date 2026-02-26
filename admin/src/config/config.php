@@ -52,19 +52,23 @@ $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' 
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
 // Determine BASE_PATH
-$envBasePath = getenv('BASE_PATH');
-if ($envBasePath === false) {
+$envBasePath = getenv('BASE_PATH') ?: ($_ENV['BASE_PATH'] ?? null);
+
+if ($envBasePath === null) {
     // Auto-detect BASE_PATH if not set in .env
-    // If localhost:8080 (Docker), we usually expect root
-    if (strpos($host, ':8080') !== false) {
-        $envBasePath = '';
-    } else if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
+    $script_path = str_replace('\\', '/', dirname(ADMIN_ROOT, 2));
+    $root_path = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
+
+    if (empty($root_path)) {
         $envBasePath = '/edonation';
     } else {
-        $envBasePath = '/edonation'; // Default fallback for production /edonation
+        $envBasePath = str_replace($root_path, '', $script_path);
+        if ($envBasePath && $envBasePath[0] !== '/') {
+            $envBasePath = '/' . $envBasePath;
+        }
     }
 }
-define('BASE_PATH', rtrim($envBasePath, '/'));
+define('BASE_PATH', rtrim($envBasePath ?: '/edonation', '/'));
 
 // Full URLs
 define('APP_URL', "{$protocol}://{$host}" . BASE_PATH);

@@ -54,9 +54,6 @@ class ReceiptController
                 case 'cancel':
                     AuthMiddleware::requireAdmin();
                     return $this->cancel($id);
-                case 'resend':
-                    AuthMiddleware::requireAdmin();
-                    return $this->resend($id);
                 case 'shipping':
                     AuthMiddleware::requireAdmin();
                     return $this->updateShipping($id);
@@ -910,11 +907,7 @@ class ReceiptController
 
             $receiptId = $this->pdo->lastInsertId();
 
-            // Store email for later if provided and send_email is true
-            if (!empty($data['email']) && !empty($data['send_email'])) {
-                // TODO: Queue email sending
-                error_log("Receipt {$receiptNo} created for {$data['email']} - email would be sent");
-            }
+            // Email sending logic removed as per request
 
             $this->pdo->commit();
 
@@ -994,20 +987,6 @@ class ReceiptController
             error_log("Cancel receipt error: " . $e->getMessage());
             return Response::error('DATABASE_ERROR', 'ไม่สามารถยกเลิกใบเสร็จได้: ' . $e->getMessage(), 500);
         }
-    }
-
-    /**
-     * POST /receipts/:id/resend (Admin)
-     */
-    private function resend(string $id): array
-    {
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
-
-        if (empty($data['email'])) {
-            return Response::error('VALIDATION_ERROR', 'กรุณาระบุอีเมล');
-        }
-
-        return Response::success(['api_version' => self::VERSION], 'ส่งใบเสร็จไปยัง ' . $data['email'] . ' เรียบร้อย');
     }
 
     /**
@@ -1168,6 +1147,14 @@ class ReceiptController
                     ':notes' => $data['notes'] ?? ''
                 ]);
             }
+
+            // Sync shipping_status to edonation_receipts
+            $updateReceiptSql = "UPDATE edonation_receipts SET shipping_status = :status WHERE id = :id";
+            $updStmt = $this->pdo->prepare($updateReceiptSql);
+            $updStmt->execute([
+                ':id' => $id,
+                ':status' => $data['status'] ?? 'shipped'
+            ]);
 
             $this->pdo->commit();
             return Response::success(null, 'อัปเดตข้อมูลการจัดส่งสำเร็จ');

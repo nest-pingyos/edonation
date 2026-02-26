@@ -111,12 +111,14 @@ class DonationController
                     billPaymentRef1, project_number, project_name, type, phone, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
                     need_receipt, receipt_address, shipping_address,
-                    address_line, province, amphure, district, zip_code
+                    address_line, province, amphure, district, zip_code,
+                    ship_address_line, ship_province, ship_amphure, ship_district, ship_zip_code
                 ) VALUES (
                     :ref1, :project_number, :project_name, :type, :phone, :amount, 
                     :fiscal_year, 'pending', 'โอน/QR PromptPay', CURDATE(),
                     :need_receipt, :receipt_address, :shipping_address,
-                    :address_line, :province, :amphure, :district, :zip_code
+                    :address_line, :province, :amphure, :district, :zip_code,
+                    :ship_address_line, :ship_province, :ship_amphure, :ship_district, :ship_zip_code
                 )"
             );
 
@@ -140,7 +142,12 @@ class DonationController
                 ':province' => $data['province'] ?? null,
                 ':amphure' => $data['amphure'] ?? null,
                 ':district' => $data['district'] ?? null,
-                ':zip_code' => $data['zipCode'] ?? null
+                ':zip_code' => $data['zipCode'] ?? null,
+                ':ship_address_line' => $data['shipAddressLine'] ?? null,
+                ':ship_province' => $data['shipProvince'] ?? null,
+                ':ship_amphure' => $data['shipAmphure'] ?? null,
+                ':ship_district' => $data['shipDistrict'] ?? null,
+                ':ship_zip_code' => $data['shipZipCode'] ?? null
             ]);
 
             $id = $this->pdo->lastInsertId();
@@ -240,12 +247,14 @@ class DonationController
                     billPaymentRef1, project_number, project_name, type, phone, email, occupation, amount, 
                     fiscal_year, status_donat, payby, receiptDate,
                     need_receipt, title, first_name, last_name, id_card, receipt_address, shipping_address,
-                    address_line, province, amphure, district, zip_code, notes
+                    address_line, province, amphure, district, zip_code, notes,
+                    ship_address_line, ship_province, ship_amphure, ship_district, ship_zip_code
                 ) VALUES (
                     :ref1, :project_number, :project_name, :type, :phone, :email, :occupation, :amount, 
                     :fiscal_year, 'completed', :payby, :receipt_date,
                     1, :title, :first_name, :last_name, :id_card, :receipt_address, :shipping_address,
-                    :address_line, :province, :amphure, :district, :zip_code, :notes
+                    :address_line, :province, :amphure, :district, :zip_code, :notes,
+                    :ship_address_line, :ship_province, :ship_amphure, :ship_district, :ship_zip_code
                 )
             ");
 
@@ -272,7 +281,12 @@ class DonationController
                 ':amphure' => $data['amphure'] ?? null,
                 ':district' => $data['district'] ?? null,
                 ':zip_code' => $data['zip_code'] ?? null,
-                ':notes' => $data['note'] ?? ''
+                ':notes' => $data['note'] ?? '',
+                ':ship_address_line' => $data['ship_address_line'] ?? null,
+                ':ship_province' => $data['ship_province'] ?? null,
+                ':ship_amphure' => $data['ship_amphure'] ?? null,
+                ':ship_district' => $data['ship_district'] ?? null,
+                ':ship_zip_code' => $data['ship_zip_code'] ?? null
             ]);
 
             $donationId = $this->pdo->lastInsertId();

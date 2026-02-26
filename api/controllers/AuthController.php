@@ -218,12 +218,8 @@ class AuthController
         $code = $data['code'];
         $passedRedirectUri = $data['redirect_uri'] ?? null;
 
-        // If on Port 8080, we must match the registered URI exactly
-        if (strpos($_SERVER['HTTP_HOST'] ?? '', ':8080') !== false) {
-            $redirectUri = 'http://localhost:8080/admin/src/auth-callback.php';
-        } else {
-            $redirectUri = $passedRedirectUri ?? $this->getRedirectUri();
-        }
+        // Use environment-based redirect URI
+        $redirectUri = $this->getRedirectUri();
 
         // 1. Exchange code for access token with Microsoft
         $tokenResult = $this->exchangeCodeForToken($code, $redirectUri);
@@ -422,28 +418,28 @@ class AuthController
 
     private function getRedirectUri(): string
     {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-        // Match logic in admin/src/config/oauth.php
-        if (strpos($host, ':8080') !== false) {
-            return $protocol . '://localhost:8080/admin/src/auth-callback.php';
+        // Use APP_URL if defined, otherwise fall back to dynamic detection
+        if (defined('APP_URL')) {
+            return APP_URL . '/admin/src/auth-callback.php';
         }
 
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+
         return $protocol . '://' . $host . $basePath . '/admin/src/auth-callback.php';
     }
 
     private function getAdminBaseUrl(): string
     {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-        if (strpos($host, ':8080') !== false) {
-            return $protocol . '://' . $host . '/admin/src';
+        if (defined('ADMIN_URL')) {
+            return ADMIN_URL . '/src';
         }
 
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
+
         return $protocol . '://' . $host . $basePath . '/admin/src';
     }
 

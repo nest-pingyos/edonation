@@ -190,11 +190,17 @@ include_once('../config/head.php');
                 const categoryLabels = {
                     'general': 'ข่าวทั่วไป',
                     'announcement': 'ประกาศ',
-                    'thank': 'ขอบคุณ'
+                    'thank': 'ขอบคุณ',
+                    'activity': 'กิจกรรม',
+                    'donation': 'การรับบริจาค'
                 };
 
                 container.innerHTML = news.map(item => {
                     const categoryLabel = categoryLabels[item.category] || item.category || 'ข่าวสาร';
+
+                    // Check if news is newer than 7 days
+                    const pubDate = item.published_at ? new Date(item.published_at) : new Date();
+                    const isNew = (new Date() - pubDate) / (1000 * 60 * 60 * 24) <= 7;
 
                     return `
                     <div class="news-slide">
@@ -203,7 +209,7 @@ include_once('../config/head.php');
                                 <img src="${item.image_url}" alt="${escapeHtml(item.title)}" 
                                      onerror="this.src='../assets/images/blog/grid/default.jpg'">
                                 <span class="news-card-category">${escapeHtml(categoryLabel)}</span>
-                                ${item.is_featured == 1 ? '<span class="news-card-featured">ข่าวเด่น</span>' : ''}
+                                ${isNew ? '<span class="news-badge-new">ใหม่</span>' : ''}
                             </div>
                             <div class="news-card-content">
                                 <div class="news-card-date">
@@ -215,9 +221,9 @@ include_once('../config/head.php');
                                     <span class="news-card-views">
                                         <i class="far fa-eye"></i> ${item.view_count || 0} เข้าชม
                                     </span>
-                                    <a href="../news/detail.php?id=${item.id}" class="btn btn__secondary btn__link btn__rounded">
+                                    <a href="../news/detail.php?id=${item.id}" class="btn__link">
                                         <span>อ่านเพิ่มเติม</span>
-                                        <i class="icon-arrow-right"></i>
+                                        <i class="fas fa-arrow-right"></i>
                                     </a>
                                 </div>
                             </div>

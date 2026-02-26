@@ -48,7 +48,8 @@ $langParam = $currentLang !== 'th' ? '?lang=' . $currentLang : '';
     </div>
     <div class="footer-bottom">
         <div class="container">
-            <p>&copy; 2024 Faculty of Nursing, Chiang Mai University. All rights reserved.</p>
+            <p>&copy; 2024 Faculty of Nursing, Chiang Mai University. All rights reserved. <span
+                    class="ms-2 opacity-50 small">Version 3.0</span></p>
         </div>
     </div>
 </footer>

@@ -574,17 +574,6 @@
             window.location.href = `receipts-edit.php?id=${id}`;
         }
 
-        async function resendReceipt(id) {
-            const result = await confirmAction('ส่งใบเสร็จทางอีเมล?', 'ระบบจะส่งใบเสร็จไปยังอีเมลของผู้บริจาคอีกครั้ง', 'ส่งอีเมล');
-            if (!result.isConfirmed) return;
-
-            try {
-                await apiPost('/receipts/' + id + '/resend');
-                showSuccess('ส่งใบเสร็จทางอีเมลสำเร็จ');
-            } catch (error) {
-                showError(error.message);
-            }
-        }
 
         async function downloadSecurePdf(id) {
             try {

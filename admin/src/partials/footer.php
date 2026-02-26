@@ -6,7 +6,7 @@
                 <script>
                     document.write(new Date().getFullYear())
                 </script>
-                &copy; eDonation E-Donation System. All rights reserved.
+                &copy; eDonation E-Donation System. All rights reserved. <span class="ms-1 text-muted small">v3.0</span>
             </div>
         </div>
     </div>

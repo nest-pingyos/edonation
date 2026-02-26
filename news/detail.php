@@ -52,12 +52,12 @@ include_once('../config/head.php');
                         <!-- Main Content -->
                         <div class="col-lg-8">
                             <article class="news-article">
-                                <!-- Featured Image -->
+                                <!-- Featured Image / Gallery -->
                                 <div class="news-article-image">
-                                    <img id="articleImage" src="../assets/images/blog/grid/default.jpg" alt="">
+                                    <div id="imageGallery" class="news-gallery">
+                                        <img id="articleImage" src="../assets/images/blog/grid/default.jpg" alt="">
+                                    </div>
                                     <span class="news-article-category" id="articleCategory">ข่าวสาร</span>
-                                    <span class="news-article-featured" id="articleFeatured"
-                                        style="display: none;">ข่าวเด่น</span>
                                 </div>
 
                                 <!-- Content -->
@@ -91,34 +91,31 @@ include_once('../config/head.php');
                                         <p>เนื้อหา...</p>
                                     </div>
 
-                                    <!-- Share -->
-                                    <div class="news-share">
-                                        <span class="news-share-label">แชร์:</span>
-                                        <button class="share-btn facebook" onclick="shareToFacebook()"
-                                            title="แชร์ไปยัง Facebook">
-                                            <i class="fab fa-facebook-f"></i>
-                                        </button>
-                                        <button class="share-btn twitter" onclick="shareToTwitter()"
-                                            title="แชร์ไปยัง Twitter">
-                                            <i class="fab fa-twitter"></i>
-                                        </button>
-                                        <button class="share-btn line" onclick="shareToLine()" title="แชร์ไปยัง LINE">
-                                            <i class="fab fa-line"></i>
-                                        </button>
-                                        <button class="share-btn copy" onclick="copyLink()" title="คัดลอกลิงก์">
-                                            <i class="fas fa-link"></i>
-                                        </button>
+                                    <!-- Album Gallery -->
+                                    <div id="albumSection" style="display: none; margin-top: 40px;">
+                                        <h5 class="fw-bold mb-3"><i class="far fa-images me-1"></i> รูปภาพเพิ่มเติม</h5>
+                                        <div id="albumGallery" class="row g-3">
+                                            <!-- Album items will be rendered as col-md-4 -->
+                                        </div>
                                     </div>
-                                </div>
-                            </article>
+                                </div> <!-- news-article-content -->
+                            </article> <!-- news-article -->
 
-                            <!-- Navigation -->
-                            <div class="news-navigation">
+                            <!-- Recommended News Grid (Bottom) -->
+                            <div class="recommended-news-section mt-5">
+                                <h4 class="sidebar-title mb-4">ข่าวแนะนำสำหรับคุณ</h4>
+                                <div id="recommendedNewsGrid" class="row g-4">
+                                    <!-- Recommended news will be loaded here -->
+                                </div>
+                            </div>
+
+                            <!-- Back Navigation -->
+                            <div class="news-navigation mt-5">
                                 <a href="index.php" class="nav-btn secondary">
                                     <i class="fas fa-arrow-left"></i> กลับไปรายการข่าว
                                 </a>
                             </div>
-                        </div>
+                        </div> <!-- col-lg-8 -->
 
                         <!-- Sidebar -->
                         <div class="col-lg-4">
@@ -129,10 +126,72 @@ include_once('../config/head.php');
                                 </div>
                             </aside>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </div> <!-- row -->
+                </div> <!-- articleContent -->
+            </div> <!-- container -->
         </section>
+
+        <style>
+            .gallery-item img {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                cursor: pointer;
+                width: 100%;
+                height: 200px;
+                object-fit: cover;
+                border-radius: 8px;
+            }
+
+            .gallery-item img:hover {
+                transform: scale(1.02);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .recommended-card {
+                display: block;
+                text-decoration: none;
+                color: inherit;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                background-color: #fff;
+                height: 100%;
+                border: 1px solid #eee;
+            }
+
+            .recommended-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+                border-color: #FB974E;
+            }
+
+            .recommended-card-img {
+                width: 100%;
+                height: 160px;
+                object-fit: cover;
+            }
+
+            .recommended-card-content {
+                padding: 15px;
+            }
+
+            .recommended-card-title {
+                font-size: 1rem;
+                font-weight: 600;
+                margin-bottom: 8px;
+                color: #1a3a5c;
+                line-height: 1.4;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .recommended-card-date {
+                font-size: 0.8rem;
+                color: #888;
+            }
+        </style>
 
         <?php include_once('../config/footer.php'); ?>
     </div>
@@ -204,10 +263,6 @@ include_once('../config/head.php');
             // Category
             document.getElementById('articleCategory').textContent = categoryLabels[news.category] || news.category || 'ข่าวสาร';
 
-            // Featured badge
-            if (news.is_featured == 1) {
-                document.getElementById('articleFeatured').style.display = 'block';
-            }
 
             // Meta
             document.getElementById('articleDate').textContent = news.published_at_formatted || '-';
@@ -227,29 +282,82 @@ include_once('../config/head.php');
             // Body
             const bodyEl = document.getElementById('articleBody');
             if (news.content) {
-                // Convert newlines to paragraphs
-                const paragraphs = news.content.split('\n').filter(p => p.trim());
-                bodyEl.innerHTML = paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+                // Quill provides HTML, we show it directly to support styles/colors
+                bodyEl.innerHTML = news.content;
             } else if (news.excerpt) {
                 bodyEl.innerHTML = `<p>${escapeHtml(news.excerpt)}</p>`;
             } else {
                 bodyEl.innerHTML = '<p>ไม่มีเนื้อหา</p>';
             }
+
+            // Main Cover
+            const coverImg = document.getElementById('articleImage');
+            if (news.cover_url) {
+                coverImg.src = news.cover_url;
+            } else if (news.image_url) {
+                coverImg.src = news.image_url;
+            }
+
+            // Image Album Setup
+            const albumSection = document.getElementById('albumSection');
+            const albumGallery = document.getElementById('albumGallery');
+
+            if (news.album_urls && news.album_urls.length > 0) {
+                albumSection.style.display = 'block';
+                albumGallery.innerHTML = news.album_urls.map(url => `
+                    <div class="col-6 col-md-4 gallery-item">
+                        <img src="${url}" alt="Album Image" 
+                             onerror="this.src='../assets/images/blog/grid/default.jpg'">
+                    </div>
+                `).join('');
+            } else {
+                albumSection.style.display = 'none';
+            }
         }
 
         async function loadRelatedNews() {
             try {
-                const response = await fetch(`${API_BASE}/news?limit=5`);
+                const response = await fetch(`${API_BASE}/news?limit=10`);
                 const result = await response.json();
 
                 if (result.success && result.data) {
                     // Filter out current news
-                    const related = result.data.filter(item => item.id != newsId).slice(0, 4);
-                    renderRelatedNews(related);
+                    const allOthers = result.data.filter(item => item.id != newsId);
+
+                    // Sidebar: 4 items
+                    renderRelatedNews(allOthers.slice(0, 4));
+
+                    // Bottom Recommended: 3 items (different from sidebar)
+                    renderRecommendedGrid(allOthers.slice(4, 7));
                 }
             } catch (error) {
                 console.error('Error loading related news:', error);
             }
+        }
+
+        function renderRecommendedGrid(news) {
+            const container = document.getElementById('recommendedNewsGrid');
+            if (!container) return;
+
+            if (news.length === 0) {
+                container.innerHTML = '<div class="col-12"><p class="text-muted">กำลังเตรียมข่าวแนะนำ...</p></div>';
+                return;
+            }
+
+            container.innerHTML = news.map(item => `
+                <div class="col-md-4">
+                    <a href="detail.php?id=${item.id}" class="recommended-card">
+                        <img src="${item.image_url}" class="recommended-card-img" alt="${escapeHtml(item.title)}"
+                             onerror="this.src='../assets/images/blog/grid/default.jpg'">
+                        <div class="recommended-card-content">
+                            <h5 class="recommended-card-title">${escapeHtml(item.title)}</h5>
+                            <div class="recommended-card-date">
+                                <i class="far fa-calendar-alt"></i> ${item.published_at_formatted || '-'}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            `).join('');
         }
 
         function renderRelatedNews(news) {

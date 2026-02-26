@@ -153,18 +153,22 @@
                             <div class="card shadow-sm border-0 mb-4 divider-dashed">
                                 <div class="card-body p-4">
                                     <div class="d-flex align-items-center mb-3">
-                                        <iconify-icon icon="solar:magnifer-linear" class="text-primary fs-24 me-2"></iconify-icon>
+                                        <iconify-icon icon="solar:magnifer-linear"
+                                            class="text-primary fs-24 me-2"></iconify-icon>
                                         <h5 class="card-title mb-0">ค้นหาประวัติบุคคล</h5>
                                     </div>
-                                    
+
                                     <div class="row g-2">
                                         <div class="col-md-10">
-                                            <input type="text" class="form-control form-control-lg bg-light border-0 px-3" id="searchQuery" 
+                                            <input type="text"
+                                                class="form-control form-control-lg bg-light border-0 px-3"
+                                                id="searchQuery"
                                                 placeholder="กรอกชื่อ-นามสกุล, เลขบัตร หรือเบอร์โทรศัพท์ เพื่อดึงข้อมูลเดิม..."
                                                 onkeypress="if(event.key==='Enter'){event.preventDefault(); smartSearch();}">
                                         </div>
                                         <div class="col-md-2">
-                                            <button class="btn btn-primary btn-lg w-100" type="button" onclick="smartSearch()">
+                                            <button class="btn btn-primary btn-lg w-100" type="button"
+                                                onclick="smartSearch()">
                                                 ค้นหา
                                             </button>
                                         </div>
@@ -172,14 +176,19 @@
 
                                     <!-- Search Results Area (Simplified List) -->
                                     <div id="searchResults" class="mt-4" style="display: none;">
-                                        <div id="searchResultsBody" class="list-group list-group-flush border rounded-3 overflow-auto" style="max-height: 300px;">
+                                        <div id="searchResultsBody"
+                                            class="list-group list-group-flush border rounded-3 overflow-auto"
+                                            style="max-height: 300px;">
                                             <!-- Results will be injected here as List Items -->
                                         </div>
                                     </div>
 
                                     <!-- No Results -->
-                                    <div id="noResults" class="mt-3 text-center py-3 border border-dashed rounded bg-light" style="display: none;">
-                                        <span class="text-muted small">ไม่พบข้อมูลประวัติ กรุณากรอกเริ่มกรอกข้อมูลใหม่ด้านล่าง หรือตรวจสอบตัวสะกด</span>
+                                    <div id="noResults"
+                                        class="mt-3 text-center py-3 border border-dashed rounded bg-light"
+                                        style="display: none;">
+                                        <span class="text-muted small">ไม่พบข้อมูลประวัติ
+                                            กรุณากรอกเริ่มกรอกข้อมูลใหม่ด้านล่าง หรือตรวจสอบตัวสะกด</span>
                                     </div>
                                 </div>
                             </div>
@@ -409,10 +418,6 @@
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="form-check form-switch mb-2">
-                                        <input class="form-check-input" type="checkbox" id="send_email">
-                                        <label class="form-check-label" for="send_email">ส่งใบเสร็จทางอีเมล</label>
-                                    </div>
                                     <div class="form-check form-switch mb-2">
                                         <input class="form-check-input" type="checkbox" id="print_receipt" checked>
                                         <label class="form-check-label"
@@ -959,7 +964,6 @@
                     donation_date: donationDate,
                     payment_method: document.getElementById('payment_method').value,
                     note: document.getElementById('note').value,
-                    send_email: document.getElementById('send_email').checked,
                     print_receipt: document.getElementById('print_receipt').checked,
                     notify_line: document.getElementById('notify_line').checked
                 };
