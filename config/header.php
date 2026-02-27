@@ -49,9 +49,9 @@ $currentPage = basename(dirname($_SERVER['PHP_SELF']));
           </li>
           <li class="nav__item d-flex align-items-center">
             <div class="lang-switch">
-              <a href="?lang=th" class="lang-switch__btn <?= $currentLang === 'th' ? 'active' : '' ?>">TH</a>
-              <span class="lang-switch__divider">|</span>
-              <a href="?lang=en" class="lang-switch__btn <?= $currentLang === 'en' ? 'active' : '' ?>">EN</a>
+              <a href="?lang=th" class="lang-switch__btn active">TH</a>
+              <!-- <span class="lang-switch__divider">|</span> -->
+              <!-- <a href="?lang=en" class="lang-switch__btn">EN</a> -->
             </div>
           </li>
         </ul>

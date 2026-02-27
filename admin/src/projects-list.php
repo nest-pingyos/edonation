@@ -255,6 +255,7 @@
                 const params = new URLSearchParams();
                 params.append('page', currentPage);
                 params.append('limit', perPage);
+                params.append('status', 'all');
                 if (search) params.append('search', search);
 
                 const response = await apiGet('/projects?' + params.toString());

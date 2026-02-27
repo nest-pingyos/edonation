@@ -19,9 +19,9 @@ class AuthMiddleware
 {
     private const ROLE_HIERARCHY = [
         'super_admin' => 100,
-        'admin' => 50,
-        'editor' => 25,
-        'viewer' => 10
+        'finance_admin' => 80,
+        'hr_admin' => 60,
+        'news_admin' => 40
     ];
 
     /**
@@ -31,17 +31,21 @@ class AuthMiddleware
      */
     public static function authenticate(): ?array
     {
-        // Bypass in development mode
+        // 1. Try real token first
+        $token = self::getBearerToken();
+        if ($token) {
+            $user = self::validateToken($token);
+            if ($user) {
+                return $user;
+            }
+        }
+
+        // 2. Bypass in development mode ONLY if no valid token
         if (defined('APP_ENV') && APP_ENV === 'development') {
             return self::getDevUser();
         }
 
-        $token = self::getBearerToken();
-        if (!$token) {
-            return null;
-        }
-
-        return self::validateToken($token);
+        return null;
     }
 
     /**
@@ -51,11 +55,6 @@ class AuthMiddleware
      */
     public static function requireAuth(): array
     {
-        // Bypass in development mode
-        if (defined('APP_ENV') && APP_ENV === 'development') {
-            return self::getDevUser();
-        }
-
         $user = self::authenticate();
         if (!$user) {
             self::sendUnauthorizedResponse();

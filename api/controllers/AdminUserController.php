@@ -24,12 +24,12 @@ class AdminUserController
     // Role hierarchy: higher number = more privileges
     private const ROLE_HIERARCHY = [
         'super_admin' => 100,
-        'admin' => 50,
-        'editor' => 25,
-        'viewer' => 10
+        'finance_admin' => 80,
+        'hr_admin' => 60,
+        'news_admin' => 40
     ];
 
-    private const ALLOWED_ROLES = ['super_admin', 'admin', 'editor', 'viewer'];
+    private const ALLOWED_ROLES = ['super_admin', 'finance_admin', 'hr_admin', 'news_admin'];
     private const ALLOWED_STATUSES = ['active', 'inactive'];
     private const CMU_EMAIL_DOMAIN = '@cmu.ac.th';
 
@@ -79,7 +79,26 @@ class AdminUserController
      */
     private function initCurrentUser(): void
     {
-        // Get from AuthMiddleware or Session
+        // 1. Attempt to get from JWT (API requests)
+        $user = AuthMiddleware::authenticate();
+        if ($user) {
+            $this->currentUser = $user;
+            return;
+        }
+
+        // 2. Fallback to session (admin panel requests)
+        if (session_status() === PHP_SESSION_ACTIVE || (session_status() === PHP_SESSION_NONE && session_start())) {
+            if (isset($_SESSION['user'])) {
+                $this->currentUser = $_SESSION['user'];
+                return;
+            }
+            if (isset($_SESSION['backend_user'])) {
+                $this->currentUser = $_SESSION['backend_user'];
+                return;
+            }
+        }
+
+        // 3. Last fallback: Bypass in development mode ONLY if no other auth found
         if (defined('APP_ENV') && APP_ENV === 'development') {
             $this->currentUser = [
                 'id' => 1,
@@ -87,28 +106,6 @@ class AdminUserController
                 'role' => 'super_admin'
             ];
             return;
-        }
-
-        // Attempt to get from JWT (API requests)
-        $user = AuthMiddleware::authenticate();
-        if ($user) {
-            $this->currentUser = $user;
-            return;
-        }
-
-        // Fallback to session (admin panel requests)
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (isset($_SESSION['backend_user']) && $_SESSION['backend_user']['logged_in'] === true) {
-            $this->currentUser = [
-                'id' => $_SESSION['backend_user']['id'] ?? 0,
-                'email' => $_SESSION['backend_user']['email'],
-                'role' => $_SESSION['backend_user']['role']
-            ];
-        } elseif (isset($_SESSION['user']) && isset($_SESSION['user']['id'])) {
-            $this->currentUser = $_SESSION['user'];
         }
     }
 

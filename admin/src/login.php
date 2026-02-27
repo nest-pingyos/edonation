@@ -25,8 +25,27 @@ $apiBaseV1 = $apiBase . '/v1';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เข้าสู่ระบบ | eDonation Admin</title>
     <link rel="shortcut icon" href="<?= $basePath ?>/assets/images/favicon/favicon.png" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+
     <style>
+        :root {
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #a78bfa;
+            --secondary: #4f46e5;
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -34,59 +53,113 @@ $apiBaseV1 = $apiBase . '/v1';
         }
 
         body {
-            font-family: 'Prompt', sans-serif;
+            font-family: 'Inter', 'Prompt', sans-serif;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f8fafc;
+            background: #f1f5f9;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Blobs */
+        .blob {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%);
+            filter: blur(80px);
+            border-radius: 50%;
+            z-index: -1;
+            animation: move 20s infinite alternate;
+        }
+
+        .blob-1 { top: -100px; right: -100px; animation-delay: 0s; }
+        .blob-2 { bottom: -100px; left: -100px; animation-delay: -5s; }
+
+        @keyframes move {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(100px, 100px) scale(1.1); }
         }
 
         .login-wrapper {
             width: 100%;
-            max-width: 400px;
-            padding: 20px;
+            max-width: 440px;
+            padding: 24px;
+            z-index: 10;
         }
 
         .login-card {
-            background: white;
-            border-radius: 16px;
-            padding: 48px 40px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .logo {
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-section {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 40px;
         }
 
-        .logo img {
+        .logo-container {
+            width: 72px;
+            height: 72px;
+            background: white;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-container img {
+            width: 48px;
             height: 48px;
         }
 
         .logo-text {
-            font-size: 24px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-top: 12px;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
         }
 
         .subtitle {
-            text-align: center;
-            color: #64748b;
-            font-size: 14px;
-            margin-bottom: 32px;
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-top: 8px;
         }
 
         .alert {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-            padding: 12px 16px;
-            border-radius: 8px;
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #e11d48;
+            padding: 14px 18px;
+            border-radius: 12px;
             font-size: 14px;
-            margin-bottom: 24px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
         }
 
         .btn-cmu {
@@ -94,150 +167,119 @@ $apiBaseV1 = $apiBase . '/v1';
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            padding: 14px 24px;
-            background: #7c3aed;
+            gap: 14px;
+            padding: 16px 28px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 14px;
             font-family: inherit;
-            font-size: 15px;
-            font-weight: 500;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.3);
         }
 
         .btn-cmu:hover {
-            background: #6d28d9;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(124, 58, 237, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn-cmu:active {
+            transform: translateY(0);
         }
 
         .btn-cmu:disabled {
-            background: #a78bfa;
+            background: #cbd5e1;
+            box-shadow: none;
             cursor: not-allowed;
             transform: none;
         }
 
-        .btn-cmu svg {
-            width: 20px;
-            height: 20px;
+        .btn-cmu iconify-icon {
+            font-size: 24px;
         }
 
         .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
             border-top-color: white;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            to { transform: rotate(360deg); }
         }
 
-        .divider {
+        .footer-text {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .cmu-brand {
             display: flex;
             align-items: center;
-            margin: 24px 0;
-            color: #94a3b8;
-            font-size: 13px;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #e2e8f0;
-        }
-
-        .divider span {
-            padding: 0 12px;
-        }
-
-        .alt-login {
-            text-align: center;
-            font-size: 14px;
-            color: #64748b;
-        }
-
-        .alt-login a {
-            color: #7c3aed;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .alt-login a:hover {
-            text-decoration: underline;
-        }
-
-        .footer {
-            text-align: center;
+            justify-content: center;
+            gap: 8px;
             margin-top: 24px;
-            font-size: 12px;
-            color: #94a3b8;
+            opacity: 0.7;
         }
 
-        <?php if (defined('APP_ENV') && APP_ENV === 'development'): ?>
-            .dev-login {
-                margin-top: 16px;
-            }
+        .cmu-brand img {
+            height: 24px;
+        }
 
-            .btn-dev {
-                width: 100%;
-                padding: 12px;
-                background: transparent;
-                border: 1px solid #e2e8f0;
-                color: #64748b;
-                border-radius: 8px;
-                font-family: inherit;
-                font-size: 13px;
-                cursor: pointer;
-                transition: all 0.2s;
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 32px 24px;
             }
-
-            .btn-dev:hover {
-                background: #f8fafc;
-                border-color: #cbd5e1;
-            }
-
-        <?php endif; ?>
+        }
     </style>
 </head>
 
 <body>
+    <!-- Background Blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
     <div class="login-wrapper">
         <div class="login-card">
-            <div class="logo">
-                <img src="<?= $basePath ?>/assets/images/logo/logo.svg" alt="eDonation"
-                    onerror="this.style.display='none'">
-                <div class="logo-text">eDonation</div>
+            <div class="logo-section">
+                <div class="logo-container">
+                    <img src="<?= $basePath ?>/assets/images/logo/logo.svg" alt="eDonation"
+                        onerror="this.src='https://api.iconify.design/solar:heart-bold-duotone.svg?color=%237c3aed'">
+                </div>
+                <h1 class="logo-text">eDonation</h1>
+                <p class="subtitle">ระบบจัดการการบริจาค คณะพยาบาลศาสตร์ มช.</p>
             </div>
 
-            <p class="subtitle">ระบบจัดการการบริจาค คณะพยาบาลศาสตร์ มช.</p>
-
             <?php if ($error): ?>
-                <div class="alert"><?= htmlspecialchars($error) ?></div>
+                <div class="alert">
+                    <iconify-icon icon="solar:danger-circle-bold-duotone"></iconify-icon>
+                    <span><?= htmlspecialchars($error) ?></span>
+                </div>
             <?php endif; ?>
 
             <button type="button" id="btnLogin" class="btn-cmu" onclick="loginWithCmu()">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                </svg>
+                <iconify-icon id="btnIcon" icon="solar:user-circle-bold-duotone"></iconify-icon>
                 <span id="btnText">Sign in with CMU Account</span>
             </button>
 
-            <div class="dev-login">
-                <button type="button" class="btn-dev" onclick="devLogin()">
-                    Developer Login (admin / admin123)
-                </button>
+            <div class="cmu-brand">
+                <iconify-icon icon="solar:shield-check-bold-duotone" style="color: var(--primary);"></iconify-icon>
+                <span>Authenticated by CMU IT Account</span>
             </div>
         </div>
-        © <?= date('Y') ?> Faculty of Nursing, Chiang Mai University
+
+        <p class="footer-text">
+            © <?= date('Y') ?> Faculty of Nursing, Chiang Mai University<br>
+            <span style="font-size: 11px; opacity: 0.8;">Admin Portal v3.0</span>
         </p>
     </div>
 
@@ -247,28 +289,44 @@ $apiBaseV1 = $apiBase . '/v1';
         async function loginWithCmu() {
             const btn = document.getElementById('btnLogin');
             const text = document.getElementById('btnText');
+            const icon = document.getElementById('btnIcon');
 
             btn.disabled = true;
+            icon.style.display = 'none';
             text.innerHTML = '<span class="spinner"></span> กำลังเชื่อมต่อ...';
 
             try {
                 const res = await fetch(`${API_BASE}/auth/oauth/login`);
+                if (!res.ok) throw new Error('Network response was not ok');
+                
                 const data = await res.json();
 
                 if (data.success && data.data?.auth_url) {
-                    window.location.href = data.data.auth_url;
+                    // Pre-redirect delay for smooth transition
+                    setTimeout(() => {
+                        window.location.href = data.data.auth_url;
+                    }, 500);
                 } else {
-                    throw new Error(data.error?.message || 'Connection failed');
+                    throw new Error(data.error?.message || 'การเชื่อมต่อล้มเหลว กรุณาลองใหม่');
                 }
             } catch (e) {
-                alert('เกิดข้อผิดพลาด: ' + e.message);
                 btn.disabled = false;
+                icon.style.display = 'block';
                 text.textContent = 'Sign in with CMU Account';
+                
+                // Show error as alert
+                const alertContainer = document.createElement('div');
+                alertContainer.className = 'alert';
+                alertContainer.innerHTML = `
+                    <iconify-icon icon="solar:danger-circle-bold-duotone"></iconify-icon>
+                    <span>${e.message}</span>
+                `;
+                
+                const logoSection = document.querySelector('.logo-section');
+                const existingAlert = document.querySelector('.alert');
+                if (existingAlert) existingAlert.remove();
+                logoSection.after(alertContainer);
             }
-        }
-
-        function devLogin() {
-            window.location.href = 'dev-login.php';
         }
     </script>
 </body>

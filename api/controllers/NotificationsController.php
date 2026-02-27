@@ -40,16 +40,14 @@ class NotificationsController
     public function handle(string $method, ?string $id, ?string $action): array
     {
         try {
-            if ($method !== 'POST') {
-                return Response::error('METHOD_NOT_ALLOWED', 'Use POST method', 405);
-            }
-
             AuthMiddleware::requireAdmin();
 
             return match ($id) {
-                'send' => $this->send(),
-                'email' => $this->sendEmail(),
-                'line' => $this->sendLine(),
+                'self-status' => $method === 'GET' ? $this->getSelfStatus() : Response::error('METHOD_NOT_ALLOWED', 'Use GET', 405),
+                'toggle-status' => $method === 'POST' ? $this->toggleSelfStatus() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
+                'send' => $method === 'POST' ? $this->send() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
+                'email' => $method === 'POST' ? $this->sendEmail() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
+                'line' => $method === 'POST' ? $this->sendLine() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
                 default => Response::error('NOT_FOUND', 'Endpoint not found', 404)
             };
         } catch (PDOException $e) {
@@ -197,6 +195,94 @@ class NotificationsController
             'message' => $message,
             'results' => $result['results']
         ], $result['success'] ? 'ส่งข้อความ LINE ของคณะเรียบร้อย' : 'ไม่สามารถส่งข้อความ LINE ได้');
+    }
+
+    /**
+     * GET /notifications/self-status
+     * ตรวจสอบสถานะการแจ้งเตือนของตัวเอง
+     */
+    private function getSelfStatus(): array
+    {
+        $user = AuthMiddleware::authenticate();
+        if (!$user || empty($user['email'])) {
+            return Response::error('UNAUTHORIZED', 'Session expired', 401);
+        }
+
+        $email = $user['email'];
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT is_active 
+                FROM edonation_notification_recipients 
+                WHERE cmu_account = :email 
+                LIMIT 1
+            ");
+            $stmt->execute([':email' => $email]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return Response::success([
+                'email' => $email,
+                'is_active' => $row ? (bool) $row['is_active'] : false,
+                'exists' => (bool) $row
+            ]);
+        } catch (PDOException $e) {
+            return Response::error('DATABASE_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /notifications/toggle-status
+     * ปิด/เปิดการแจ้งเตือนของตัวเอง
+     */
+    private function toggleSelfStatus(): array
+    {
+        $user = AuthMiddleware::authenticate();
+        if (!$user || empty($user['email'])) {
+            return Response::error('UNAUTHORIZED', 'Session expired', 401);
+        }
+
+        $email = $user['email'];
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $active = isset($data['is_active']) ? (bool) $data['is_active'] : null;
+
+        if ($active === null) {
+            return Response::error('VALIDATION_ERROR', 'Missing is_active parameter', 400);
+        }
+
+        try {
+            // Check if exists
+            $stmt = $this->pdo->prepare("SELECT id FROM edonation_notification_recipients WHERE cmu_account = :email");
+            $stmt->execute([':email' => $email]);
+            $exists = $stmt->fetch();
+
+            if ($exists) {
+                // Update
+                $stmt = $this->pdo->prepare("
+                    UPDATE edonation_notification_recipients 
+                    SET is_active = :active, updated_at = NOW() 
+                    WHERE cmu_account = :email
+                ");
+                $stmt->execute([
+                    ':active' => $active ? 1 : 0,
+                    ':email' => $email
+                ]);
+            } else if ($active) {
+                // Insert new (defaulting to payment_success if they enable it)
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO edonation_notification_recipients 
+                    (notification_type, recipient_email, cmu_account, is_active, created_at)
+                    VALUES ('payment_success', :email, :cmu, 1, NOW())
+                ");
+                $stmt->execute([
+                    ':email' => $email,
+                    ':cmu' => $email
+                ]);
+            }
+
+            return Response::success(['is_active' => $active], 'บันทึกสถานะเรียบร้อย');
+        } catch (PDOException $e) {
+            return Response::error('DATABASE_ERROR', $e->getMessage(), 500);
+        }
     }
 
     /**

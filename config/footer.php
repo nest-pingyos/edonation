@@ -34,13 +34,12 @@ $langParam = $currentLang !== 'th' ? '?lang=' . $currentLang : '';
                     <div class="footer-contact">
                         <p><i class="fas fa-map-marker-alt"></i> คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่</p>
                         <p><i class="fas fa-phone"></i> <a href="tel:053-949075">053-949075</a></p>
-                        <p><i class="fas fa-envelope"></i> <a
-                                href="mailto:donate@nurse.cmu.ac.th">donate@nurse.cmu.ac.th</a></p>
+                        <p><i class="fas fa-envelope"></i> <a href="mailto:fon.pr@cmu.ac.th">fon.pr@cmu.ac.th</a></p>
                     </div>
                     <div class="footer-lang">
-                        <a href="?lang=th" class="<?= $currentLang === 'th' ? 'active' : '' ?>">TH</a>
-                        <span>|</span>
-                        <a href="?lang=en" class="<?= $currentLang === 'en' ? 'active' : '' ?>">EN</a>
+                        <a href="?lang=th" class="active">TH</a>
+                        <!-- <span>|</span> -->
+                        <!-- <a href="?lang=en">EN</a> -->
                     </div>
                 </div>
             </div>

@@ -2,7 +2,7 @@
 include 'partials/main.php';
 
 // Check permissions
-if (!hasRole('super_admin') && !hasRole('admin')) {
+if (!hasRole('super_admin')) {
     header('Location: dashboard.php');
     exit;
 }
@@ -108,10 +108,10 @@ if (!hasRole('super_admin') && !hasRole('admin')) {
                                 <div class="mb-3">
                                     <label for="role" class="form-label">สิทธิ์การใช้งาน</label>
                                     <select class="form-select" id="role" name="role">
-                                        <option value="viewer">Viewer</option>
-                                        <option value="editor">Editor</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="super_admin">Super Admin</option>
+                                        <option value="news_admin">News/Shipping (เจ้าหน้าที่ข่าว/จัดส่ง)</option>
+                                        <option value="hr_admin">HR Admin (เจ้าหน้าที่บุคคล)</option>
+                                        <option value="finance_admin">Finance Admin (เจ้าหน้าที่การเงิน)</option>
+                                        <option value="super_admin">Super Admin (ผู้ดูแลระบบสูงสุด)</option>
                                     </select>
                                 </div>
                             </div>
@@ -208,9 +208,9 @@ if (!hasRole('super_admin') && !hasRole('admin')) {
         function getRoleBadge(role) {
             const map = {
                 'super_admin': { class: 'badge-soft-danger', text: 'Super Admin' },
-                'admin': { class: 'badge-soft-success', text: 'Admin' },
-                'editor': { class: 'badge-soft-primary', text: 'Editor' },
-                'viewer': { class: 'badge-soft-secondary', text: 'Viewer' }
+                'finance_admin': { class: 'badge-soft-success', text: 'Finance Admin' },
+                'hr_admin': { class: 'badge-soft-primary', text: 'HR Admin' },
+                'news_admin': { class: 'badge-soft-secondary', text: 'News/Shipping' }
             };
             const config = map[role] || { class: 'badge-soft-light', text: role };
             return `<span class="badge ${config.class} fs-12">${config.text}</span>`;
@@ -231,7 +231,7 @@ if (!hasRole('super_admin') && !hasRole('admin')) {
                 document.getElementById('modalTitle').textContent = 'เพิ่มผู้ดูแลระบบ';
                 document.getElementById('userForm').reset();
                 document.getElementById('userId').value = '';
-                document.getElementById('role').value = 'viewer';
+                document.getElementById('role').value = 'news_admin';
                 document.getElementById('status').value = 'active';
                 emailInput.readOnly = false;
                 btn.textContent = 'บันทึกข้อมูล';

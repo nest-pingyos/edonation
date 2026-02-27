@@ -18,7 +18,6 @@ function authGuard(): void
     // Pages that don't need authentication
     $bypassPages = [
         'login.php',
-        'dev-login.php',
         'logout.php',
         'auth-callback.php',
         'auth-signin.php'
@@ -39,6 +38,17 @@ function authGuard(): void
         $base = defined('BASE_PATH') ? BASE_PATH : '';
         header("Location: {$base}/admin/src/login.php");
         exit;
+    }
+
+    // 3. Page Permissions Check
+    $currentFile = basename($currentPath);
+    if (!canAccess($currentFile)) {
+        // Allow bypass pages (already allowed by step 1, but for safety)
+        if (!in_array($currentFile, ['dashboard.php', 'profile.php'])) {
+            $base = defined('BASE_PATH') ? BASE_PATH : '';
+            header("Location: {$base}/admin/src/pages-403.php");
+            exit;
+        }
     }
 }
 

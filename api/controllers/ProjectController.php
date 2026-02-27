@@ -13,7 +13,7 @@
 
 class ProjectController
 {
-    const VERSION = '2.2';
+    const VERSION = '3.1';
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const UPLOAD_PATH = __DIR__ . '/../../assets/images/projects';
@@ -61,7 +61,7 @@ class ProjectController
         $page = max(1, intval($_GET['page'] ?? 1));
         $limit = min(500, max(1, intval($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
-        $status = $_GET['status'] ?? null;
+        $status = !empty($_GET['status']) ? $_GET['status'] : 'active';
         $search = $_GET['search'] ?? null;
         $sort = strtolower($_GET['sort'] ?? 'desc');
         $orderDir = ($sort === 'asc') ? 'ASC' : 'DESC';
@@ -69,9 +69,11 @@ class ProjectController
         $whereClauses = [];
         $params = [':limit' => $limit, ':offset' => $offset];
 
-        if ($status && $status !== 'all') {
-            $whereClauses[] = "LOWER(status) = LOWER(:status)";
-            $params[':status'] = $status;
+        // Default to active for public list
+        if ($status === 'all') {
+            // Admin can see all
+        } else {
+            $whereClauses[] = "LOWER(status) = 'active'";
         }
 
         if ($search) {

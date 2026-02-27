@@ -177,7 +177,12 @@ function hasRole(string $role): bool
     if (!$user)
         return false;
 
-    $roleHierarchy = ['super_admin' => 100, 'admin' => 50, 'editor' => 25, 'viewer' => 10];
+    $roleHierarchy = [
+        'super_admin' => 100,
+        'finance_admin' => 80,
+        'hr_admin' => 60,
+        'news_admin' => 40
+    ];
     $userLevel = $roleHierarchy[$user['role']] ?? 0;
     $requiredLevel = $roleHierarchy[$role] ?? 0;
 
@@ -188,6 +193,54 @@ function hasExactRole(string $role): bool
 {
     $user = getCurrentUser();
     return $user && $user['role'] === $role;
+}
+
+/**
+ * Check if current user can access a specific page
+ */
+function canAccess(string $page): bool
+{
+    $user = getCurrentUser();
+    if (!$user)
+        return false;
+
+    $role = $user['role'] ?? '';
+    if ($role === 'super_admin')
+        return true;
+
+    $permissions = [
+        'finance_admin' => [
+            'dashboard.php',
+            'profile.php',
+            'receipts-list.php',
+            'receipts-generate.php',
+            'receipts-edit.php',
+            'receipts-print-address.php',
+            'projects-list.php',
+            'members-list.php',
+            'members-search.php',
+            'reports-daily.php',
+            'reports-monthly.php',
+            'reports-yearly.php',
+            'settings-general.php'
+        ],
+        'hr_admin' => [
+            'dashboard.php',
+            'profile.php',
+            'members-list.php',
+            'members-search.php'
+        ],
+        'news_admin' => [
+            'dashboard.php',
+            'profile.php',
+            'news-list.php',
+            'benefits-list.php',
+            'projects-list.php'
+        ]
+    ];
+
+    $allowed = $permissions[$role] ?? [];
+    return in_array($page, $allowed);
 }
 
 /**

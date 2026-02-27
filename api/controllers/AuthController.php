@@ -99,27 +99,6 @@ class AuthController
             return Response::validation($v->errors());
         }
 
-        // Dev account for testing
-        if ($data['username'] === 'admin' && $data['password'] === 'admin123') {
-            $token = AuthMiddleware::generateToken([
-                'id' => 1,
-                'name' => 'Admin (Dev)',
-                'email' => 'admin@dev.local',
-                'role' => 'admin'
-            ]);
-
-            return Response::success([
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-                'expires_in' => JWT_EXPIRE,
-                'user' => [
-                    'id' => 1,
-                    'name' => 'Admin (Dev)',
-                    'email' => 'admin@dev.local',
-                    'role' => 'admin'
-                ]
-            ]);
-        }
 
         // Find user from database
         try {
