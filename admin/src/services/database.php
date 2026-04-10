@@ -25,12 +25,9 @@ class DatabaseService
     private static ?PDO $instance = null;
 
     // Password hashing options (Argon2id preferred, bcrypt fallback)
-    private const PASSWORD_ALGO = PASSWORD_DEFAULT; // Uses best available (Argon2id on PHP 7.3+)
-    private const PASSWORD_OPTIONS = [
-        'memory_cost' => PASSWORD_ARGON2_DEFAULT_MEMORY_COST,
-        'time_cost' => PASSWORD_ARGON2_DEFAULT_TIME_COST,
-        'threads' => PASSWORD_ARGON2_DEFAULT_THREADS,
-    ];
+    // Use bcrypt options as default — Argon2 constants may not exist if PHP was compiled without libargon2
+    private const PASSWORD_ALGO = PASSWORD_DEFAULT;
+    private const PASSWORD_OPTIONS = ['cost' => 12];
 
     /**
      * Get database instance (Singleton)

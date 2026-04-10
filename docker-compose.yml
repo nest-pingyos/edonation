@@ -15,29 +15,51 @@ services:
       - edonation_db_data:/var/lib/mysql
       - ./database/donation.sql:/docker-entrypoint-initdb.d/init.sql
 
-  # ส่วน Web Server (PHP + Apache)
-  # ครอบคลุมทั้งส่วนหน้าเว็บ (root), admin, และ api
-  app:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    container_name: edonation_app
+  # ส่วน Web Server (PHP + Apache) — ปิดไว้เพราะรัน local ด้วย XAMPP แทน
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/php/Dockerfile
+  #   container_name: edonation_app
+  #   restart: always
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - .:/var/www/html/edonation
+  #     - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
+  #   environment:
+  #     - DB_HOST=db
+  #     - DB_NAME=donation
+  #     - DB_USER=root
+  #     - DB_PASS=root
+  #     - APP_DOMAIN=http://localhost:8080
+  #     - API_DOMAIN=http://localhost:8080
+  #     - APP_ENV=local
+  #   depends_on:
+  #     - db
+
+  # phpMyAdmin — จัดการ DB ผ่าน http://localhost:8081
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: edonation_pma
     restart: always
-    ports:
-      - "8080:80"
-    volumes:
-      - .:/var/www/html/edonation
-      - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
     environment:
-      - DB_HOST=db
-      - DB_NAME=donation
-      - DB_USER=root
-      - DB_PASS=root
-      - APP_DOMAIN=http://localhost:8080
-      - API_DOMAIN=http://localhost:8080
-      - APP_ENV=local
+      - PMA_HOST=db
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - "8081:80"
     depends_on:
       - db
+
+  # ตัวอย่าง XAMPP All-in-one (ถ้าต้องการใช้แบบก้อนเดียว ให้เอา comment ออก)
+  # xampp:
+  #   image: tomsik68/xampp:latest
+  #   container_name: edonation_xampp_full
+  #   ports:
+  #     - "8082:80"
+  #     - "3307:3306"
+  #   volumes:
+  #     - .:/www
 
 networks:
   default:

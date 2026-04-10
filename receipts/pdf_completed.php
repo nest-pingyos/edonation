@@ -290,6 +290,7 @@ function fetchReceiptData($receiptId)
                     du.amphure,
                     du.district,
                     du.zip_code,
+                    du.notes,
                     bt.billPaymentRef2,
                     bt.billPaymentRef1,
                     bt.payerAccountName,
@@ -465,7 +466,8 @@ $data = [
     'receiptDate' => $receiptData['receipt_date'] ?? $receiptData['receiptDate'] ?? date('Y-m-d'),
     'fiscal_year' => $receiptData['fiscal_year'] ?? (date('Y') + 543),
     'receipt_no' => $receiptData['receipt_no'] ?? '',
-    'payby' => $receiptData['pay_by'] ?? $receiptData['payby'] ?? 'QR PromptPay'
+    'payby' => $receiptData['pay_by'] ?? $receiptData['payby'] ?? 'QR PromptPay',
+    'notes' => $receiptData['notes'] ?? ''
 ];
 
 // Construct Full Address
@@ -703,12 +705,25 @@ $content = '
         <td align="right" colspan="2">' . htmlspecialchars($currentConfig['collector_name']) . '<br>เจ้าหน้าที่ผู้รับเงิน/Collector<br>วันที่ : ' . $rec_day . ' ' . $rec_month . ' ' . $rec_yearth . '</td>
     </tr>
     <tr>
-        <td colspan="2" ><b>หมายเหตุ : ใบเสร็จรับเงินจะมีผลสมบูรณ์ต่อเมื่อได้รับชำระเงินเรียบร้อยแล้วและมีลายเซ็นของผู้รับเงินครบถ้วน<br>The receipt will be valid with payment and the signature of the collector</b></td>
+        <td colspan="1">
+            <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td width="45" valign="top"><b>หมายเหตุ : </b></td>
+                    <td width="10" valign="top"></td>
+                    <td width="465">ใบเสร็จรับเงินจะมีผลสมบูรณ์ต่อเมื่อได้รับชำระเงินเรียบร้อยแล้วและมีลายเซ็นของผู้รับเงินครบถ้วน<br>The receipt will be valid with payment and the signature of the collector</td>
+                </tr>
+                ' . (!empty($data['notes']) ? '
+                <tr>
+                    <td></td>
+                    <td valign="top">2.</td>
+                    <td>' . nl2br(htmlspecialchars($data['notes'])) . '</td>
+                </tr>' : '') . '
+            </table>
+        </td>
     </tr>
     <tr>
         <td colspan="2" style="border-bottom: solid black 1px;"></td>
     </tr>
-
     <br>
     <br>
     <br>

@@ -32,9 +32,10 @@ class AuthController
         $this->pdo = Database::getInstance();
 
         // Load OAuth config from environment (secure)
-        $this->clientId = getenv('CMU_OAUTH_CLIENT_ID') ?: '9ff50902-00e4-482f-b3d0-f0d59d31c999';
-        $this->clientSecret = getenv('CMU_OAUTH_CLIENT_SECRET') ?: '';
-        $this->tenantId = getenv('CMU_OAUTH_TENANT_ID') ?: 'cf81f1df-de59-4c29-91da-a2dfd04aa751';
+        // Use $_ENV first (loaded from .env file), fall back to getenv() for system env (Docker)
+        $this->clientId = $_ENV['CMU_OAUTH_CLIENT_ID'] ?? getenv('CMU_OAUTH_CLIENT_ID') ?: '9ff50902-00e4-482f-b3d0-f0d59d31c999';
+        $this->clientSecret = $_ENV['CMU_OAUTH_CLIENT_SECRET'] ?? getenv('CMU_OAUTH_CLIENT_SECRET') ?: '';
+        $this->tenantId = $_ENV['CMU_OAUTH_TENANT_ID'] ?? getenv('CMU_OAUTH_TENANT_ID') ?: 'cf81f1df-de59-4c29-91da-a2dfd04aa751';
         $this->scope = 'api://cmu/Mis.Account.Read.Me.Basicinfo';
         $this->authUrl = "https://login.microsoftonline.com/{$this->tenantId}/oauth2/v2.0/authorize";
         $this->tokenUrl = "https://login.microsoftonline.com/{$this->tenantId}/oauth2/v2.0/token";
