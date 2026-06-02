@@ -1,0 +1,26 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Docker files (not needed inside image)
+docker-compose*.yml
+.dockerignore
+
+# Environment files (injected at runtime via env vars)
+.env
+.env.*
+!.env.example
+
+# Dev/local tooling
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Database dumps (large, loaded separately at container init)
+database/*.sql
+
+# Documentation
+*.md
+docs/

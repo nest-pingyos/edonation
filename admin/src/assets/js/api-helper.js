@@ -128,44 +128,38 @@ async function apiUpload(endpoint, formData) {
 }
 
 /**
- * Notification Functions (using SweetAlert2)
+ * Notification Functions (using SweetAlert2 toast)
  */
-function showSuccess(message) {
+function showToast(type, message) {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
-            icon: 'success',
-            title: 'สำเร็จ',
-            text: message,
-            timer: 2000,
-            showConfirmButton: false
+            toast: true,
+            position: 'top-end',
+            icon: type,
+            title: message,
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
         });
     } else {
         alert(message);
     }
+}
+
+function showSuccess(message) {
+    showToast('success', message);
 }
 
 function showError(message) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'error',
-            title: 'เกิดข้อผิดพลาด',
-            text: message
-        });
-    } else {
-        alert(message);
-    }
+    showToast('error', message);
 }
 
 function showWarning(message) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'warning',
-            title: 'คำเตือน',
-            text: message
-        });
-    } else {
-        alert(message);
-    }
+    showToast('warning', message);
+}
+
+function showInfo(message) {
+    showToast('info', message);
 }
 
 async function confirmDelete(itemName = 'รายการนี้') {
@@ -173,7 +167,7 @@ async function confirmDelete(itemName = 'รายการนี้') {
         return await Swal.fire({
             icon: 'warning',
             title: 'ยืนยันการลบ?',
-            text: `คุณต้องการลบ "${itemName}" ใช่หรือไม่?`,
+            text: `คุณต้องการลบ "${itemName}" ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`,
             showCancelButton: true,
             confirmButtonColor: '#ef5f5f',
             cancelButtonColor: '#6c757d',
@@ -185,20 +179,25 @@ async function confirmDelete(itemName = 'รายการนี้') {
     }
 }
 
-async function confirmAction(title, text, confirmText = 'ยืนยัน') {
+// รับ options object: { title, text, icon, confirmText, cancelText }
+async function confirmAction(options) {
+    if (typeof options === 'string') {
+        // backward-compat: confirmAction(title, text, confirmText)
+        options = { title: options, text: arguments[1], confirmText: arguments[2] };
+    }
     if (typeof Swal !== 'undefined') {
         return await Swal.fire({
-            icon: 'question',
-            title: title,
-            text: text,
+            icon: options.icon || 'question',
+            title: options.title || 'ยืนยันการดำเนินการ?',
+            text: options.text || 'คุณต้องการดำเนินการนี้หรือไม่?',
             showCancelButton: true,
             confirmButtonColor: '#1c84ee',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: confirmText,
-            cancelButtonText: 'ยกเลิก'
+            confirmButtonText: options.confirmText || 'ยืนยัน',
+            cancelButtonText: options.cancelText || 'ยกเลิก'
         });
     } else {
-        return { isConfirmed: confirm(text) };
+        return { isConfirmed: confirm(options.text || 'ยืนยัน?') };
     }
 }
 

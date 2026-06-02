@@ -44,6 +44,11 @@ class MemberController
             return $this->search();
         }
 
+        // GET /members/stats - สถิติภาพรวม
+        if ($id === 'stats') {
+            return $this->getStats();
+        }
+
         // GET /members/:id_members/donations
         if ($id && $action === 'donations') {
             return $this->getMemberDonations($id);
@@ -71,12 +76,6 @@ class MemberController
             return $this->update($id);
         }
 
-        // POST /members/export - Export สมาชิกที่เลือก
-        if ($method === 'POST' && $id === 'export') {
-            AuthMiddleware::requireAdmin();
-            return $this->export();
-        }
-
         // POST /members/sync - Sync สมาชิกจากใบเสร็จ
         if ($method === 'POST' && $id === 'sync') {
             AuthMiddleware::requireAdmin();
@@ -87,165 +86,53 @@ class MemberController
     }
 
     /**
-     * POST /members/export
-     * Body: { ids: string[] }
-     * Return: CSV Content or Download Link
-     */
-    private function export(): array
-    {
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
-        $ids = $data['ids'] ?? [];
-
-        if (empty($ids)) {
-            return Response::error('VALIDATION_ERROR', 'กรุณาเลือกรายการที่ต้องการ Export');
-        }
-
-        // Prepare Query
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-
-        // Similar to index() query but filtered by IDs
-        $sql = "SELECT 
-                    r.id_members,
-                    r.id_card,
-                    MIN(r.payer_name) as name,
-                    MAX(du.first_name) as first_name,
-                    MAX(du.last_name) as last_name,
-                    MAX(du.title) as title,
-                    MAX(du.phone) as phone,
-                    MAX(du.occupation) as occupation,
-                    COUNT(r.id) as receipt_count,
-                    SUM(r.amount) as total_amount,
-                    MAX(r.issued_at) as last_donation,
-                    MAX(du.receipt_address) as address,
-                    MAX(du.address_line) as address_line,
-                    MAX(du.province) as province,
-                    MAX(du.amphure) as amphure,
-                    MAX(du.district) as district,
-                    MAX(du.zip_code) as zip_code
-                FROM edonation_receipts r
-                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                WHERE r.id_members IN ($placeholders)
-                GROUP BY r.id_members
-                ORDER BY r.id_members ASC";
-
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($ids);
-            $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Generate CSV
-            $output = fopen('php://temp', 'r+');
-            // BOM for Excel Thai
-            fputs($output, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
-
-            // Header
-            fputcsv($output, [
-                'รหัสสมาชิก',
-                'ชื่อ-นามสกุล',
-                'เลขบัตรประชาชน',
-                'เบอร์โทรศัพท์',
-                'อาชีพ',
-                'ที่อยู่',
-                'จังหวัด',
-                'อำเภอ',
-                'ตำบล',
-                'รหัสไปรษณีย์',
-                'จำนวนครั้งบริจาค',
-                'ยอดรวมบริจาค',
-                'บริจาคล่าสุด'
-            ]);
-
-            foreach ($members as $m) {
-                // Name Logic
-                $name = $m['name'];
-                if (empty($name) || is_numeric($name)) {
-                    $name = trim(($m['title'] ?? '') . ' ' . $m['first_name'] . ' ' . ($m['last_name'] ?? ''));
-                }
-
-                // Address Logic
-                $addr = $m['address'];
-                if (empty($addr)) {
-                    $parts = [];
-                    if ($m['address_line'])
-                        $parts[] = $m['address_line'];
-                    if ($m['district'])
-                        $parts[] = 'ต.' . $m['district'];
-                    if ($m['amphure'])
-                        $parts[] = 'อ.' . $m['amphure'];
-                    if ($m['province'])
-                        $parts[] = 'จ.' . $m['province'];
-                    if ($m['zip_code'])
-                        $parts[] = $m['zip_code'];
-                    $addr = implode(' ', $parts);
-                }
-
-                fputcsv($output, [
-                    $m['id_members'] . "\t", // Force string in Excel
-                    $name,
-                    $m['id_card'] . "\t",
-                    $m['phone'] . "\t",
-                    $m['occupation'] ?? '',
-                    $addr,
-                    $m['province'],
-                    $m['amphure'],
-                    $m['district'],
-                    $m['zip_code'],
-                    $m['receipt_count'],
-                    $m['total_amount'],
-                    $m['last_donation']
-                ]);
-            }
-
-            rewind($output);
-            $csvContent = stream_get_contents($output);
-            fclose($output);
-
-            // Convert to Base64 to send via JSON
-            return Response::success([
-                'file_name' => 'members_export_' . date('Ymd_His') . '.csv',
-                'content_type' => 'text/csv',
-                'content_base64' => base64_encode($csvContent)
-            ], 'Export สำเร็จ');
-
-        } catch (PDOException $e) {
-            error_log("Export Error: " . $e->getMessage());
-            return Response::error('DATABASE_ERROR', 'เกิดข้อผิดพลาดในการ Export');
-        }
-    }
-
-    /**
      * ดึงข้อมูล Transaction รายละเอียดของสมาชิกที่เลือก (สำหรับ Internal Use / admin export_members.php)
+     * - ข้อมูลสมาชิกมาจาก edonation_members (canonical)
+     * - รองรับใบเสร็จเก่าที่ match ด้วย id_card แทน id_members
+     * - กรองใบเสร็จที่ถูกยกเลิก (status = 2)
      */
     public function getTransactionsForExport(array $ids): array
     {
-        if (empty($ids))
-            return [];
+        if (empty($ids)) return [];
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
-        $sql = "SELECT 
-                r.issued_at,
-                r.receipt_no as receipt_number,
-                r.amount,
-                du.project_name,
-                r.id_members,
-                r.id_card,
-                r.payer_name as receipt_name,
-                du.first_name,
-                du.last_name,
-                du.title,
-                du.phone,
-                du.occupation,
-                du.receipt_address as address_full,
-                du.address_line,
-                du.province,
-                du.amphure,
-                du.district,
-                du.zip_code
-            FROM edonation_receipts r
-            LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-            WHERE r.id_members IN ($placeholders)
-            ORDER BY r.id_members ASC, r.issued_at DESC";
+        $sql = "SELECT
+                    m.id_members,
+                    m.id_card,
+                    m.full_name,
+                    m.title,
+                    m.first_name,
+                    m.last_name,
+                    m.phone,
+                    m.email,
+                    m.occupation,
+                    m.full_address      AS address_full,
+                    m.address_line,
+                    m.province,
+                    m.district          AS amphure,
+                    m.subdistrict       AS district,
+                    m.zip_code,
+                    r.issued_at,
+                    r.receipt_no        AS receipt_number,
+                    r.amount,
+                    r.payer_name        AS receipt_name,
+                    du.project_name
+                FROM edonation_members m
+                LEFT JOIN edonation_receipts r
+                    ON (
+                        r.id_members = m.id_members
+                        OR (
+                            m.id_card IS NOT NULL AND m.id_card != ''
+                            AND r.id_card = m.id_card
+                            AND (r.id_members IS NULL OR r.id_members = '')
+                        )
+                    )
+                LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
+                WHERE m.id_members IN ($placeholders)
+                  AND m.is_active = 1
+                  AND (r.id IS NULL OR r.status != 2)
+                ORDER BY m.id_members ASC, r.issued_at DESC";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($ids);
@@ -387,6 +274,20 @@ class MemberController
     }
 
     /**
+     * Strip placeholder text (e.g. "-- เลือกจังหวัด --") from address fields before saving
+     */
+    private function cleanAddressField(string $val): string
+    {
+        $val = trim($val);
+        if ($val === '') return '';
+        // Strip patterns: starts with "--" or contains "เลือก"
+        if (str_starts_with($val, '--') || mb_strpos($val, 'เลือก') !== false) {
+            return '';
+        }
+        return $val;
+    }
+
+    /**
      * POST /members/:id_members/update
      * แก้ไขข้อมูลสมาชิก (ชื่อ, ที่อยู่, เบอร์โทร)
      * *Update ข้อมูลย้อนหลังทั้งหมดสำหรับ id_members นี้ (Cascade)*
@@ -406,23 +307,23 @@ class MemberController
             $fullName = trim("$title $firstName $lastName");
             $idCard = preg_replace('/\D/', '', $data['id_card'] ?? '');
 
-            // Shared address common values
+            // Shared address common values — ล้าง placeholder ก่อน save
             $addr = [
-                'line' => $data['address_line'] ?? '',
-                'prov' => $data['province'] ?? '',
-                'amp' => $data['amphure'] ?? '',
-                'dist' => $data['district'] ?? '', // Form district is Tambon
-                'zip' => $data['zip_code'] ?? $data['postcode'] ?? '',
-                'full' => $data['address'] ?? ''
+                'line' => trim($data['address_line'] ?? ''),
+                'prov' => $this->cleanAddressField($data['province'] ?? ''),
+                'amp'  => $this->cleanAddressField($data['amphure'] ?? ''),
+                'dist' => $this->cleanAddressField($data['district'] ?? ''),
+                'zip'  => trim($data['zip_code'] ?? $data['postcode'] ?? ''),
+                'full' => trim($data['address'] ?? '')
             ];
 
             $ship = [
-                'line' => $data['ship_address_line'] ?? '',
-                'prov' => $data['ship_province'] ?? '',
-                'amp' => $data['ship_district'] ?? '',
-                'dist' => $data['ship_subdistrict'] ?? '',
-                'zip' => $data['ship_zip_code'] ?? '',
-                'full' => $data['shipping_address'] ?? ''
+                'line' => trim($data['ship_address_line'] ?? ''),
+                'prov' => $this->cleanAddressField($data['ship_province'] ?? ''),
+                'amp'  => $this->cleanAddressField($data['ship_district'] ?? ''),
+                'dist' => $this->cleanAddressField($data['ship_subdistrict'] ?? ''),
+                'zip'  => trim($data['ship_zip_code'] ?? ''),
+                'full' => trim($data['shipping_address'] ?? '')
             ];
 
             // 1. Update Receipts
@@ -507,6 +408,36 @@ class MemberController
      * GET /members
      * รายการสมาชิกทั้งหมด (ดึงจากตาราง edonation_members)
      */
+
+    /**
+     * GET /members/stats
+     * สถิติภาพรวมสมาชิก — ใช้สำหรับ mini dashboard
+     */
+    private function getStats(): array
+    {
+        $currentYear = (int) date('Y');
+
+        $stmt = $this->pdo->query("
+            SELECT
+                COUNT(*)                                              AS total_members,
+                SUM(total_donated)                                    AS total_amount,
+                SUM(donation_count)                                   AS total_donations,
+                SUM(CASE WHEN YEAR(first_donation_date) = {$currentYear} THEN 1 ELSE 0 END) AS new_this_year
+            FROM edonation_members
+            WHERE is_active = 1
+        ");
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return Response::success([
+            'total_members'   => (int)   ($row['total_members']   ?? 0),
+            'total_amount'    => (float) ($row['total_amount']    ?? 0),
+            'total_donations' => (int)   ($row['total_donations'] ?? 0),
+            'new_this_year'   => (int)   ($row['new_this_year']   ?? 0),
+            'year'            => $currentYear,
+        ]);
+    }
+
     private function index(): array
     {
         $page = max(1, intval($_GET['page'] ?? 1));
@@ -668,11 +599,12 @@ class MemberController
      */
     private function search(): array
     {
-        $query = trim($_GET['q'] ?? '');
-        $type = $_GET['type'] ?? 'all'; // all, name, id_card
-        $limit = min(10000, max(1, intval($_GET['limit'] ?? 50)));
+        $query      = trim($_GET['q'] ?? '');
+        $searchMode = $_GET['search_mode'] ?? 'all'; // all, name, id_card, payer_name
+        $donorType  = $_GET['donor_type'] ?? '';      // new, repeat, loyal
+        $limit      = min(10000, max(1, intval($_GET['limit'] ?? 50)));
 
-        $sql = "SELECT 
+        $sql = "SELECT
                     m.id,
                     m.id_members,
                     m.id_card,
@@ -699,15 +631,25 @@ class MemberController
 
         $params = [];
 
+        // Apply donor-type filter (same logic as index())
+        if ($donorType === 'new') {
+            $sql .= " AND m.donation_count = 1";
+        } elseif ($donorType === 'repeat') {
+            $sql .= " AND m.donation_count >= 2";
+        } elseif ($donorType === 'loyal') {
+            $sql .= " AND m.donation_count >= 10";
+        }
+
         if (!empty($query)) {
-            $cleanQuery = str_replace(' ', '', $query);
-            $searchVal = '%' . $query . '%';
+            $cleanQuery   = str_replace(' ', '', $query);
+            $numericQuery = preg_replace('/\D/', '', $query); // digits only (for id_card / phone)
+            $searchVal      = '%' . $query . '%';
             $cleanSearchVal = '%' . $cleanQuery . '%';
 
-            switch ($type) {
+            switch ($searchMode) {
                 case 'name':
                     $sql .= " AND (
-                        REPLACE(m.full_name, ' ', '') LIKE :q1 
+                        REPLACE(m.full_name, ' ', '') LIKE :q1
                         OR REPLACE(CONCAT(m.first_name, m.last_name), ' ', '') LIKE :q2
                         OR m.first_name LIKE :q3
                         OR m.last_name LIKE :q4
@@ -721,8 +663,13 @@ class MemberController
                     break;
 
                 case 'id_card':
-                    $sql .= " AND m.id_card LIKE :q1";
-                    $params[':q1'] = '%' . preg_replace('/\D/', '', $query) . '%';
+                    // Non-numeric query cannot match an id_card — return nothing
+                    if (empty($numericQuery)) {
+                        $sql .= " AND 1=0";
+                    } else {
+                        $sql .= " AND m.id_card LIKE :q1";
+                        $params[':q1'] = '%' . $numericQuery . '%';
+                    }
                     break;
 
                 case 'payer_name':
@@ -730,25 +677,32 @@ class MemberController
                     $params[':q1'] = $searchVal;
                     break;
 
-                default: // all
-                    $sql .= " AND (
-                        REPLACE(m.full_name, ' ', '') LIKE :q1 
+                default: // all fields
+                    // Always search text fields
+                    $conditions = "
+                        REPLACE(m.full_name, ' ', '') LIKE :q1
                         OR REPLACE(CONCAT(m.first_name, m.last_name), ' ', '') LIKE :q2
-                        OR m.id_card LIKE :q3 
                         OR m.id_members LIKE :q4
                         OR m.first_name LIKE :q5
                         OR m.last_name LIKE :q6
-                        OR m.phone LIKE :q7
                         OR EXISTS (SELECT 1 FROM edonation_receipts r WHERE r.id_members = m.id_members AND r.payer_name LIKE :q8)
-                    )";
+                    ";
                     $params[':q1'] = $cleanSearchVal;
                     $params[':q2'] = $cleanSearchVal;
-                    $params[':q3'] = '%' . preg_replace('/\D/', '', $query) . '%';
                     $params[':q4'] = $searchVal;
                     $params[':q5'] = $searchVal;
                     $params[':q6'] = $searchVal;
-                    $params[':q7'] = '%' . preg_replace('/\D/', '', $query) . '%';
                     $params[':q8'] = $searchVal;
+
+                    // Only add numeric searches when the query actually contains digits
+                    // — avoids LIKE '%%' which would match ALL records
+                    if (!empty($numericQuery)) {
+                        $conditions .= " OR m.id_card LIKE :q3 OR m.phone LIKE :q7";
+                        $params[':q3'] = '%' . $numericQuery . '%';
+                        $params[':q7'] = '%' . $numericQuery . '%';
+                    }
+
+                    $sql .= " AND ($conditions)";
             }
         }
 
@@ -799,20 +753,22 @@ class MemberController
             return Response::notFound('ไม่พบข้อมูลสมาชิก');
         }
 
-        // ดึงโครงการที่เคยบริจาค
-        $projectsSql = "SELECT 
+        // ดึงโครงการที่เคยบริจาค (ค้นหาจาก id_members หรือ id_card เพื่อไม่พลาดใบเสร็จเก่า)
+        $projectsSql = "SELECT
                             du.project_name,
                             du.project_number,
                             COUNT(*) as count,
                             SUM(r.amount) as total
                         FROM edonation_receipts r
                         LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                        WHERE r.id_members = :id_members
+                        WHERE r.status != 2
+                          AND (r.id_members = :id_members
+                               OR (r.id_card IS NOT NULL AND r.id_card != '' AND r.id_card = :id_card))
                         GROUP BY du.project_name, du.project_number
                         ORDER BY total DESC
                         LIMIT 5";
         $projectsStmt = $this->pdo->prepare($projectsSql);
-        $projectsStmt->execute([':id_members' => $idMembers]);
+        $projectsStmt->execute([':id_members' => $idMembers, ':id_card' => $member['id_card'] ?? '']);
         $projects = $projectsStmt->fetchAll(PDO::FETCH_ASSOC);
 
         // กำหนดระดับผู้มีอุปการคุณ
@@ -820,12 +776,14 @@ class MemberController
         $benefactorLevel = $this->getBenefactorLevel($totalAmount);
 
         // นับจำนวนปีที่บริจาค (ใช้วัดความต่อเนื่อง)
-        $yearsSql = "SELECT DISTINCT YEAR(r.issued_at) as year 
-                     FROM edonation_receipts r 
-                     WHERE r.id_members = :id_members 
+        $yearsSql = "SELECT DISTINCT YEAR(r.issued_at) as year
+                     FROM edonation_receipts r
+                     WHERE r.status != 2
+                       AND (r.id_members = :id_members
+                            OR (r.id_card IS NOT NULL AND r.id_card != '' AND r.id_card = :id_card))
                      ORDER BY year DESC";
         $yearsStmt = $this->pdo->prepare($yearsSql);
-        $yearsStmt->execute([':id_members' => $idMembers]);
+        $yearsStmt->execute([':id_members' => $idMembers, ':id_card' => $member['id_card'] ?? '']);
         $donationYears = $yearsStmt->fetchAll(PDO::FETCH_COLUMN);
 
         // คำนวณความถี่การบริจาค
@@ -902,11 +860,12 @@ class MemberController
         $limit = min(100, max(1, intval($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
 
-        $sql = "SELECT 
+        $sql = "SELECT
                     r.id as receipt_id,
                     r.receipt_no,
                     r.amount,
                     r.issued_at,
+                    r.status,
                     r.donation_id,
                     du.project_name,
                     du.project_number,
@@ -914,7 +873,7 @@ class MemberController
                     du.created_at as donation_date
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                WHERE r.id_members = :id_members
+                WHERE r.id_members = :id_members AND r.status != 2
                 ORDER BY r.issued_at DESC
                 LIMIT :limit OFFSET :offset";
 
@@ -925,8 +884,8 @@ class MemberController
         $stmt->execute();
         $donations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Count total
-        $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE id_members = :id");
+        // Count active receipts only
+        $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM edonation_receipts WHERE id_members = :id AND status != 2");
         $countStmt->execute([':id' => $idMembers]);
         $total = (int) $countStmt->fetchColumn();
 
@@ -949,22 +908,30 @@ class MemberController
      */
     private function getMemberReceipts(string $idMembers): array
     {
-        $sql = "SELECT 
+        // หา id_card ของสมาชิกเพื่อใช้ค้นหาใบเสร็จเก่าที่อาจไม่มี id_members
+        $memberStmt = $this->pdo->prepare("SELECT id_card FROM edonation_members WHERE id_members = :id_members LIMIT 1");
+        $memberStmt->execute([':id_members' => $idMembers]);
+        $idCard = $memberStmt->fetchColumn() ?: '';
+
+        $sql = "SELECT
                     r.id,
                     r.receipt_no,
                     r.payer_name,
                     r.amount,
                     r.issued_at,
+                    r.status,
                     du.project_name,
                     du.project_number,
                     du.fiscal_year
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                WHERE r.id_members = :id_members
+                WHERE r.status != 2
+                  AND (r.id_members = :id_members
+                       OR (r.id_card IS NOT NULL AND r.id_card != '' AND r.id_card = :id_card))
                 ORDER BY r.issued_at DESC";
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':id_members' => $idMembers]);
+        $stmt->execute([':id_members' => $idMembers, ':id_card' => $idCard]);
         $receipts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($receipts as &$r) {
@@ -984,14 +951,14 @@ class MemberController
      */
     private function getMemberSummary(string $idMembers): array
     {
-        // ยอดรวมทั้งหมด
-        $totalSql = "SELECT 
+        // ยอดรวมเฉพาะใบเสร็จที่ยังใช้งานได้ (ไม่รวมที่ถูกยกเลิก)
+        $totalSql = "SELECT
                         SUM(amount) as total_amount,
                         COUNT(*) as total_receipts,
                         MIN(issued_at) as first_date,
                         MAX(issued_at) as last_date
-                     FROM edonation_receipts 
-                     WHERE id_members = :id";
+                     FROM edonation_receipts
+                     WHERE id_members = :id AND status != 2";
         $totalStmt = $this->pdo->prepare($totalSql);
         $totalStmt->execute([':id' => $idMembers]);
         $totals = $totalStmt->fetch(PDO::FETCH_ASSOC);
@@ -1000,29 +967,29 @@ class MemberController
             return Response::notFound('ไม่พบข้อมูลสมาชิก');
         }
 
-        // สรุปตามปี
-        $yearSql = "SELECT 
+        // สรุปตามปี (เฉพาะใบเสร็จที่ใช้งานได้)
+        $yearSql = "SELECT
                         du.fiscal_year as year,
                         SUM(r.amount) as amount,
                         COUNT(*) as count
                     FROM edonation_receipts r
                     LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                    WHERE r.id_members = :id
+                    WHERE r.id_members = :id AND r.status != 2
                     GROUP BY du.fiscal_year
                     ORDER BY du.fiscal_year DESC";
         $yearStmt = $this->pdo->prepare($yearSql);
         $yearStmt->execute([':id' => $idMembers]);
         $byYear = $yearStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // สรุปตามโครงการ
-        $projectSql = "SELECT 
+        // สรุปตามโครงการ (เฉพาะใบเสร็จที่ใช้งานได้)
+        $projectSql = "SELECT
                             du.project_name,
                             du.project_number,
                             SUM(r.amount) as amount,
                             COUNT(*) as count
                        FROM edonation_receipts r
                        LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
-                       WHERE r.id_members = :id
+                       WHERE r.id_members = :id AND r.status != 2
                        GROUP BY du.project_name, du.project_number
                        ORDER BY amount DESC";
         $projectStmt = $this->pdo->prepare($projectSql);

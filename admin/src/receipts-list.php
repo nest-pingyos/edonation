@@ -31,8 +31,8 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-soft-primary rounded">
-                                        <span class="avatar-title text-primary fs-32">#</span>
+                                    <div class="avatar-md bg-soft-primary rounded d-flex align-items-center justify-content-center">
+                                        <iconify-icon icon="solar:receipt-bold-duotone" class="text-primary fs-28"></iconify-icon>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0" id="total-receipts">-</h3>
@@ -46,8 +46,8 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-soft-success rounded">
-                                        <span class="avatar-title text-success fs-32">✓</span>
+                                    <div class="avatar-md bg-soft-success rounded d-flex align-items-center justify-content-center">
+                                        <iconify-icon icon="solar:check-circle-bold-duotone" class="text-success fs-28"></iconify-icon>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0" id="issued-count">-</h3>
@@ -61,8 +61,8 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-soft-danger rounded">
-                                        <span class="avatar-title text-danger fs-32">✕</span>
+                                    <div class="avatar-md bg-soft-danger rounded d-flex align-items-center justify-content-center">
+                                        <iconify-icon icon="solar:close-circle-bold-duotone" class="text-danger fs-28"></iconify-icon>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0" id="cancelled-count">-</h3>
@@ -76,8 +76,8 @@
                         <div class="card bg-primary text-white">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-md bg-white bg-opacity-25 rounded">
-                                        <span class="avatar-title text-white fs-32">฿</span>
+                                    <div class="avatar-md bg-white bg-opacity-25 rounded d-flex align-items-center justify-content-center">
+                                        <iconify-icon icon="solar:wallet-money-bold-duotone" class="text-white fs-28"></iconify-icon>
                                     </div>
                                     <div class="ms-3">
                                         <h3 class="mb-0 text-white" id="total-amount">-</h3>
@@ -238,34 +238,8 @@
         </div>
     </div>
 
-    <!-- Detail Modal -->
-    <div class="modal fade" id="detailModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">รายละเอียดใบเสร็จ</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="detailContent">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
-                    <button type="button" class="btn btn-outline-danger" id="cancelReceiptBtn"
-                        onclick="cancelReceipt()">
-                        ยกเลิกใบเสร็จ
-                    </button>
-                    <a href="#" id="downloadPdfBtn" class="btn btn-primary" target="_blank">
-                        ดาวน์โหลด PDF
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <?php include 'partials/vendor-scripts.php'; ?>
+<?php include 'partials/vendor-scripts.php'; ?>
     <script src="assets/js/api-helper.js"></script>
 
     <script>
@@ -278,7 +252,6 @@
 
         let receipts = [];
         let currentPage = 1;
-        let currentReceipt = null;
         let perPage = 25;
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -435,7 +408,7 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item" href="javascript:void(0)" onclick="viewDetail('${item.id}')">
+                            <a class="dropdown-item" href="javascript:void(0)" onclick="window.open('receipts-detail.php?id=${item.id}', '_blank')">
                                 ดูรายละเอียด
                             </a>
                         </li>
@@ -481,64 +454,6 @@
             return badges[status] || badges['issued'];
         }
 
-        async function viewDetail(id) {
-            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-            modal.show();
-
-            const content = document.getElementById('detailContent');
-            content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
-
-            try {
-                const response = await apiGet('/receipts/' + id);
-                const r = response.data;
-                currentReceipt = r;
-
-                content.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="text-muted mb-3">ข้อมูลใบเสร็จ</h6>
-                    <table class="table table-sm">
-                        <tr><td class="text-muted" width="130">เลขที่ใบเสร็จ</td><td class="fw-medium font-monospace">${escapeHtml(r.receipt_number)}</td></tr>
-                        <tr><td class="text-muted">วันที่ออก</td><td>${formatThaiDate(r.receipt_date || r.created_at)}</td></tr>
-                        <tr><td class="text-muted">จำนวนเงิน</td><td class="fw-semibold text-primary fs-18">${formatCurrency(r.amount)}</td></tr>
-                        <tr><td class="text-muted">โครงการ</td><td>${escapeHtml(r.project_name || r.project_number)}</td></tr>
-                        <tr><td class="text-muted">สถานะ</td><td>${getReceiptStatusBadge(r.status)}</td></tr>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="text-muted mb-3">ข้อมูลผู้บริจาค</h6>
-                    <table class="table table-sm">
-                        <tr><td class="text-muted" width="130">ชื่อ</td><td class="fw-medium">${escapeHtml(r.donor_name || r.name)}</td></tr>
-                        <tr><td class="text-muted">เลขบัตรประชาชน</td><td>${formatIdCard(r.id_card)}</td></tr>
-                        <tr><td class="text-muted">อีเมล</td><td>${r.email || '-'}</td></tr>
-                        <tr><td class="text-muted">โทรศัพท์</td><td>${formatPhone(r.phone)}</td></tr>
-                        <tr><td class="text-muted">ที่อยู่</td><td>${escapeHtml(r.address) || '-'}</td></tr>
-                    </table>
-                </div>
-            </div>
-            ${r.note ? `
-            <div class="mt-3">
-                <h6 class="text-muted">หมายเหตุ</h6>
-                <p class="mb-0">${escapeHtml(r.note)}</p>
-            </div>
-            ` : ''}
-        `;
-
-                // Update buttons in modal
-                document.getElementById('downloadPdfBtn').onclick = () => downloadSecurePdf(r.id);
-                document.getElementById('cancelReceiptBtn').style.display = r.status === 'cancelled' ? 'none' : '';
-                // re-bind cancel button in modal to use cancelReceiptItem if needed, or keep cancelReceipt() which uses currentReceipt
-
-            } catch (error) {
-                content.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
-            }
-        }
-
-        // Wrapper for modal button
-        function cancelReceipt() {
-            if (currentReceipt) cancelReceiptItem(currentReceipt.id, currentReceipt.receipt_number);
-        }
-
         async function cancelReceiptItem(id, receiptNo) {
             const result = await confirmAction('ยกเลิกใบเสร็จ?', `คุณต้องการยกเลิกใบเสร็จ ${receiptNo} ใช่หรือไม่?`, 'ยกเลิกใบเสร็จ');
             if (!result.isConfirmed) return;
@@ -546,11 +461,6 @@
             try {
                 await apiPost('/receipts/' + id + '/cancel');
                 showSuccess('ยกเลิกใบเสร็จสำเร็จ');
-                // If modal open, close it
-                const modalEl = document.getElementById('detailModal');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-
                 loadReceipts();
             } catch (error) {
                 showError(error.message);
@@ -582,11 +492,11 @@
                 if (response.success && response.data.pdf_url) {
                     window.open(response.data.pdf_url, '_blank');
                 } else {
-                    alert('ไม่สามารถสร้างลิงก์ดาวน์โหลดได้: ' + (response.message || 'Unknown error'));
+                    showError('ไม่สามารถสร้างลิงก์ดาวน์โหลดได้: ' + (response.message || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Download failed:', error);
-                alert('เกิดข้อผิดพลาดในการดาวน์โหลด PDF');
+                showError('เกิดข้อผิดพลาดในการดาวน์โหลด PDF');
             }
         }
 

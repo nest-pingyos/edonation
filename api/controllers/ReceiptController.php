@@ -475,7 +475,7 @@ class ReceiptController
      */
     private function show(string $id): array
     {
-        $sql = "SELECT 
+        $sql = "SELECT
                     r.id,
                     r.receipt_no,
                     r.payer_name,
@@ -502,10 +502,19 @@ class ReceiptController
                     du.district,
                     du.zip_code,
                     du.email,
-                    bt.billPaymentRef2
+                    du.fiscal_year,
+                    bt.billPaymentRef2,
+                    bt.billPaymentRef1,
+                    bt.payerAccountName,
+                    rs.shipping_method,
+                    rs.tracking_number,
+                    rs.status   AS shipping_status,
+                    rs.shipped_at,
+                    rs.notes    AS shipping_notes
                 FROM edonation_receipts r
                 LEFT JOIN edonation_donat_user du ON r.donation_id = du.id
                 LEFT JOIN edonation_bank_transactions bt ON r.bank_transaction_id = bt.id
+                LEFT JOIN edonation_receipt_shippings rs ON rs.receipt_id = r.id
                 WHERE r.id = :id";
 
         $stmt = $this->pdo->prepare($sql);
@@ -516,32 +525,51 @@ class ReceiptController
             return Response::notFound('ไม่พบใบเสร็จ');
         }
 
+        $fullAddress = implode(' ', array_filter([
+            $receipt['address_line'] ?? '',
+            $receipt['district']     ?? '',
+            $receipt['amphure']      ?? '',
+            $receipt['province']     ?? '',
+            $receipt['zip_code']     ?? '',
+        ]));
+
         return Response::success([
-            'id' => (int) $receipt['id'],
-            'receipt_no' => $receipt['receipt_no'],
-            'payer_name' => $receipt['payer_name'],
-            'amount' => floatval($receipt['amount']),
-            'receipt_date' => $receipt['issued_at'],
-            'donation_id' => $receipt['donation_id'],
-            'project_name' => $receipt['project_name'] ?? '',
+            'id'             => (int) $receipt['id'],
+            'receipt_no'     => $receipt['receipt_no'],
+            'payer_name'     => $receipt['payer_name'],
+            'amount'         => floatval($receipt['amount']),
+            'receipt_date'   => $receipt['issued_at'],
+            'donation_id'    => $receipt['donation_id'],
+            'project_name'   => $receipt['project_name']   ?? '',
             'project_number' => $receipt['project_number'] ?? '',
-            'pay_by' => $receipt['payby'] ?? 'QR PromptPay',
-            'title' => $receipt['title'] ?? '',
-            'first_name' => $receipt['first_name'] ?? '',
-            'last_name' => $receipt['last_name'] ?? '',
-            'id_card' => $receipt['id_card'] ?? '',
-            'phone' => $receipt['phone'] ?? '',
-            'occupation' => $receipt['occupation'] ?? '',
-            'receiptDate' => $receipt['receiptDate'] ?? '',
-            'receipt_address' => $receipt['receipt_address'] ?? '',
-            'address_line' => $receipt['address_line'] ?? '',
-            'province' => $receipt['province'] ?? '',
-            'amphure' => $receipt['amphure'] ?? '',
-            'district' => $receipt['district'] ?? '',
-            'zip_code' => $receipt['zip_code'] ?? '',
-            'email' => $receipt['email'] ?? '',
-            'status' => ((int) ($receipt['status'] ?? 1) === 2) ? 'cancelled' : 'issued',
-            'has_tax_id' => !empty($receipt['billPaymentRef2']),
+            'pay_by'         => $receipt['payby']          ?? 'QR PromptPay',
+            'fiscal_year'    => $receipt['fiscal_year']    ?? '',
+            'title'          => $receipt['title']          ?? '',
+            'first_name'     => $receipt['first_name']     ?? '',
+            'last_name'      => $receipt['last_name']      ?? '',
+            'id_card'        => $receipt['id_card']        ?? '',
+            'phone'          => $receipt['phone']          ?? '',
+            'occupation'     => $receipt['occupation']     ?? '',
+            'email'          => $receipt['email']          ?? '',
+            'receipt_address'=> $receipt['receipt_address']?? '',
+            'address_line'   => $receipt['address_line']   ?? '',
+            'province'       => $receipt['province']       ?? '',
+            'amphure'        => $receipt['amphure']        ?? '',
+            'district'       => $receipt['district']       ?? '',
+            'zip_code'       => $receipt['zip_code']       ?? '',
+            'full_address'   => $fullAddress,
+            'status'         => ((int) ($receipt['status'] ?? 1) === 2) ? 'cancelled' : 'issued',
+            'has_tax_id'     => !empty($receipt['billPaymentRef2']),
+            'tax_id_ref'     => $receipt['billPaymentRef2'] ?? '',
+            'bank_ref'       => $receipt['billPaymentRef1'] ?? '',
+            'payer_account'  => $receipt['payerAccountName'] ?? '',
+            'shipping' => $receipt['tracking_number'] ? [
+                'method'     => $receipt['shipping_method']  ?? '',
+                'tracking'   => $receipt['tracking_number']  ?? '',
+                'status'     => $receipt['shipping_status']  ?? '',
+                'shipped_at' => $receipt['shipped_at']       ?? '',
+                'notes'      => $receipt['shipping_notes']   ?? '',
+            ] : null,
             'api_version' => self::VERSION
         ]);
     }
@@ -560,7 +588,7 @@ class ReceiptController
         $params = [];
 
         if (!empty($_GET['search'])) {
-            $where[] = "(r.receipt_no LIKE :s1 OR r.payer_name LIKE :s2 OR du.first_name LIKE :s3 OR du.last_name LIKE :s4 OR bt.billPaymentRef2 LIKE :s5 OR du.project_number LIKE :s6 OR du.project_name LIKE :s7)";
+            $where[] = "(r.receipt_no LIKE :s1 OR r.payer_name LIKE :s2 OR du.first_name LIKE :s3 OR du.last_name LIKE :s4 OR bt.billPaymentRef2 LIKE :s5 OR du.project_number LIKE :s6 OR du.project_name LIKE :s7 OR r.id_members LIKE :s8 OR r.id_card LIKE :s9)";
             $searchVal = '%' . $_GET['search'] . '%';
             $params[':s1'] = $searchVal;
             $params[':s2'] = $searchVal;
@@ -569,6 +597,8 @@ class ReceiptController
             $params[':s5'] = $searchVal;
             $params[':s6'] = $searchVal;
             $params[':s7'] = $searchVal;
+            $params[':s8'] = $searchVal;
+            $params[':s9'] = $searchVal;
         }
 
         // Status filter
@@ -907,6 +937,42 @@ class ReceiptController
 
             $receiptId = $this->pdo->lastInsertId();
 
+            // Upsert member record so the trigger's UPDATE always has a target row.
+            // For new donors the trigger fired before this row existed (0 rows updated),
+            // so we INSERT with the correct initial stats.
+            // For existing donors ON DUPLICATE KEY UPDATE is a no-op — trigger already handled it.
+            $addressFull = trim(implode(' ', array_filter([
+                $data['address_line'] ?? '',
+                $data['address'] ?? ''
+            ])));
+            $upsertMember = $this->pdo->prepare("
+                INSERT INTO edonation_members (
+                    id_members, id_card, type, title, first_name, last_name, phone, email, occupation,
+                    address_line, full_address,
+                    total_donated, donation_count, first_donation_date, last_donation_date
+                ) VALUES (
+                    :id_members, :id_card, :type, :title, :first_name, :last_name, :phone, :email, :occupation,
+                    :address_line, :full_address,
+                    :amount, 1, CURDATE(), CURDATE()
+                )
+                ON DUPLICATE KEY UPDATE
+                    last_donation_date = CURDATE()
+            ");
+            $upsertMember->execute([
+                ':id_members'  => $idMembers,
+                ':id_card'     => $idCardClean,
+                ':type'        => $data['type'] ?? 'บุคคลทั่วไป',
+                ':title'       => $data['title'] ?? '',
+                ':first_name'  => $data['first_name'],
+                ':last_name'   => $data['last_name'] ?? '',
+                ':phone'       => $data['phone'] ?? '',
+                ':email'       => $data['email'] ?? '',
+                ':occupation'  => $data['occupation'] ?? '',
+                ':address_line'=> $data['address_line'] ?? '',
+                ':full_address'=> $addressFull,
+                ':amount'      => floatval($data['amount']),
+            ]);
+
             // Email sending logic removed as per request
 
             $this->pdo->commit();
@@ -949,13 +1015,17 @@ class ReceiptController
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $reason = $data['reason'] ?? 'ไม่ระบุเหตุผล';
 
-        // Check if receipt exists
-        $checkStmt = $this->pdo->prepare("SELECT id, donation_id, receipt_no FROM edonation_receipts WHERE id = :id");
+        // Check if receipt exists (fetch amount and id_members for member stat rollback)
+        $checkStmt = $this->pdo->prepare("SELECT id, donation_id, receipt_no, amount, id_members, status FROM edonation_receipts WHERE id = :id");
         $checkStmt->execute([':id' => $id]);
         $receipt = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$receipt) {
             return Response::notFound('ไม่พบใบเสร็จ');
+        }
+
+        if ((int) $receipt['status'] === 2) {
+            return Response::error('ALREADY_CANCELLED', 'ใบเสร็จนี้ถูกยกเลิกแล้ว', 400);
         }
 
         try {
@@ -969,6 +1039,34 @@ class ReceiptController
             if ($receipt['donation_id']) {
                 $updateStmt = $this->pdo->prepare("UPDATE edonation_donat_user SET status_donat = 'cancelled', updated_at = NOW() WHERE id = :id");
                 $updateStmt->execute([':id' => $receipt['donation_id']]);
+            }
+
+            // Rollback member stats — mirror the trigger that ran on INSERT
+            if (!empty($receipt['id_members'])) {
+                $rollbackStmt = $this->pdo->prepare("
+                    UPDATE edonation_members
+                    SET
+                        total_donated  = GREATEST(0, total_donated - :amount),
+                        donation_count = GREATEST(0, donation_count - 1),
+                        benefactor_level = CASE
+                            WHEN GREATEST(0, total_donated - :amount2) >= 1000000 THEN 'มหากุศลาธิยาอา'
+                            WHEN GREATEST(0, total_donated - :amount3) >= 500000  THEN 'กุศลาธิกาอา'
+                            WHEN GREATEST(0, total_donated - :amount4) >= 100000  THEN 'อุดมกุศลา'
+                            WHEN GREATEST(0, total_donated - :amount5) >= 50000   THEN 'มหากุศลา'
+                            WHEN GREATEST(0, total_donated - :amount6) >= 10000   THEN 'กุศลา'
+                            ELSE 'ผู้บริจาค'
+                        END
+                    WHERE id_members = :id_members
+                ");
+                $rollbackStmt->execute([
+                    ':amount'      => $receipt['amount'],
+                    ':amount2'     => $receipt['amount'],
+                    ':amount3'     => $receipt['amount'],
+                    ':amount4'     => $receipt['amount'],
+                    ':amount5'     => $receipt['amount'],
+                    ':amount6'     => $receipt['amount'],
+                    ':id_members'  => $receipt['id_members'],
+                ]);
             }
 
             $this->pdo->commit();

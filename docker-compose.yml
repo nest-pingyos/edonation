@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # ฐานข้อมูล (MariaDB 10.4)
   db:
     image: mariadb:10.4
     container_name: edonation_db
@@ -15,28 +14,6 @@ services:
       - edonation_db_data:/var/lib/mysql
       - ./database/donation.sql:/docker-entrypoint-initdb.d/init.sql
 
-  # ส่วน Web Server (PHP + Apache) — ปิดไว้เพราะรัน local ด้วย XAMPP แทน
-  # app:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/php/Dockerfile
-  #   container_name: edonation_app
-  #   restart: always
-  #   ports:
-  #     - "8080:80"
-  #   volumes:
-  #     - .:/var/www/html/edonation
-  #     - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
-  #   environment:
-  #     - DB_HOST=db
-  #     - DB_NAME=donation
-  #     - DB_USER=root
-  #     - DB_PASS=root
-  #     - APP_DOMAIN=http://localhost:8080
-  #     - API_DOMAIN=http://localhost:8080
-  #     - APP_ENV=local
-  #   depends_on:
-  #     - db
 
   # phpMyAdmin — จัดการ DB ผ่าน http://localhost:8081
   phpmyadmin:

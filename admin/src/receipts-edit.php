@@ -13,22 +13,6 @@
     <?php include 'partials/head-css.php'; ?>
     <?php autoprovinceCss(); ?>
 
-    <style>
-        .form-section {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .receipt-info-card {
-            background: linear-gradient(135deg, #1c84ee 0%, #0d6efd 100%);
-            color: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 
 <body>
@@ -40,8 +24,8 @@
 
             <div class="container-xxl">
                 <?php
-                $pageTitle = "แก้ไขใบเสร็จรับเงิน";
-                $subTitle = "ใบเสร็จ";
+                $pageTitle = "ใบเสร็จรับเงิน";
+                $subTitle = "แก้ไขใบเสร็จ";
                 include 'partials/page-title.php'; ?>
 
                 <!-- Loading State -->
@@ -65,23 +49,33 @@
                     <div class="row">
                         <div class="col-12">
                             <!-- Receipt Info Card -->
-                            <div class="receipt-info-card bg-primary text-white mb-4">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h4 id="displayReceiptNo" class="text-white mb-1">-</h4>
-                                        <small>เลขที่ใบเสร็จ</small>
-                                    </div>
-                                    <div class="text-end">
-                                        <h4 id="displayAmount" class="text-white mb-1">-</h4>
-                                        <small>จำนวนเงินเดิม</small>
+                            <div class="card bg-primary text-white mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="avatar-md bg-white bg-opacity-25 rounded d-flex align-items-center justify-content-center">
+                                                <iconify-icon icon="solar:receipt-bold-duotone" class="text-white fs-28"></iconify-icon>
+                                            </div>
+                                            <div>
+                                                <div class="opacity-75 small">เลขที่ใบเสร็จ</div>
+                                                <h4 id="displayReceiptNo" class="text-white mb-0">-</h4>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="opacity-75 small">จำนวนเงินเดิม</div>
+                                            <h4 id="displayAmount" class="text-white mb-0">-</h4>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- ข้อมูลผู้บริจาค -->
                             <div class="card mb-4">
-                                <div class="card-header bg-soft-primary">
-                                    <h5 class="card-title mb-0 text-primary">ข้อมูลผู้บริจาค</h5>
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <iconify-icon icon="solar:user-bold-duotone" class="me-1 text-primary"></iconify-icon>
+                                        ข้อมูลผู้บริจาค
+                                    </h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
@@ -186,8 +180,11 @@
 
                             <!-- ข้อมูลการบริจาค -->
                             <div class="card mb-4">
-                                <div class="card-header bg-soft-primary">
-                                    <h5 class="card-title mb-0 text-primary">ข้อมูลการบริจาค</h5>
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <iconify-icon icon="solar:hand-heart-bold-duotone" class="me-1 text-primary"></iconify-icon>
+                                        ข้อมูลการบริจาค
+                                    </h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
@@ -225,12 +222,15 @@
 
                             <!-- Actions -->
                             <div class="d-flex gap-2 mb-5">
-                                <button type="submit" class="btn btn-primary px-5 py-2" id="submitBtn">
-                                    <span class="spinner-border spinner-border-sm d-none me-2"
-                                        id="submitSpinner"></span>
+                                <button type="submit" class="btn btn-primary px-5" id="submitBtn">
+                                    <span class="spinner-border spinner-border-sm d-none me-2" id="submitSpinner"></span>
+                                    <iconify-icon icon="solar:floppy-disk-bold-duotone" class="me-1"></iconify-icon>
                                     บันทึกการแก้ไข
                                 </button>
-                                <a href="receipts-list.php" class="btn btn-outline-secondary px-5 py-2">ยกเลิก</a>
+                                <button type="button" class="btn btn-outline-secondary px-5" id="btnBack" onclick="goBack()">
+                                    <iconify-icon icon="solar:arrow-left-bold-duotone" class="me-1"></iconify-icon>
+                                    ยกเลิก
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -294,7 +294,7 @@
             const receiptId = urlParams.get('id');
 
             if (!receiptId) {
-                showError('ไม่พบ ID ใบเสร็จ');
+                showPageError('ไม่พบ ID ใบเสร็จ');
                 return;
             }
 
@@ -302,7 +302,7 @@
                 await loadProjects();
                 await loadReceipt(receiptId);
             } catch (error) {
-                showError(error.message);
+                showPageError(error.message);
             }
         });
 
@@ -452,9 +452,10 @@
                     payer_name: buildPayerName()
                 };
 
-                await apiPut('/receipts/' + document.getElementById('receiptId').value, formData);
+                const receiptId = document.getElementById('receiptId').value;
+                await apiPut('/receipts/' + receiptId, formData);
                 showSuccess('แก้ไขใบเสร็จสำเร็จ');
-                setTimeout(() => window.location.href = 'receipts-list.php', 1500);
+                setTimeout(() => window.location.href = 'receipts-detail.php?id=' + receiptId, 1200);
             } catch (error) {
                 showError(error.message);
             } finally {
@@ -470,7 +471,12 @@
             return [title, firstName, lastName].filter(Boolean).join(' ');
         }
 
-        function showError(message) {
+        function goBack() {
+            const receiptId = document.getElementById('receiptId').value;
+            window.location.href = receiptId ? 'receipts-detail.php?id=' + receiptId : 'receipts-list.php';
+        }
+
+        function showPageError(message) {
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('editForm').style.display = 'none';
             document.getElementById('errorState').style.display = 'block';

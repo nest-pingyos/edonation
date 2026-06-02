@@ -192,13 +192,7 @@
             localStorage.setItem('fiscalYearType', fiscalType);
 
             // Show success message
-            Swal.fire({
-                icon: 'success',
-                title: 'บันทึกสำเร็จ',
-                text: 'การตั้งค่าปีสำหรับรายงานถูกบันทึกแล้ว',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            showSuccess('การตั้งค่าปีสำหรับรายงานถูกบันทึกแล้ว');
 
             updateCurrentYearDisplay();
         }

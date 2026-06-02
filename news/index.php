@@ -81,10 +81,9 @@ include_once('../config/head.php');
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="../assets/js/plugins.js"></script>
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/utils.js"></script>
 
     <script>
-        // Get API_BASE from meta tag (set by PHP head.php)
-        const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '/edonation/api/v1';
         let currentPage = 0;
         let currentCategory = '';
         let searchQuery = '';
@@ -213,15 +212,9 @@ include_once('../config/head.php');
         function renderNews(news) {
             const newsGrid = document.getElementById('newsGrid');
 
-            const categoryLabels = {
-                'general': 'ข่าวทั่วไป',
-                'announcement': 'ประกาศ',
-                'thank': 'ขอบคุณ'
-            };
-
             let html = '';
             news.forEach(item => {
-                const categoryLabel = categoryLabels[item.category] || item.category || 'ข่าวสาร';
+                const categoryLabel = NEWS_CATEGORY_LABELS[item.category] || item.category || 'ข่าวสาร';
 
                 html += `
     <div class="news-card">
@@ -273,12 +266,6 @@ include_once('../config/head.php');
             }
         }
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
     </script>
 </body>
 

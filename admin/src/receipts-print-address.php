@@ -75,77 +75,64 @@
         <div class="page-content">
             <?php include 'partials/edonation-topbar.php'; ?>
 
-            <div class="container-fluid">
+            <div class="container-xxl">
 
-                <!-- Page Title -->
-                <div class="row">
-                    <div class="col-12">
-                        <div class="page-title-box d-flex align-items-center justify-content-between">
-                            <h4 class="mb-0 font-size-18">พิมพ์ที่อยู่จัดส่งใบเสร็จ</h4>
-                            <div class="page-title-right">
-                                <ol class="breadcrumb m-0">
-                                    <li class="breadcrumb-item"><a href="receipts-list.php">ใบเสร็จ</a></li>
-                                    <li class="breadcrumb-item active">พิมพ์ที่อยู่</li>
-                                </ol>
-                            </div>
+                <?php
+                $pageTitle = "ใบเสร็จรับเงิน";
+                $subTitle  = "พิมพ์ที่อยู่จัดส่ง";
+                include 'partials/page-title.php'; ?>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">รายการใบเสร็จรับเงิน</h4>
+                        <div class="d-flex gap-2">
+                            <a href="receipts-list.php" class="btn btn-outline-secondary">
+                                <iconify-icon icon="solar:arrow-left-bold-duotone" class="align-middle me-1"></iconify-icon>
+                                กลับรายการใบเสร็จ
+                            </a>
+                            <button class="btn btn-primary" onclick="printSelected()">
+                                <iconify-icon icon="solar:printer-bold-duotone" class="align-middle me-1"></iconify-icon>
+                                พิมพ์รายการที่เลือก
+                            </button>
                         </div>
                     </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h4 class="card-title mb-0">รายการใบเสร็จรับเงิน</h4>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-soft-secondary btn-sm" onclick="window.history.back()">
-                                        <iconify-icon icon="solar:arrow-left-bold-duotone"
-                                            class="fs-16 align-middle me-1"></iconify-icon>
-                                        ย้อนกลับ
-                                    </button>
-                                    <button class="btn btn-primary btn-sm" onclick="printSelected()">
-                                        <iconify-icon icon="solar:printer-bold-duotone"
-                                            class="fs-16 align-middle me-1"></iconify-icon>
-                                        พิมพ์รายการที่เลือก
+                    <div class="card-body">
+                        <!-- Filters -->
+                        <div class="bg-light p-3 rounded mb-4">
+                            <div class="row g-3">
+                                <div class="col-lg-4 col-md-6">
+                                    <label class="form-label fw-bold">ค้นหา</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0">
+                                            <iconify-icon icon="solar:magnifer-linear" class="fs-18"></iconify-icon>
+                                        </span>
+                                        <input type="text" class="form-control border-start-0 ps-0" id="searchInput"
+                                            placeholder="เลขที่ใบเสร็จ, ชื่อผู้บริจาค...">
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label fw-bold">โครงการ</label>
+                                    <input type="text" class="form-control" id="projectFilter"
+                                        placeholder="รหัสโครงการ">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label fw-bold">สถานะการส่ง</label>
+                                    <select class="form-select" id="shippingStatusFilter">
+                                        <option value="">ทั้งหมด</option>
+                                        <option value="pending">รอการจัดส่ง</option>
+                                        <option value="shipped">จัดส่งแล้ว</option>
+                                        <option value="delivered">ถึงผู้รับแล้ว</option>
+                                        <option value="returned">พัสดุตีกลับ</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center" onclick="loadData()">
+                                        <iconify-icon icon="solar:filter-bold-duotone" class="me-2 fs-18"></iconify-icon>
+                                        กรองข้อมูล
                                     </button>
                                 </div>
                             </div>
-                            <div class="card-body">
-                                <!-- Filters -->
-                                <div class="row g-3 mb-4">
-                                    <div class="col-md-4">
-                                        <label class="form-label text-muted">ค้นหา</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-end-0">
-                                                <iconify-icon icon="solar:magnifer-linear" class="fs-18"></iconify-icon>
-                                            </span>
-                                            <input type="text" class="form-control border-start-0 ps-0" id="searchInput"
-                                                placeholder="เลขที่ใบเสร็จ, ชื่อผู้บริจาค...">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">โครงการ</label>
-                                        <input type="text" class="form-control" id="projectFilter"
-                                            placeholder="รหัสโครงการ">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label text-muted">สถานะการส่ง</label>
-                                        <select class="form-select" id="shippingStatusFilter" onchange="loadData()">
-                                            <option value="">ทั้งหมด</option>
-                                            <option value="pending">รอการจัดส่ง</option>
-                                            <option value="shipped">จัดส่งแล้ว</option>
-                                            <option value="delivered">ถึงผู้รับแล้ว</option>
-                                            <option value="returned">พัสดุตีกลับ</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <button class="btn btn-primary w-100" onclick="loadData()">
-                                            <iconify-icon icon="solar:filter-bold-duotone"
-                                                class="fs-16 align-middle me-1"></iconify-icon>
-                                            กรองข้อมูล
-                                        </button>
-                                    </div>
-                                </div>
+                        </div>
 
                                 <!-- Table -->
                                 <div class="table-responsive">
@@ -184,12 +171,10 @@
                                     <nav id="pagination"></nav>
                                 </div>
 
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-            </div> <!-- container-fluid -->
+            </div> <!-- container-xxl -->
 
             <?php include 'partials/footer.php'; ?>
         </div>
@@ -261,7 +246,6 @@
     </div>
 
     <?php include 'partials/vendor-scripts.php'; ?>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="assets/js/api-helper.js"></script>
 
     <script>
@@ -273,8 +257,7 @@
 
             // Search with debounce
             document.getElementById('searchInput').addEventListener('input', debounce(loadData, 500));
-            document.getElementById('projectFilter').addEventListener('change', loadData);
-            document.getElementById('dateFilter').addEventListener('change', loadData);
+            document.getElementById('shippingStatusFilter').addEventListener('change', loadData);
         });
 
         async function loadData(page = 1) {

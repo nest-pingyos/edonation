@@ -131,78 +131,15 @@ include_once('../config/head.php');
             </div> <!-- container -->
         </section>
 
-        <style>
-            .gallery-item img {
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-                cursor: pointer;
-                width: 100%;
-                height: 200px;
-                object-fit: cover;
-                border-radius: 8px;
-            }
-
-            .gallery-item img:hover {
-                transform: scale(1.02);
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            }
-
-            .recommended-card {
-                display: block;
-                text-decoration: none;
-                color: inherit;
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-                background-color: #fff;
-                height: 100%;
-                border: 1px solid #eee;
-            }
-
-            .recommended-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-                border-color: #FB974E;
-            }
-
-            .recommended-card-img {
-                width: 100%;
-                height: 160px;
-                object-fit: cover;
-            }
-
-            .recommended-card-content {
-                padding: 15px;
-            }
-
-            .recommended-card-title {
-                font-size: 1rem;
-                font-weight: 600;
-                margin-bottom: 8px;
-                color: #1a3a5c;
-                line-height: 1.4;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
-
-            .recommended-card-date {
-                font-size: 0.8rem;
-                color: #888;
-            }
-        </style>
-
         <?php include_once('../config/footer.php'); ?>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="../assets/js/plugins.js"></script>
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/utils.js"></script>
 
     <script>
-        // Get API_BASE from meta tag (set by PHP head.php)
-        const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '/edonation/api/v1';
         const newsId = <?php echo $newsId; ?>;
         let currentNews = null;
 
@@ -240,12 +177,6 @@ include_once('../config/head.php');
         }
 
         function renderNewsDetail(news) {
-            const categoryLabels = {
-                'general': 'ข่าวทั่วไป',
-                'announcement': 'ประกาศ',
-                'thank': 'ขอบคุณ'
-            };
-
             // Update page title
             document.title = news.title + ' | คณะพยาบาลศาสตร์ มหาวิทยาลัยเชียงใหม่';
 
@@ -261,7 +192,7 @@ include_once('../config/head.php');
             };
 
             // Category
-            document.getElementById('articleCategory').textContent = categoryLabels[news.category] || news.category || 'ข่าวสาร';
+            document.getElementById('articleCategory').textContent = NEWS_CATEGORY_LABELS[news.category] || news.category || 'ข่าวสาร';
 
 
             // Meta
@@ -392,18 +323,6 @@ include_once('../config/head.php');
         function showError() {
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('errorState').style.display = 'block';
-        }
-
-        function truncateText(text, maxLength) {
-            if (text.length <= maxLength) return text;
-            return text.substring(0, maxLength) + '...';
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
         }
 
         // Share functions

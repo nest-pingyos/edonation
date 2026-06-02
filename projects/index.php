@@ -49,10 +49,9 @@ include_once('../config/head.php');
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="../assets/js/plugins.js"></script>
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/utils.js"></script>
 
     <script>
-        // Get API_BASE from meta tag (set by PHP head.php)
-        const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '/edonation/api/v1';
 
         document.addEventListener('DOMContentLoaded', function () {
             loadProjects();
@@ -124,18 +123,6 @@ include_once('../config/head.php');
             projectsGrid.innerHTML = html;
         }
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function truncateText(text, maxLength) {
-            if (!text) return '';
-            if (text.length <= maxLength) return text;
-            return text.substring(0, maxLength).trim() + '...';
-        }
     </script>
 </body>
 

@@ -1,0 +1,26 @@
+FROM php:8.2-apache
+
+# Install required PHP extensions
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    curl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install mysqli pdo pdo_mysql gd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable Apache modules
+RUN a2enmod rewrite headers
+
+WORKDIR /var/www/html/edonation
+
+# Copy application code (excluded by .dockerignore)
+COPY . .
+
+# Lock down file permissions
+RUN chown -R www-data:www-data /var/www/html/edonation \
+    && find /var/www/html/edonation -type d -exec chmod 755 {} \; \
+    && find /var/www/html/edonation -type f -exec chmod 644 {} \;
+
+EXPOSE 80

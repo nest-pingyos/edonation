@@ -42,16 +42,20 @@ try {
     }
 
     // Group data by id_members
+    // แต่ละ row ที่มี receipt_number = NULL คือสมาชิกที่ไม่มีใบเสร็จ (LEFT JOIN ไม่ match)
     $groupedData = [];
     foreach ($transactions as $t) {
         $id = $t['id_members'];
         if (!isset($groupedData[$id])) {
             $groupedData[$id] = [
-                'info' => $t, // Store first record as member info representative
+                'info'  => $t,
                 'items' => []
             ];
         }
-        $groupedData[$id]['items'][] = $t;
+        // เพิ่มเฉพาะ row ที่มีใบเสร็จจริง
+        if (!empty($t['receipt_number'])) {
+            $groupedData[$id]['items'][] = $t;
+        }
     }
 
     // Set Headers for Download
@@ -71,75 +75,72 @@ try {
 
         // --- 1. Member Detail Section (Header) ---
 
-        // Name Logic
-        $name = trim(($m['title'] ?? '') . ' ' . $m['first_name'] . ' ' . ($m['last_name'] ?? ''));
-        if (empty($name))
-            $name = $m['receipt_name'];
+        // Name: ใช้ full_name จาก edonation_members เป็นหลัก
+        $name = $m['full_name'] ?: trim(($m['title'] ?? '') . ' ' . ($m['first_name'] ?? '') . ' ' . ($m['last_name'] ?? ''));
+        if (empty(trim($name))) $name = $m['receipt_name'] ?? '-';
 
-        // Address Logic
+        // Address: ใช้ full_address จาก edonation_members เป็นหลัก
         $addr = $m['address_full'];
         if (empty($addr)) {
             $parts = [];
-            if ($m['address_line'])
-                $parts[] = $m['address_line'];
-            if ($m['district'])
-                $parts[] = 'ต.' . $m['district'];
-            if ($m['amphure'])
-                $parts[] = 'อ.' . $m['amphure'];
-            if ($m['province'])
-                $parts[] = 'จ.' . $m['province'];
-            if ($m['zip_code'])
-                $parts[] = $m['zip_code'];
+            if (!empty($m['address_line'])) $parts[] = $m['address_line'];
+            if (!empty($m['district']))     $parts[] = 'ต.' . $m['district'];
+            if (!empty($m['amphure']))      $parts[] = 'อ.' . $m['amphure'];
+            if (!empty($m['province']))     $parts[] = 'จ.' . $m['province'];
+            if (!empty($m['zip_code']))     $parts[] = $m['zip_code'];
             $addr = implode(' ', $parts);
         }
 
         // Write Member Info Block
         fputcsv($output, ['ข้อมูลสมาชิก']);
-        fputcsv($output, ['รหัสสมาชิก:', $m['id_members'] . "\t"]); // Tab for text format
-        fputcsv($output, ['ชื่อ-นามสกุล:', $name]);
+        fputcsv($output, ['รหัสสมาชิก:',      $m['id_members'] . "\t"]);
+        fputcsv($output, ['ชื่อ-นามสกุล:',    $name]);
         fputcsv($output, ['เลขบัตรประชาชน:', $m['id_card'] . "\t"]);
-        fputcsv($output, ['เบอร์โทรศัพท์:', $m['phone'] . "\t"]);
-        fputcsv($output, ['ที่อยู่:', $addr]);
-        fputcsv($output, ['อาชีพ:', $m['occupation'] ?? '-']);
+        fputcsv($output, ['เบอร์โทรศัพท์:',  $m['phone'] . "\t"]);
+        fputcsv($output, ['อีเมล:',           $m['email'] ?? '-']);
+        fputcsv($output, ['ที่อยู่:',          $addr]);
+        fputcsv($output, ['อาชีพ:',           $m['occupation'] ?? '-']);
 
         // Summary for this member
-        $totalAmount = array_sum(array_column($items, 'amount'));
-        fputcsv($output, ['ยอดบริจาครวม:', number_format($totalAmount, 2)]);
+        $totalAmount = array_sum(array_filter(array_column($items, 'amount')));
+        fputcsv($output, ['จำนวนครั้งบริจาค:', count($items) . ' ครั้ง']);
+        fputcsv($output, ['ยอดบริจาครวม:',     number_format($totalAmount, 2) . ' บาท']);
         fputcsv($output, []); // Blank line
 
         // --- 2. Donation History Section (Table) ---
-        fputcsv($output, ['ประวัติการบริจาค']);
-        // Table Header
-        fputcsv($output, [
-            'ลำดับ',
-            'วันที่',
-            'เวลา',
-            'เลขที่ใบเสร็จ',
-            'โครงการ',
-            'ชื่อผู้บริจาค (หน้าใบเสร็จ)',
-            'จำนวนเงิน'
-        ]);
-
-        // Transaction Rows
-        foreach ($items as $index => $t) {
-            // DateTime Logic
-            $date = '';
-            $time = '';
-            if (!empty($t['issued_at'])) {
-                $dt = new DateTime($t['issued_at']);
-                $date = $dt->format('Y-m-d');
-                $time = $dt->format('H:i:s');
-            }
-
+        if (!empty($items)) {
+            fputcsv($output, ['ประวัติการบริจาค']);
             fputcsv($output, [
-                $index + 1,
-                $date,
-                $time,
-                $t['receipt_number'],
-                $t['project_name'] ?? '-',
-                $t['receipt_name'],
-                number_format($t['amount'], 2)
+                'ลำดับ',
+                'วันที่',
+                'เวลา',
+                'เลขที่ใบเสร็จ',
+                'โครงการ',
+                'ชื่อผู้บริจาค (หน้าใบเสร็จ)',
+                'จำนวนเงิน (บาท)'
             ]);
+
+            foreach ($items as $index => $t) {
+                $date = '';
+                $time = '';
+                if (!empty($t['issued_at'])) {
+                    $dt   = new DateTime($t['issued_at']);
+                    $date = $dt->format('Y-m-d');
+                    $time = $dt->format('H:i:s');
+                }
+
+                fputcsv($output, [
+                    $index + 1,
+                    $date,
+                    $time,
+                    $t['receipt_number'],
+                    $t['project_name'] ?? '-',
+                    $t['receipt_name'] ?? '-',
+                    number_format((float) $t['amount'], 2)
+                ]);
+            }
+        } else {
+            fputcsv($output, ['ประวัติการบริจาค', 'ไม่พบข้อมูลใบเสร็จ']);
         }
 
         // End of Member Block - Separator

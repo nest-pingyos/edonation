@@ -43,11 +43,13 @@ class NotificationsController
             AuthMiddleware::requireAdmin();
 
             return match ($id) {
-                'self-status' => $method === 'GET' ? $this->getSelfStatus() : Response::error('METHOD_NOT_ALLOWED', 'Use GET', 405),
-                'toggle-status' => $method === 'POST' ? $this->toggleSelfStatus() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
-                'send' => $method === 'POST' ? $this->send() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
+                'self-status'    => $method === 'GET'  ? $this->getSelfStatus()    : Response::error('METHOD_NOT_ALLOWED', 'Use GET', 405),
+                'toggle-status'  => $method === 'POST' ? $this->toggleSelfStatus() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
+                'users-status'   => $method === 'GET'  ? $this->getUsersStatus()   : Response::error('METHOD_NOT_ALLOWED', 'Use GET', 405),
+                'admin-toggle'   => $method === 'POST' ? $this->adminToggle()      : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
+                'send'  => $method === 'POST' ? $this->send()      : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
                 'email' => $method === 'POST' ? $this->sendEmail() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
-                'line' => $method === 'POST' ? $this->sendLine() : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
+                'line'  => $method === 'POST' ? $this->sendLine()  : Response::error('METHOD_NOT_ALLOWED', 'Use POST', 405),
                 default => Response::error('NOT_FOUND', 'Endpoint not found', 404)
             };
         } catch (PDOException $e) {
@@ -280,6 +282,124 @@ class NotificationsController
             }
 
             return Response::success(['is_active' => $active], 'บันทึกสถานะเรียบร้อย');
+        } catch (PDOException $e) {
+            return Response::error('DATABASE_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /notifications/users-status
+     * ดึงสถานะ Line แจ้งเตือนของ admin users ทั้งหมด (super_admin เท่านั้น)
+     */
+    private function getUsersStatus(): array
+    {
+        $user = AuthMiddleware::authenticate();
+        if (!$user) {
+            return Response::error('UNAUTHORIZED', 'Session expired', 401);
+        }
+
+        try {
+            // ดึง email ของ admin users ทั้งหมด
+            $adminStmt = $this->pdo->query("SELECT id, email FROM edonation_admin_users WHERE status = 'active'");
+            $admins = $adminStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($admins)) {
+                return Response::success([]);
+            }
+
+            $emails = array_column($admins, 'email');
+            $placeholders = implode(',', array_fill(0, count($emails), '?'));
+
+            // ดึงสถานะของ admins ที่มีใน notification_recipients
+            $notifStmt = $this->pdo->prepare("
+                SELECT cmu_account, is_active
+                FROM edonation_notification_recipients
+                WHERE cmu_account IN ({$placeholders})
+            ");
+            $notifStmt->execute($emails);
+            $notifRows = $notifStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Index by email
+            $notifMap = [];
+            foreach ($notifRows as $row) {
+                $notifMap[$row['cmu_account']] = (bool) $row['is_active'];
+            }
+
+            // รวมข้อมูล
+            $result = [];
+            foreach ($admins as $admin) {
+                $result[$admin['email']] = [
+                    'id' => (int) $admin['id'],
+                    'email' => $admin['email'],
+                    'is_active' => $notifMap[$admin['email']] ?? false,
+                ];
+            }
+
+            return Response::success(array_values($result));
+        } catch (PDOException $e) {
+            return Response::error('DATABASE_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /notifications/admin-toggle
+     * super_admin toggle Line notification ของ user อื่น
+     * Body: { email: "...", is_active: true/false }
+     */
+    private function adminToggle(): array
+    {
+        $user = AuthMiddleware::authenticate();
+        if (!$user || empty($user['email'])) {
+            return Response::error('UNAUTHORIZED', 'Session expired', 401);
+        }
+
+        // ต้องเป็น super_admin เท่านั้น
+        if (($user['role'] ?? '') !== 'super_admin') {
+            return Response::error('FORBIDDEN', 'เฉพาะ Super Admin เท่านั้น', 403);
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $targetEmail = trim($data['email'] ?? '');
+        $active = isset($data['is_active']) ? (bool) $data['is_active'] : null;
+
+        if (empty($targetEmail) || !filter_var($targetEmail, FILTER_VALIDATE_EMAIL)) {
+            return Response::error('VALIDATION_ERROR', 'email ไม่ถูกต้อง', 400);
+        }
+
+        if ($active === null) {
+            return Response::error('VALIDATION_ERROR', 'is_active is required', 400);
+        }
+
+        try {
+            // ตรวจว่ามี record อยู่แล้วไหม
+            $checkStmt = $this->pdo->prepare(
+                "SELECT id FROM edonation_notification_recipients WHERE cmu_account = :email LIMIT 1"
+            );
+            $checkStmt->execute([':email' => $targetEmail]);
+            $exists = $checkStmt->fetch();
+
+            if ($exists) {
+                $stmt = $this->pdo->prepare("
+                    UPDATE edonation_notification_recipients
+                    SET is_active = :active, updated_at = NOW()
+                    WHERE cmu_account = :email
+                ");
+                $stmt->execute([':active' => $active ? 1 : 0, ':email' => $targetEmail]);
+            } elseif ($active) {
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO edonation_notification_recipients
+                    (notification_type, recipient_email, cmu_account, is_active, created_at)
+                    VALUES ('payment_success', :email, :cmu, 1, NOW())
+                ");
+                $stmt->execute([':email' => $targetEmail, ':cmu' => $targetEmail]);
+            }
+
+            error_log("AUDIT: Line notify toggled for {$targetEmail} → " . ($active ? 'ON' : 'OFF') . " by {$user['email']}");
+
+            return Response::success(
+                ['email' => $targetEmail, 'is_active' => $active],
+                'บันทึกสถานะเรียบร้อย'
+            );
         } catch (PDOException $e) {
             return Response::error('DATABASE_ERROR', $e->getMessage(), 500);
         }

@@ -51,6 +51,7 @@ if (!hasRole('super_admin')) {
                                         <th>อีเมล CMU Account</th>
                                         <th>สิทธิ์การใช้งาน</th>
                                         <th>สถานะ</th>
+                                        <th class="text-center">Line แจ้งเตือน</th>
                                         <th>วันที่สร้าง</th>
                                         <th>เข้าสู่ระบบล่าสุด</th>
                                         <th style="width: 100px;" class="text-center">จัดการ</th>
@@ -58,7 +59,7 @@ if (!hasRole('super_admin')) {
                                 </thead>
                                 <tbody id="usersTableBody">
                                     <tr>
-                                        <td colspan="8" class="text-center py-4">
+                                        <td colspan="9" class="text-center py-4">
                                             <div class="spinner-border text-primary" role="status">
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
@@ -145,6 +146,9 @@ if (!hasRole('super_admin')) {
     <script>
         const userModal = new bootstrap.Modal(document.getElementById('userModal'));
 
+        // Map email → is_active สำหรับ Line notification
+        let notifStatusMap = {};
+
         document.addEventListener('DOMContentLoaded', () => {
             loadUsers();
         });
@@ -153,15 +157,28 @@ if (!hasRole('super_admin')) {
             const tbody = document.getElementById('usersTableBody');
 
             try {
-                const response = await apiGet('/admin-users');
-                const users = response.data || [];
+                // โหลดข้อมูล users และสถานะ Line พร้อมกัน
+                const [usersRes, notifRes] = await Promise.all([
+                    apiGet('/admin-users'),
+                    apiGet('/notifications/users-status').catch(() => ({ data: [] }))
+                ]);
+
+                const users = usersRes.data || [];
+
+                // สร้าง map email → is_active
+                notifStatusMap = {};
+                (notifRes.data || []).forEach(n => {
+                    notifStatusMap[n.email] = n.is_active;
+                });
 
                 if (users.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูลผู้ดูแลระบบ</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูลผู้ดูแลระบบ</td></tr>`;
                     return;
                 }
 
-                tbody.innerHTML = users.map((user, index) => `
+                tbody.innerHTML = users.map((user, index) => {
+                    const lineActive = notifStatusMap[user.email] ?? false;
+                    return `
                     <tr>
                         <td>${index + 1}</td>
                         <td class="fw-medium">
@@ -175,6 +192,18 @@ if (!hasRole('super_admin')) {
                         <td>${escapeHtml(user.email)}</td>
                         <td>${getRoleBadge(user.role)}</td>
                         <td>${getStatusBadge(user.status)}</td>
+                        <td class="text-center">
+                            <div class="form-check form-switch d-inline-flex align-items-center gap-2 mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                    id="lineToggle_${user.id}"
+                                    ${lineActive ? 'checked' : ''}
+                                    onchange="toggleLineNotify('${escapeHtml(user.email)}', this)">
+                                <label class="form-check-label ${lineActive ? 'text-success fw-semibold' : 'text-muted'}"
+                                    for="lineToggle_${user.id}" id="lineLabel_${user.id}">
+                                    ${lineActive ? 'เปิด' : 'ปิด'}
+                                </label>
+                            </div>
+                        </td>
                         <td>${formatThaiDateShort(user.created_at)}</td>
                         <td>${user.last_login ? formatThaiDateTimeShort(user.last_login) : '<span class="text-muted">-</span>'}</td>
                         <td class="text-center">
@@ -198,10 +227,40 @@ if (!hasRole('super_admin')) {
                             </div>
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
 
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">เกิดข้อผิดพลาด: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">เกิดข้อผิดพลาด: ${error.message}</td></tr>`;
+            }
+        }
+
+        async function toggleLineNotify(email, checkbox) {
+            const isActive = checkbox.checked;
+            const userId = checkbox.id.replace('lineToggle_', '');
+            const label = document.getElementById('lineLabel_' + userId);
+
+            // แสดงสถานะกำลังบันทึก
+            checkbox.disabled = true;
+            label.textContent = 'กำลังบันทึก...';
+            label.className = 'form-check-label text-muted';
+
+            try {
+                await apiPost('/notifications/admin-toggle', { email, is_active: isActive });
+
+                label.textContent = isActive ? 'เปิด' : 'ปิด';
+                label.className = `form-check-label ${isActive ? 'text-success fw-semibold' : 'text-muted'}`;
+                notifStatusMap[email] = isActive;
+
+                showSuccess(`${isActive ? 'เปิด' : 'ปิด'}การแจ้งเตือน Line ของ ${email} แล้ว`);
+            } catch (error) {
+                // revert
+                checkbox.checked = !isActive;
+                const reverted = !isActive;
+                label.textContent = reverted ? 'เปิด' : 'ปิด';
+                label.className = `form-check-label ${reverted ? 'text-success fw-semibold' : 'text-muted'}`;
+                showError('ไม่สามารถบันทึกสถานะได้: ' + error.message);
+            } finally {
+                checkbox.disabled = false;
             }
         }
 
@@ -292,16 +351,7 @@ if (!hasRole('super_admin')) {
         }
 
         async function deleteUser(id, email) {
-            const result = await Swal.fire({
-                title: 'ยืนยันการลบ?',
-                text: `คุณต้องการลบผู้ดูแลระบบ ${email} ใช่หรือไม่?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'ลบข้อมูล',
-                cancelButtonText: 'ยกเลิก'
-            });
+            const result = await confirmDelete(email);
 
             if (result.isConfirmed) {
                 try {

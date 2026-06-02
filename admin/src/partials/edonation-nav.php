@@ -32,7 +32,7 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
                 </a>
             </li>
 
-            <?php if (canAccess('receipts-list.php') || canAccess('receipts-generate.php')): ?>
+            <?php if (canAccess('receipts-list.php') || canAccess('members-list.php') || canAccess('receipts-print-address.php')): ?>
                 <li class="nav-item">
                     <a class="nav-link menu-arrow" href="#sidebarReceipts" data-bs-toggle="collapse" role="button"
                         aria-expanded="false" aria-controls="sidebarReceipts">
@@ -48,9 +48,9 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
                                     <a class="sub-nav-link" href="receipts-list.php">รายการใบเสร็จ</a>
                                 </li>
                             <?php endif; ?>
-                            <?php if (canAccess('receipts-generate.php')): ?>
+                            <?php if (canAccess('members-list.php')): ?>
                                 <li class="sub-nav-item">
-                                    <a class="sub-nav-link" href="receipts-generate.php">ออกใบเสร็จ</a>
+                                    <a class="sub-nav-link" href="members-list.php">รายชื่อสมาชิก</a>
                                 </li>
                             <?php endif; ?>
                             <?php if (canAccess('receipts-print-address.php')): ?>
@@ -96,29 +96,14 @@ $basePath = defined('BASE_PATH') ? BASE_PATH : '/edonation';
                 </li>
             <?php endif; ?>
 
-            <?php if (canAccess('members-list.php') || canAccess('members-search.php')): ?>
+            <?php if (canAccess('members-search.php')): ?>
                 <li class="nav-item">
-                    <a class="nav-link menu-arrow" href="#sidebarMembers" data-bs-toggle="collapse" role="button"
-                        aria-expanded="false" aria-controls="sidebarMembers">
+                    <a class="nav-link" href="members-search.php">
                         <span class="nav-icon">
                             <iconify-icon icon="iconamoon:profile-circle-duotone"></iconify-icon>
                         </span>
-                        <span class="nav-text">สมาชิก</span>
+                        <span class="nav-text">ค้นหาประวัติ</span>
                     </a>
-                    <div class="collapse" id="sidebarMembers">
-                        <ul class="nav sub-navbar-nav">
-                            <?php if (canAccess('members-list.php')): ?>
-                                <li class="sub-nav-item">
-                                    <a class="sub-nav-link" href="members-list.php">รายชื่อสมาชิก</a>
-                                </li>
-                            <?php endif; ?>
-                            <?php if (canAccess('members-search.php')): ?>
-                                <li class="sub-nav-item">
-                                    <a class="sub-nav-link" href="members-search.php">ค้นหาประวัติ</a>
-                                </li>
-                            <?php endif; ?>
-                        </ul>
-                    </div>
                 </li>
             <?php endif; ?>
 

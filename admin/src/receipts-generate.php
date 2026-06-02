@@ -140,8 +140,8 @@
 
             <div class="container-xxl">
                 <?php
-                $pageTitle = "ออกใบเสร็จรับเงิน";
-                $subTitle = "ใบเสร็จ";
+                $pageTitle = "ใบเสร็จรับเงิน";
+                $subTitle = "ออกใบเสร็จใหม่";
                 include 'partials/page-title.php'; ?>
 
                 <form id="receiptForm" onsubmit="handleSubmit(event)">
@@ -150,13 +150,14 @@
                         <div class="col-12">
 
                             <!-- Simple Donor Search -->
-                            <div class="card shadow-sm border-0 mb-4 divider-dashed">
-                                <div class="card-body p-4">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <iconify-icon icon="solar:magnifer-linear"
-                                            class="text-primary fs-24 me-2"></iconify-icon>
-                                        <h5 class="card-title mb-0">ค้นหาประวัติบุคคล</h5>
-                                    </div>
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <iconify-icon icon="solar:magnifer-bold-duotone" class="me-1 text-primary"></iconify-icon>
+                                        ค้นหาประวัติบุคคล
+                                    </h5>
+                                </div>
+                                <div class="card-body">
 
                                     <div class="row g-2">
                                         <div class="col-md-10">
@@ -195,8 +196,9 @@
 
                             <!-- ข้อมูลผู้บริจาค -->
                             <div class="card mb-4">
-                                <div class="card-header bg-soft-primary">
-                                    <h5 class="card-title mb-0 text-primary">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <iconify-icon icon="solar:user-bold-duotone" class="me-1 text-primary"></iconify-icon>
                                         ข้อมูลผู้บริจาค
                                     </h5>
                                 </div>
@@ -363,8 +365,9 @@
 
                             <!-- ข้อมูลการบริจาค -->
                             <div class="card mb-4">
-                                <div class="card-header bg-soft-primary">
-                                    <h5 class="card-title mb-0 text-primary">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <iconify-icon icon="solar:hand-heart-bold-duotone" class="me-1 text-primary"></iconify-icon>
                                         ข้อมูลการบริจาค
                                     </h5>
                                 </div>
@@ -412,8 +415,9 @@
 
                             <!-- ตัวเลือกเพิ่มเติม -->
                             <div class="card mb-4">
-                                <div class="card-header bg-soft-primary">
-                                    <h5 class="card-title mb-0 text-primary">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <iconify-icon icon="solar:settings-bold-duotone" class="me-1 text-primary"></iconify-icon>
                                         ตัวเลือกเพิ่มเติม
                                     </h5>
                                 </div>
@@ -431,9 +435,9 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-3" id="submitBtn">
-                                <div class="spinner-border spinner-border-sm d-none me-2" id="submitSpinner"
-                                    role="status"></div>
+                            <button type="submit" class="btn btn-primary w-100 py-3 fs-16" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm d-none me-2" id="submitSpinner" role="status"></span>
+                                <iconify-icon icon="solar:receipt-bold-duotone" class="me-2 fs-18"></iconify-icon>
                                 ยืนยันข้อมูลและออกใบเสร็จ
                             </button>
                         </div>
@@ -450,8 +454,8 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-body text-center py-5">
-                    <div class="avatar-xl bg-soft-success rounded-circle mx-auto mb-4">
-                        <span class="avatar-title text-success" style="font-size: 48px;">✓</span>
+                    <div class="avatar-xl bg-soft-success rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center">
+                        <iconify-icon icon="solar:check-circle-bold-duotone" class="text-success" style="font-size: 48px;"></iconify-icon>
                     </div>
                     <h4 class="mb-2">ออกใบเสร็จสำเร็จ!</h4>
                     <p class="text-muted mb-4">
@@ -489,6 +493,7 @@
     <script>
         let projects = [];
         let selectedDonation = null;
+        let searchResults = [];
 
         const JURISTIC_TITLES = ['บริษัท', 'ห้างหุ้นส่วน', 'มูลนิธิ', 'สมาคม'];
 
@@ -576,7 +581,35 @@
 
             loadProjects();
             setDefaultDate();
+
+            // Pre-fill member data from URL ?member_id=
+            const prefillId = new URLSearchParams(window.location.search).get('member_id');
+            if (prefillId) prefillMemberById(prefillId);
         });
+
+        async function prefillMemberById(memberId) {
+            try {
+                const res = await apiGet(`/members/${encodeURIComponent(memberId)}`);
+                const d = res.data || {};
+                fillFormFromSearchResult({
+                    title:        d.title        || '',
+                    first_name:   d.first_name   || '',
+                    last_name:    d.last_name     || '',
+                    id_card:      d.id_card       || '',
+                    phone:        d.phone         || '',
+                    email:        d.email         || '',
+                    occupation:   d.occupation    || '',
+                    address_line: d.address?.address_line || '',
+                    address:      d.address?.full         || '',
+                    province:     d.address?.province     || '',
+                    district:     d.address?.district     || '',
+                    subdistrict:  d.address?.subdistrict  || '',
+                    zip_code:     d.address?.zip_code     || '',
+                });
+            } catch (e) {
+                console.warn('prefillMemberById failed:', e.message);
+            }
+        }
 
         // ===== AUTOPROVINCE FUNCTIONS =====
 
@@ -734,7 +767,7 @@
             document.getElementById('noResults').style.display = 'none';
 
             try {
-                const response = await apiGet(`/members/search?q=${encodeURIComponent(query)}`);
+                const response = await apiGet(`/members/search?q=${encodeURIComponent(query)}&search_mode=all`);
                 const results = response.data || [];
 
                 if (results.length === 0) {
@@ -752,10 +785,11 @@
             const container = document.getElementById('searchResults');
             const body = document.getElementById('searchResultsBody');
 
+            searchResults = results;
             container.style.display = 'block';
 
-            body.innerHTML = results.map((item, index) => `
-                <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 px-4" onclick="selectSimpleResult(${index})">
+            body.innerHTML = results.map(item => `
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 px-4" onclick="selectSimpleResult('${escapeHtml(item.id_members || item.id)}')">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="fw-bold text-primary mb-1">${escapeHtml(item.name || 'ไม่ระบุชื่อ')}</div>
@@ -768,12 +802,10 @@
                     </div>
                 </a>
             `).join('');
-
-            window.searchResults = results;
         }
 
-        function selectSimpleResult(index) {
-            const item = window.searchResults[index];
+        function selectSimpleResult(memberId) {
+            const item = searchResults.find(r => String(r.id_members || r.id) === String(memberId));
             if (!item) return;
 
             fillFormFromSearchResult(item);
@@ -820,7 +852,7 @@
 
         function selectDonation(donation) {
             // Store selected donation
-            window.selectedDonation = donation;
+            selectedDonation = donation;
 
             // Fill donation ID
             document.getElementById('donation_id').value = donation.id || donation.donation_id || '';
